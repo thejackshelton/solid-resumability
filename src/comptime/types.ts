@@ -346,7 +346,19 @@ export interface ClassBindingInfo extends BindingCommon {
   initialFrom: InitialFrom;
 }
 
-export type BindingInfo = TextBindingInfo | AttributeBindingInfo | ClassBindingInfo;
+/**
+ * A binding that owns the rest-attribute set of its element. Bakes no
+ * bytes: capture measures the set the spread actually wrote, and resume
+ * replays a spread assign of the identity-class rest object. `expression`
+ * is the rest identifier, printed from source.
+ */
+export interface SpreadBindingInfo extends BindingCommon {
+  kind: "spread";
+  expression: string;
+  initialFrom: InitialFrom;
+}
+
+export type BindingInfo = TextBindingInfo | AttributeBindingInfo | ClassBindingInfo | SpreadBindingInfo;
 
 /** True for the text arm. Bindings are told apart by `kind`; these two guards
  * exist so a consumer that only ever wanted text keeps reading the fields it
@@ -357,6 +369,10 @@ export function isTextBinding(binding: BindingInfo): binding is TextBindingInfo 
 
 export function isAttributeBinding(binding: BindingInfo): binding is AttributeBindingInfo {
   return binding.kind === "attribute";
+}
+
+export function isSpreadBinding(binding: BindingInfo): binding is SpreadBindingInfo {
+  return binding.kind === "spread";
 }
 
 /**

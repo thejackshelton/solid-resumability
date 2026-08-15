@@ -52,9 +52,9 @@
   },
   "totals": {
     "components": 12,
-    "provable": 0,
-    "fallback": 12,
-    "provableFraction": "0.0%",
+    "provable": 1,
+    "fallback": 11,
+    "provableFraction": "8.3%",
     "sourceFiles": 12,
     "distFiles": 6,
     "armsAgreeOnStatus": true,
@@ -74,21 +74,9 @@
       "onlyBlockerFor": 0
     },
     {
-      "code": "jsx-spread",
-      "components": 4,
-      "occurrences": 6,
-      "onlyBlockerFor": 0
-    },
-    {
       "code": "show-branch-not-static-at-capture",
       "components": 4,
       "occurrences": 4,
-      "onlyBlockerFor": 0
-    },
-    {
-      "code": "jsx-dynamic-attribute",
-      "components": 3,
-      "occurrences": 20,
       "onlyBlockerFor": 0
     },
     {
@@ -104,6 +92,12 @@
       "onlyBlockerFor": 0
     },
     {
+      "code": "jsx-dynamic-attribute",
+      "components": 2,
+      "occurrences": 16,
+      "onlyBlockerFor": 1
+    },
+    {
       "code": "handler-not-inline",
       "components": 2,
       "occurrences": 8,
@@ -116,13 +110,25 @@
       "onlyBlockerFor": 0
     },
     {
+      "code": "jsx-spread",
+      "components": 1,
+      "occurrences": 2,
+      "onlyBlockerFor": 0
+    },
+    {
       "code": "signal-initializer-not-literal",
       "components": 1,
       "occurrences": 1,
       "onlyBlockerFor": 0
     }
   ],
-  "onlyBlockers": [],
+  "onlyBlockers": [
+    {
+      "function": "ButtonRoot",
+      "authoredSource": "packages/core/src/button/button-root.tsx",
+      "code": "jsx-dynamic-attribute"
+    }
+  ],
   "errata": [
     {
       "id": "E1",
@@ -158,32 +164,22 @@
       "function": "SeparatorRoot",
       "alias": "Root",
       "publicPath": "@kobalte/core/separator",
-      "verdict": "fallback",
+      "verdict": "provable",
       "authoredSource": "packages/core/src/separator/separator-root.tsx",
       "chunk": "dist/separator/QhqEt4aD.jsx",
       "exported": true,
       "arms": {
         "source": {
-          "status": "fallback",
+          "status": "provable",
           "module": "packages/core/src/separator/separator-root.tsx",
           "linkedModules": 24,
-          "codes": [
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-spread"
-          ]
+          "codes": []
         },
         "dist": {
-          "status": "fallback",
+          "status": "provable",
           "module": "dist/separator/QhqEt4aD.jsx",
           "linkedModules": 5,
-          "codes": [
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-spread"
-          ]
+          "codes": []
         }
       },
       "delta": {
@@ -192,76 +188,7 @@
         "distOnly": [],
         "counts": []
       },
-      "reasons": [
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/separator/separator-root.tsx:64:4",
-          "line": 64,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "role={tagName() !== \"hr\" ? \"separator\" : undefined}",
-          "expressionBytes": 51,
-          "message": "Attribute `role` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`SeparatorRoot` was refused with `jsx-dynamic-attribute` at `role={tagName() !== \"hr\" ? \"separator\" : undefined}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/separator/separator-root.tsx:65:4",
-          "line": 65,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "aria-orientation={ mergedProps.orientation === \"vertical\" ? \"vertical\" : undefined }",
-          "expressionBytes": 91,
-          "message": "Attribute `aria-orientation` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`SeparatorRoot` was refused with `jsx-dynamic-attribute` at `aria-orientation={ mergedProps.orientation === \"vertical\" ? \"vertical\" : undefined }`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/separator/separator-root.tsx:68:4",
-          "line": 68,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "data-orientation={mergedProps.orientation}",
-          "expressionBytes": 42,
-          "message": "Attribute `data-orientation` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`SeparatorRoot` was refused with `jsx-dynamic-attribute` at `data-orientation={mergedProps.orientation}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-spread",
-          "loc": "packages/core/src/separator/separator-root.tsx:69:4",
-          "line": 69,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "{...others}",
-          "expressionBytes": 11,
-          "message": "Spread attributes hide the element's real props.",
-          "detail": null,
-          "shape": "`SeparatorRoot` was refused with `jsx-spread` at `{...others}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        }
-      ]
+      "reasons": []
     },
     {
       "entrypoint": "button",
@@ -282,9 +209,7 @@
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-spread"
+            "jsx-dynamic-attribute"
           ]
         },
         "dist": {
@@ -296,9 +221,7 @@
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-spread"
+            "jsx-dynamic-attribute"
           ]
         }
       },
@@ -389,40 +312,6 @@
           "message": "Attribute `aria-disabled` is computed, so its rendered value is not static.",
           "detail": null,
           "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? \"true\" : undefined }`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:101:4",
-          "line": 101,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "data-disabled={mergedProps.disabled ? \"\" : undefined}",
-          "expressionBytes": 53,
-          "message": "Attribute `data-disabled` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `data-disabled={mergedProps.disabled ? \"\" : undefined}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-spread",
-          "loc": "packages/core/src/button/button-root.tsx:102:4",
-          "line": 102,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "{...others}",
-          "expressionBytes": 11,
-          "message": "Spread attributes hide the element's real props.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-spread` at `{...others}`.",
           "wouldChange": {
             "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
             "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
@@ -689,7 +578,6 @@
             "handler-not-inline",
             "jsx-spread",
             "jsx-spread",
-            "jsx-spread",
             "no-signal-source"
           ]
         },
@@ -700,7 +588,6 @@
           "codes": [
             "handler-not-inline",
             "handler-not-inline",
-            "jsx-spread",
             "jsx-spread",
             "jsx-spread",
             "no-signal-source"
@@ -800,23 +687,6 @@
           "message": "Spread attributes hide the element's real props.",
           "detail": null,
           "shape": "`CheckboxControl` was refused with `jsx-spread` at `{...context.dataset()}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-spread",
-          "loc": "packages/core/src/checkbox/checkbox-control.tsx:79:4",
-          "line": 79,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "{...others}",
-          "expressionBytes": 11,
-          "message": "Spread attributes hide the element's real props.",
-          "detail": null,
-          "shape": "`CheckboxControl` was refused with `jsx-spread` at `{...others}`.",
           "wouldChange": {
             "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
             "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
@@ -1793,7 +1663,6 @@
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
-            "jsx-spread",
             "signal-escapes-to-opaque-callee",
             "signal-escapes-unanalyzable-use"
           ]
@@ -1820,7 +1689,6 @@
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
-            "jsx-spread",
             "signal-escapes-to-opaque-callee",
             "signal-escapes-unanalyzable-use"
           ]
@@ -2129,23 +1997,6 @@
             "boundAs": "CallExpression"
           },
           "shape": "`TabsTrigger` was refused with `handler-not-inline` at `onFocus={composeEventHandlers([ mergedProps.onFocus, selectableItem.onFocus, ])}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-spread",
-          "loc": "packages/core/src/tabs/tabs-trigger.tsx:179:4",
-          "line": 179,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "{...others}",
-          "expressionBytes": 11,
-          "message": "Spread attributes hide the element's real props.",
-          "detail": null,
-          "shape": "`TabsTrigger` was refused with `jsx-spread` at `{...others}`.",
           "wouldChange": {
             "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
             "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."

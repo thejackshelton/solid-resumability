@@ -153,6 +153,12 @@ function bindingKindsNote(analysis: ProvableAnalysis): string {
       ` * the record, and is not this binding's to remove.`,
     );
   }
+  if (kinds.has("spread")) {
+    lines.push(
+      ` * A "spread" binding owns the rest-attribute set of its element. It bakes`,
+      ` * no bytes; capture measures the set and resume replays a spread assign.`,
+    );
+  }
   return lines.length === 0 ? "" : `\n${lines.join("\n")}`;
 }
 
@@ -206,6 +212,16 @@ function emitBinding(binding: BindingInfo): string {
     classes: [
 ${classes}
     ],
+  },`;
+  }
+
+  if (binding.kind === "spread") {
+    return `${head}${measuredNote("initialFrom", binding.initialFrom)}
+    captures: ${slotList(binding.captures, "    ")},
+    ${BINDING_DOC[binding.origin]}
+    compute(${slotPattern(binding.captures)}) {
+      return ${binding.expression};
+    },
   },`;
   }
 
@@ -581,6 +597,13 @@ function emitManifest(analysis: ProvableAnalysis, files: string[]): string {
               ...common,
               statics: binding.statics,
               conditions: binding.conditions,
+              ...(binding.initialFrom === "capture" ? { initialFrom: "capture" } : {}),
+            };
+          }
+          if (binding.kind === "spread") {
+            return {
+              ...common,
+              expression: binding.expression,
               ...(binding.initialFrom === "capture" ? { initialFrom: "capture" } : {}),
             };
           }

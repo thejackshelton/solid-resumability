@@ -212,7 +212,18 @@ export interface ClassBindingSpec extends BindingSpecCommon {
   classes: ClassConditionSpec[];
 }
 
-export type BindingSpec = TextBindingSpec | AttributeBindingSpec | ClassBindingSpec;
+/**
+ * A binding that owns the rest-attribute set of its element. Bakes no
+ * bytes: capture measures the set, resume replays a spread assign of the
+ * identity-class rest object.
+ */
+export interface SpreadBindingSpec extends BindingSpecCommon {
+  kind: "spread";
+  initialFrom?: "derivation" | "capture";
+  compute(slots: Slots): unknown;
+}
+
+export type BindingSpec = TextBindingSpec | AttributeBindingSpec | ClassBindingSpec | SpreadBindingSpec;
 
 /**
  * A two-state `<Show>` region, in the state the build recorded.

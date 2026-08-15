@@ -10,6 +10,8 @@ import { AccessorSummaryUnseen } from "./fixtures/shapes/AccessorSummaryHost.tsx
 import { OptionsInitializerUnseen } from "./fixtures/shapes/OptionsInitializerHost.tsx";
 import { ElementIndirectionUnseen } from "./fixtures/shapes/ElementIndirectionHost.tsx";
 import { RefFanoutUnseen } from "./fixtures/shapes/RefFanoutHost.tsx";
+import { DerivedConditionalUnseen } from "./fixtures/shapes/DerivedConditionalHost.tsx";
+import { MeasuredRestUnseen } from "./fixtures/shapes/MeasuredRestHost.tsx";
 
 /**
  * THE ADVERSARIAL INSTANTIATION GATE.
@@ -695,5 +697,138 @@ describe("adversarial instantiation gate — array-ref-wiring", () => {
     expect(
       ARRAY_REF_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
     ).toEqual(["admitted-array-elements"]);
+  });
+});
+
+const CONDITIONAL_HOSTS = `${SHAPES}/DerivedConditionalHost.tsx`;
+const CONDITIONAL_COUNTER = `${SHAPES}/DerivedConditionalCounter.tsx`;
+
+/** Clauses of the derived-conditional cargo admission — first-party, no library name. */
+const DERIVED_CONDITIONAL_CLAUSES: ShapeClause[] = [
+  {
+    id: "both-branches-derivable",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function derivedConditionalCargoRule(): ShapeRuleRegistration {
+  return {
+    id: "derived-conditional-cargo",
+    clauses: DERIVED_CONDITIONAL_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "title"),
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: CONDITIONAL_COUNTER, component: "DerivedConditionalCounter" },
+    secondInstantiation: {
+      path: CONDITIONAL_HOSTS,
+      component: "DerivedConditionalUnseen",
+      render: DerivedConditionalUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — derived-conditional-cargo", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([derivedConditionalCargoRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the opaque-branch ternary", () => {
+    const lying: ShapeRuleRegistration = { ...derivedConditionalCargoRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("derived-conditional-cargo");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(CONDITIONAL_HOSTS, "DerivedConditionalHost");
+    const lying: ShapeRuleRegistration = {
+      ...derivedConditionalCargoRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="cond" title="on">seen</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("derived-conditional-cargo");
+  });
+
+  it("the counter-instantiation fails exactly the both-branches-derivable clause", () => {
+    const counter = classify(CONDITIONAL_COUNTER, "DerivedConditionalCounter");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-dynamic-attribute")).toBe(true);
+    expect(
+      DERIVED_CONDITIONAL_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["both-branches-derivable"]);
+  });
+});
+
+const REST_HOSTS = `${SHAPES}/MeasuredRestHost.tsx`;
+const REST_COUNTER = `${SHAPES}/MeasuredRestCounter.tsx`;
+
+/** Clauses of the measured rest-spread admission — first-party, no library name. */
+const MEASURED_REST_CLAUSES: ShapeClause[] = [
+  {
+    id: "identity-class-rest",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+  {
+    id: "no-dynamic-attribute",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+];
+
+function measuredRestSpreadRule(): ShapeRuleRegistration {
+  return {
+    id: "measured-rest-spread",
+    clauses: MEASURED_REST_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" && analysis.bindings.some((binding) => binding.kind === "spread"),
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: REST_COUNTER, component: "MeasuredRestCounter" },
+    secondInstantiation: {
+      path: REST_HOSTS,
+      component: "MeasuredRestUnseen",
+      render: MeasuredRestUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — measured-rest-spread", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([measuredRestSpreadRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the call-valued spread", () => {
+    const lying: ShapeRuleRegistration = { ...measuredRestSpreadRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("measured-rest-spread");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(REST_HOSTS, "MeasuredRestHost");
+    const lying: ShapeRuleRegistration = {
+      ...measuredRestSpreadRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="rest">seen</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("measured-rest-spread");
+  });
+
+  it("the counter-instantiation fails exactly the identity-class-rest clause", () => {
+    const counter = classify(REST_COUNTER, "MeasuredRestCounter");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-spread")).toBe(true);
+    expect(
+      MEASURED_REST_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["identity-class-rest"]);
   });
 });

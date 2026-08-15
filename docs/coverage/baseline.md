@@ -56,8 +56,8 @@ Ranked by how many distinct components carry the code; occurrences break ties.
 | 1 | `jsx-component-element` | 2 | 6 | 0 |
 | 2 | `handler-unsupported-syntax` | 1 | 4 | 0 |
 | 3 | `handler-captures-unprovable-binding` | 1 | 2 | 0 |
-| 4 | `jsx-dynamic-attribute` | 1 | 2 | 0 |
-| 5 | `jsx-dynamic-child-not-derivable` | 1 | 2 | 0 |
+| 4 | `jsx-dynamic-child-not-derivable` | 1 | 2 | 0 |
+| 5 | `jsx-dynamic-attribute` | 1 | 1 | 0 |
 | 6 | `no-signal-source` | 1 | 1 | 0 |
 
 ### Only-blockers

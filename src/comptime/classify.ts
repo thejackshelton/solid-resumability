@@ -84,6 +84,18 @@
  * (function call vs assignment) to each forwarded path, before any effect
  * runs. A replay-free measured multi-ref is not this admission.
  *
+ * MEASURED ATTRIBUTE CARGO admits three derive shapes and one rest-spread,
+ * all structural, no user-name match. (a) A zero-argument call of a
+ * C1-summarized derived accessor is measured: the getter is not a source
+ * cell, so the attribute bakes zero bytes. (b) A member read of an
+ * identity-class binding (`own-props-parameter` / `derived-rest-props-result`
+ * via `sourceBindingOf`) in a standalone frame is measured. (c) A
+ * ConditionalExpression whose test `deriveCondition`s and whose both
+ * branches `derive` is measured-propagating. A measured identity
+ * rest-spread (`{...ident}`) on an own-frame intrinsic bakes nothing;
+ * capture measures the attribute set and resume replays a spread assign.
+ * A call-valued or non-identity spread still refuses `jsx-spread`.
+ *
  * Addressing is offered in the component's OWN address space only: never
  * through a props boundary (`frame.props !== null`, exactly as inlining's one
  * hop) and never inside a keyed region, whose locators are rooted at an ITEM
@@ -259,7 +271,8 @@ interface Accessor {
   access: "read" | "write";
   name: string;
   /** True for a callee-local getter bound at a derived-accessor call site.
-   * Template-byte uses still refuse (the getter is not a source cell). */
+   * A zero-argument call of that getter is a measured derivation: no source
+   * cell, so a template-byte use bakes nothing. */
   derived?: boolean;
 }
 
@@ -1247,6 +1260,22 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     };
   }
 
+  /**
+   * A member read of an identity-class binding in this component's own
+   * frame, with no parent-handed identity record. Measured: the member is
+   * runtime cargo, never a frozen value.
+   */
+  function standaloneIdentityMember(node: Node): CaptureSlot | null {
+    const source = sourceBindingOf(node);
+    if (source === null || source.path.length === 0) return null;
+    return {
+      name: String(source.path[source.path.length - 1]),
+      kind: "identity",
+      bindingClass: source.class,
+      source: { name: source.name, path: source.path },
+    };
+  }
+
   const root = unwrap(component.returnArgument);
   let html = "";
 
@@ -1561,6 +1590,11 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       onKind?.(attributeKindOf(attribute));
 
       if (attribute.type === "JSXSpreadAttribute") {
+        const spread = collectMeasuredRestSpread(frame, attribute, locator);
+        if (spread !== null) {
+          open += spread;
+          continue;
+        }
         frame.refuse("jsx-spread", "Spread attributes hide the element's real props.", attribute);
         continue;
       }
@@ -1836,6 +1870,39 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   }
 
   /**
+   * An own-frame identifier rest-spread of an identity-class binding.
+   * Bakes nothing: capture measures the attribute set, resume replays a
+   * spread assign. Call-valued and non-identity spreads stay refused.
+   */
+  function collectMeasuredRestSpread(frame: Frame, attribute: Node, locator: string): string | null {
+    if (frame.props !== null) return null;
+    const argument = unwrap(attribute.argument);
+    if (argument == null || argument.type !== "Identifier") return null;
+    const source = sourceBindingOf(argument);
+    if (source === null) return null;
+
+    sink.bindings.push({
+      id: `${sink.prefix}b${sink.bindings.length}`,
+      kind: "spread",
+      locator,
+      captures: sortedSlots([
+        {
+          name: argument.name,
+          kind: "identity",
+          bindingClass: source.class,
+          source: { name: source.name, path: source.path },
+        },
+      ]),
+      expression: argument.name,
+      initialFrom: "capture",
+      origin: "component",
+      loc: frame.locOf(attribute),
+    });
+
+    return "";
+  }
+
+  /**
    * One attribute whose value is a derivation rather than a constant — the
    * `checked={done()}` shape. Returns the markup the template carries for it, or
    * null to leave the attribute refused.
@@ -1860,8 +1927,9 @@ export function classifySite(module: Module, component: ComponentSite, options?:
 
     const derived = deriveCondition(frame, expression);
     if (derived === null) return null;
-    // Identity cargo in an attribute position reaches template bytes.
-    if (derived.slots.some(isIdentitySlot)) return null;
+    // A non-measured identity would reach template bytes. Measured identity
+    // bakes nothing: capture fills the hole.
+    if (derived.slots.some(isIdentitySlot) && !derived.measured) return null;
 
     const name = ATTRIBUTE_ALIASES[propName] ?? propName;
     const property = STATE_PROPERTIES[tag]?.has(propName) === true;
@@ -2447,7 +2515,8 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     reach(frame, container);
     const expression = unwrap(container.expression);
     if (expression == null || expression.type === "JSXEmptyExpression") return;
-    if (deriveText(frame, expression) !== null) return;
+    const derived = deriveText(frame, expression);
+    if (derived !== null && !(derived.slots.some(isIdentitySlot) && identityRecords === null)) return;
     frame.refuse(
       "jsx-dynamic-child-not-derivable",
       "This text child is not derivable from cell values and literals alone.",
@@ -2463,7 +2532,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     if (expression == null || expression.type === "JSXEmptyExpression") return "";
 
     const derived = deriveText(frame, expression);
-    if (derived === null) {
+    if (derived === null || (derived.slots.some(isIdentitySlot) && identityRecords === null)) {
       frame.refuse(
         "jsx-dynamic-child-not-derivable",
         "This text child is not derivable from cell values and literals alone.",
@@ -2529,7 +2598,12 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     }
 
     // Only reachable in a helper frame: a parameter standing for a plain value.
+    // The global `undefined` is a frozen initial in every frame, same seat as
+    // the cell-initializer widening.
     if (expression.type === "Identifier") {
+      if (isGlobalUndefined(mod, expression)) {
+        return { value: null, slots: [], source: verbatim(), inlined: false, measured: false };
+      }
       if (env === null) return null;
       const symbol = mod.referenceOf(expression)?.symbol ?? null;
       const bound = symbol === null ? undefined : env.get(symbol.id);
@@ -2588,6 +2662,16 @@ export function classifySite(module: Module, component: ComponentSite, options?:
             measured: true,
           };
         }
+        const standalone = standaloneIdentityMember(expression);
+        if (standalone !== null) {
+          return {
+            value: "",
+            slots: [standalone],
+            source: verbatim(),
+            inlined: false,
+            measured: true,
+          };
+        }
       }
 
       // Inlined-child frame only: `props.X` standing for a call-site literal.
@@ -2632,7 +2716,16 @@ export function classifySite(module: Module, component: ComponentSite, options?:
             : envAccessor(env, symbol.id);
 
       if (accessor !== undefined) {
-        if (accessor.derived) return null;
+        if (accessor.derived) {
+          if (accessor.access !== "read" || expression.arguments.length !== 0) return null;
+          return {
+            value: "",
+            slots: [],
+            source: env === null ? verbatim() : `${accessor.name}()`,
+            inlined: env !== null,
+            measured: true,
+          };
+        }
         if (accessor.access !== "read" || expression.arguments.length !== 0) return null;
         const cell = cells.find((candidate) => candidate.id === accessor.cellId);
         if (cell === undefined) return null;
@@ -2671,6 +2764,28 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         // Parenthesized when reassembled: the parts no longer sit in the source
         // positions whose precedence made them safe.
         source: inlined ? `(${left.source} ${expression.operator} ${right.source})` : verbatim(),
+        inlined,
+      };
+    }
+
+    if (isVoid0(expression)) {
+      return { value: null, slots: [], source: verbatim(), inlined: false, measured: false };
+    }
+
+    if (expression.type === "ConditionalExpression") {
+      const condition = deriveCondition(frame, expression.test);
+      const consequent = derive(mod, expression.consequent, env, frame);
+      const alternate = derive(mod, expression.alternate, env, frame);
+      if (condition === null || consequent === null || alternate === null) return null;
+      const measured = condition.measured || consequent.measured || alternate.measured;
+      const inlined = condition.inlined || consequent.inlined || alternate.inlined;
+      return {
+        value: measured ? "" : condition.value ? consequent.value : alternate.value,
+        measured,
+        slots: [...condition.slots, ...consequent.slots, ...alternate.slots],
+        source: inlined
+          ? `(${condition.source} ? ${consequent.source} : ${alternate.source})`
+          : verbatim(),
         inlined,
       };
     }

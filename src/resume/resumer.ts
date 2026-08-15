@@ -191,6 +191,12 @@ function sameCaptures(a: CaptureSlotSpec[], b: CaptureSlotSpec[]): boolean {
  * the element; any other object is assigned (`.value`). Nullish is a no-op
  * — a caller that passed no ref is not a missing join.
  */
+/** Replays one identity rest-spread onto the located element. */
+function assignSpread(element: Element, rest: unknown): void {
+  if (rest == null || typeof rest !== "object") return;
+  Object.assign(element, rest);
+}
+
 function applySolidRef(target: unknown, element: Element): void {
   if (target == null) return;
   if (typeof target === "function") {
@@ -335,6 +341,21 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
   }
   flush();
 
+  // Measured identity rest-spread. The template baked no attribute bytes;
+  // resume assigns the live rest object onto the located element.
+  for (const binding of bindings) {
+    const spec = binding.spec;
+    if (spec.kind !== "spread") continue;
+    const element = binding.element;
+    for (const slot of spec.captures) {
+      if (!isIdentitySlot(slot)) continue;
+      if (!options.identities) {
+        throw new Error(`resume: ${component} needs an identity registry for spread slot ${slot.name}`);
+      }
+      assignSpread(element, options.identities.resolve(container, slot.source));
+    }
+  }
+
   // The one thing served markup cannot say. A property-backed attribute is DOM
   // state rather than bytes — `input.checked` is not the `checked` attribute —
   // so the value the build folded is written here, before any behaviour exists
@@ -405,6 +426,8 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
       }
       return moved;
     }
+
+    if (spec.kind === "spread") return false;
 
     if (spec.kind === "attribute") {
       if (spec.attribute === "ref") return false;

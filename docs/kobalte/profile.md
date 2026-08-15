@@ -46,16 +46,16 @@ Each arm is seeded from its entrypoint module — `packages/core/src/<entrypoint
 
 ## Headline
 
-**0 / 12 of the pre-registered functions classify `provable` (0.0%).**
+**1 / 12 of the pre-registered functions classify `provable` (8.3%).**
 
-None of the 12 pre-registered functions is provable under this repo's comptime pass as it stands. That is a claim over a closed, enumerated set — it is why the set is enumerated — and it should not be read as a claim about Kobalte's other entrypoints.
+1 of the 12 classify provable and 11 refuse. Both halves are reported below in the same form.
 
 The two arms **agree on status for all 12**, and 11 of 12 carry identical reason-code multisets. The divergences are in the delta section. **That agreement is not corroboration of one cause. Read the errata immediately below before treating it as one.**
 
 | Segment | Files | Components | Provable | Fallback | Provable fraction |
 |---|---|---|---|---|---|
-| `kobalte-source` | 12 | 12 | 0 | 12 | 0.0% |
-| `kobalte-dist` | 6 | 12 | 0 | 12 | 0.0% |
+| `kobalte-source` | 12 | 12 | 1 | 11 | 8.3% |
+| `kobalte-dist` | 6 | 12 | 1 | 11 | 8.3% |
 
 The two segments are the same twelve functions read from the same artifact before and after rolldown, so the rows are a corroboration rather than two populations. The file counts differ because rolldown merges an entrypoint's parts into one chunk.
 
@@ -102,16 +102,11 @@ Columns (a) and (b) are never merged. (a) is what Kobalte would have to change. 
 | Authored source (source arm) | `packages/core/src/separator/separator-root.tsx` |
 | Chunk (dist arm) | `dist/separator/QhqEt4aD.jsx` |
 | Exported from its module | yes |
-| Verdict, source arm | **fallback** |
-| Verdict, dist arm | **fallback** |
-| Reason set | 4 occurrence(s) across 2 code(s) |
+| Verdict, source arm | **provable** |
+| Verdict, dist arm | **provable** |
+| Reason set | 0 occurrence(s) across 0 code(s) |
 
-| Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
-|---|---|---|---|---|---|---|
-| `jsx-dynamic-attribute` | `64:4` | `role={tagName() !== "hr" ? "separator" : undefined}` | `SeparatorRoot` was refused with `jsx-dynamic-attribute` at `role={tagName() !== "hr" ? "separator" : undefined}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-dynamic-attribute` | `65:4` | `aria-orientation={ mergedProps.orientation === "vertical" ? "vertical" : undefined }` | `SeparatorRoot` was refused with `jsx-dynamic-attribute` at `aria-orientation={ mergedProps.orientation === "vertical" ? "vertical" : undefined }`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-dynamic-attribute` | `68:4` | `data-orientation={mergedProps.orientation}` | `SeparatorRoot` was refused with `jsx-dynamic-attribute` at `data-orientation={mergedProps.orientation}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-spread` | `69:4` | `{...others}` | `SeparatorRoot` was refused with `jsx-spread` at `{...others}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
+No refusal reasons: this function classified `provable`.
 
 ### `ButtonRoot` — `@kobalte/core/button` -> `Root`
 
@@ -124,7 +119,7 @@ Columns (a) and (b) are never merged. (a) is what Kobalte would have to change. 
 | Exported from its module | yes |
 | Verdict, source arm | **fallback** |
 | Verdict, dist arm | **fallback** |
-| Reason set | 7 occurrence(s) across 2 code(s) |
+| Reason set | 5 occurrence(s) across 1 code(s) |
 
 | Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
 |---|---|---|---|---|---|---|
@@ -133,8 +128,6 @@ Columns (a) and (b) are never merged. (a) is what Kobalte would have to change. 
 | `jsx-dynamic-attribute` | `88:4` | `tabindex={ !isNativeButton() && !isNativeLink() && !mergedProps.disabled ? 0 : undefined }` | `ButtonRoot` was refused with `jsx-dynamic-attribute` at `tabindex={ !isNativeButton() && !isNativeLink() && !mergedProps.disabled ? 0 : undefined }`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `jsx-dynamic-attribute` | `93:4` | `disabled={ isNativeButton() \|\| isNativeInput() ? mergedProps.disabled : undefined }` | `ButtonRoot` was refused with `jsx-dynamic-attribute` at `disabled={ isNativeButton() \|\| isNativeInput() ? mergedProps.disabled : undefined }`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `jsx-dynamic-attribute` | `96:4` | `aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? "true" : undefined }` | `ButtonRoot` was refused with `jsx-dynamic-attribute` at `aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? "true" : undefined }`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-dynamic-attribute` | `101:4` | `data-disabled={mergedProps.disabled ? "" : undefined}` | `ButtonRoot` was refused with `jsx-dynamic-attribute` at `data-disabled={mergedProps.disabled ? "" : undefined}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-spread` | `102:4` | `{...others}` | `ButtonRoot` was refused with `jsx-spread` at `{...others}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 
 ### `CheckboxRoot` — `@kobalte/core/checkbox` -> `Root`
 
@@ -173,7 +166,7 @@ Columns (a) and (b) are never merged. (a) is what Kobalte would have to change. 
 | Exported from its module | yes |
 | Verdict, source arm | **fallback** |
 | Verdict, dist arm | **fallback** |
-| Reason set | 6 occurrence(s) across 3 code(s) |
+| Reason set | 5 occurrence(s) across 3 code(s) |
 
 | Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
 |---|---|---|---|---|---|---|
@@ -182,7 +175,6 @@ Columns (a) and (b) are never merged. (a) is what Kobalte would have to change. 
 | `handler-not-inline` | `76:4` | `onKeyDown={onKeyDown}` | `CheckboxControl` was refused with `handler-not-inline` at `onKeyDown={onKeyDown}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `jsx-spread` | `77:4` | `{...formControlContext.dataset()}` | `CheckboxControl` was refused with `jsx-spread` at `{...formControlContext.dataset()}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `jsx-spread` | `78:4` | `{...context.dataset()}` | `CheckboxControl` was refused with `jsx-spread` at `{...context.dataset()}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-spread` | `79:4` | `{...others}` | `CheckboxControl` was refused with `jsx-spread` at `{...others}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 
 ### `CheckboxIndicator` — `@kobalte/core/checkbox` -> `Indicator`
 
@@ -326,7 +318,7 @@ Columns (a) and (b) are never merged. (a) is what Kobalte would have to change. 
 | Exported from its module | yes |
 | Verdict, source arm | **fallback** |
 | Verdict, dist arm | **fallback** |
-| Reason set | 20 occurrence(s) across 5 code(s) |
+| Reason set | 19 occurrence(s) across 4 code(s) |
 
 | Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
 |---|---|---|---|---|---|---|
@@ -347,7 +339,6 @@ Columns (a) and (b) are never merged. (a) is what Kobalte would have to change. 
 | `handler-not-inline` | `167:4` | `onKeyDown={composeEventHandlers([ mergedProps.onKeyDown, selectableItem.onKeyDown, ])}` | `TabsTrigger` was refused with `handler-not-inline` at `onKeyDown={composeEventHandlers([ mergedProps.onKeyDown, selectableItem.onKeyDown, ])}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `handler-not-inline` | `171:4` | `onMouseDown={composeEventHandlers([ mergedProps.onMouseDown, selectableItem.onMouseDown, ])}` | `TabsTrigger` was refused with `handler-not-inline` at `onMouseDown={composeEventHandlers([ mergedProps.onMouseDown, selectableItem.onMouseDown, ])}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `handler-not-inline` | `175:4` | `onFocus={composeEventHandlers([ mergedProps.onFocus, selectableItem.onFocus, ])}` | `TabsTrigger` was refused with `handler-not-inline` at `onFocus={composeEventHandlers([ mergedProps.onFocus, selectableItem.onFocus, ])}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-spread` | `179:4` | `{...others}` | `TabsTrigger` was refused with `jsx-spread` at `{...others}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `signal-escapes-unanalyzable-use` | `107:4` | `ref` | `ref` is packed into the options object literal Kobalte hands to `createDomCollectionItem(…)`, so the cell leaves `TabsTrigger` as a field of an argument the pass cannot follow. | Pass `createDomCollectionItem` a value it can read rather than the cell itself, so what crosses the call boundary is data instead of a live signal. | NOT AUTHORIZED under zero-Solid-API-changes — follow a signal through an options-object field into `createDomCollectionItem` and summarize what it does there. | same in both arms |
 | `signal-escapes-to-opaque-callee` | `121:3` | `ref` | `ref` is handed to `createSelectableItem`, a Kobalte primitive defined in `packages/core/src/selection/create-selectable-item.ts`, outside this component, so what that primitive does with the signal is invisible and the cell cannot be proved to stay inside `TabsTrigger`. | Have `createSelectableItem` take a plain value and a callback rather than the signal pair, so the cell never crosses the module edge. | NOT AUTHORIZED under zero-Solid-API-changes — summarize what `createSelectableItem` does with the signal instead of treating every out-of-component callee as opaque. | same in both arms |
 
@@ -380,22 +371,22 @@ Ranked by how many distinct components carry the code; occurrences break ties. S
 |---|---|---|---|---|
 | 1 | `jsx-component-element` | 8 | 14 | 0 |
 | 2 | `signal-escapes-unanalyzable-use` | 7 | 24 | 0 |
-| 3 | `jsx-spread` | 4 | 6 | 0 |
-| 4 | `show-branch-not-static-at-capture` | 4 | 4 | 0 |
-| 5 | `jsx-dynamic-attribute` | 3 | 20 | 0 |
-| 6 | `signal-escapes-to-opaque-callee` | 3 | 5 | 0 |
-| 7 | `no-signal-source` | 3 | 3 | 0 |
-| 8 | `handler-not-inline` | 2 | 8 | 0 |
-| 9 | `jsx-dynamic-child-not-derivable` | 2 | 2 | 0 |
+| 3 | `show-branch-not-static-at-capture` | 4 | 4 | 0 |
+| 4 | `signal-escapes-to-opaque-callee` | 3 | 5 | 0 |
+| 5 | `no-signal-source` | 3 | 3 | 0 |
+| 6 | `jsx-dynamic-attribute` | 2 | 16 | 1 |
+| 7 | `handler-not-inline` | 2 | 8 | 0 |
+| 8 | `jsx-dynamic-child-not-derivable` | 2 | 2 | 0 |
+| 9 | `jsx-spread` | 1 | 2 | 0 |
 | 10 | `signal-initializer-not-literal` | 1 | 1 | 0 |
 
 ## Only-blockers
 
 Components whose entire refusal set is a single code — lift that code and they flip.
 
-_No function among the 12 is blocked by exactly one code._
-
-That is the load-bearing finding of this table rather than an empty result. Each of the 12 carries between 2 and 5 distinct codes, so no single change on either side of the line flips any of them: the shapes stack.
+| Component | File | Only blocker |
+|---|---|---|
+| `ButtonRoot` | `packages/core/src/button/button-root.tsx` | `jsx-dynamic-attribute` |
 
 ## Source vs dist: the reason-code delta
 
@@ -424,8 +415,8 @@ The two arms are the same artifact before and after rolldown, so this difference
 
 | Component | File | Exported | Verdict | Inlined by | Codes |
 |---|---|---|---|---|---|
-| `SeparatorRoot` | `packages/core/src/separator/separator-root.tsx` | yes | fallback | — | `jsx-dynamic-attribute`<br>`jsx-spread` |
-| `ButtonRoot` | `packages/core/src/button/button-root.tsx` | yes | fallback | — | `jsx-dynamic-attribute`<br>`jsx-spread` |
+| `SeparatorRoot` | `packages/core/src/separator/separator-root.tsx` | yes | provable | — | — |
+| `ButtonRoot` | `packages/core/src/button/button-root.tsx` | yes | fallback | — | `jsx-dynamic-attribute` |
 | `CheckboxRoot` | `packages/core/src/checkbox/checkbox-root.tsx` | yes | fallback | — | `jsx-component-element`<br>`jsx-dynamic-child-not-derivable`<br>`signal-escapes-to-opaque-callee`<br>`signal-escapes-unanalyzable-use` |
 | `CheckboxControl` | `packages/core/src/checkbox/checkbox-control.tsx` | yes | fallback | — | `handler-not-inline`<br>`jsx-spread`<br>`no-signal-source` |
 | `CheckboxIndicator` | `packages/core/src/checkbox/checkbox-indicator.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |
@@ -434,7 +425,7 @@ The two arms are the same artifact before and after rolldown, so this difference
 | `DialogContent` | `packages/core/src/dialog/dialog-content.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |
 | `DialogPortal` | `packages/core/src/dialog/dialog-portal.tsx` | yes | fallback | — | `jsx-component-element`<br>`no-signal-source`<br>`show-branch-not-static-at-capture` |
 | `TabsRoot` | `packages/core/src/tabs/tabs-root.tsx` | yes | fallback | — | `jsx-component-element`<br>`signal-escapes-unanalyzable-use`<br>`signal-initializer-not-literal` |
-| `TabsTrigger` | `packages/core/src/tabs/tabs-trigger.tsx` | yes | fallback | — | `handler-not-inline`<br>`jsx-dynamic-attribute`<br>`jsx-spread`<br>`signal-escapes-to-opaque-callee`<br>`signal-escapes-unanalyzable-use` |
+| `TabsTrigger` | `packages/core/src/tabs/tabs-trigger.tsx` | yes | fallback | — | `handler-not-inline`<br>`jsx-dynamic-attribute`<br>`signal-escapes-to-opaque-callee`<br>`signal-escapes-unanalyzable-use` |
 | `PopoverContent` | `packages/core/src/popover/popover-content.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |
 
 ## Determinism

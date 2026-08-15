@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { afterAll, describe, expect, it } from "vitest";
 
+import { runComptime } from "../src/comptime/index.ts";
 import { createIdentityRegistry } from "../src/resume/identities.ts";
+import { createRegistry, type Bundle, type HandlerModule, type IdentityCaptureSlotSpec } from "../src/resume/registry.ts";
 import { resumeBundle } from "../src/resume/resumer.ts";
-import type { Bundle, HandlerModule, IdentityCaptureSlotSpec } from "../src/resume/registry.ts";
 
 /**
  * v2 resume join — a live prop value, by identity, never serialized.
@@ -388,5 +392,76 @@ describe("mount-time restore of a measured attribute from a rest-props identity"
     expect(node.getAttribute("role")).toBe("separator");
     expect([...node.attributes].map((attr) => attr.name).sort()).toEqual(["role"]);
     app.dispose();
+  });
+});
+
+/**
+ * WP2 rehearsal: emit the four-shape conjunction and resume that bundle.
+ * The page owns the live orientation object and the rest projection; it
+ * does not re-run component-body merge/omit beyond those two provides.
+ */
+const CONJUNCTION = "test/fixtures/shapes/FoldedMeasuredHost.tsx";
+const conjunctionDirs: string[] = [];
+
+function conjunctionScratch(): string {
+  const dir = mkdtempSync(join(process.cwd(), ".artifacts-conjunction-"));
+  conjunctionDirs.push(dir);
+  return dir;
+}
+
+afterAll(() => {
+  for (const dir of conjunctionDirs) rmSync(dir, { recursive: true, force: true });
+});
+
+describe("emitted four-shape conjunction resumes measured attrs at mount", () => {
+  it("emits a full bundle and paints identity cargo the build did not bake", async () => {
+    const outRoot = conjunctionScratch();
+    const result = runComptime(CONJUNCTION, { component: "FoldedMeasuredHost", outRoot });
+    expect(result.analysis.status).toBe("provable");
+    if (result.analysis.status !== "provable" || result.emitted === null) {
+      throw new Error("expected the conjunction host to emit");
+    }
+    expect(result.analysis.html).toBe("<hr>");
+    expect(result.emitted.files).toEqual(expect.arrayContaining(["manifest.json", "structure.js", "template.js", "wiring.js"]));
+
+    const dir = result.emitted.dir;
+    const load = async (file: string) =>
+      (await import(pathToFileURL(join(dir, file)).href)) as Record<string, unknown>;
+    const template = await load("template.js");
+    const structure = await load("structure.js");
+    const wiring = await load("wiring.js");
+    const registry = createRegistry(
+      {
+        "/artifacts/FoldedMeasuredHost/template.js": template,
+        "/artifacts/FoldedMeasuredHost/structure.js": structure,
+        "/artifacts/FoldedMeasuredHost/wiring.js": wiring,
+      },
+      {},
+    );
+    const bundle = registry.get("FoldedMeasuredHost");
+    if (!bundle) throw new Error("no bundle for FoldedMeasuredHost");
+
+    const live = { orientation: "vertical", id: "from-page" };
+    const others = { id: "from-page" };
+    const handle = (node: Element) => {
+      void node;
+    };
+    const identities = createIdentityRegistry();
+    const host = document.createElement("div");
+    host.innerHTML = bundle.template!.html;
+    document.body.appendChild(host);
+    identities.provide(host, { name: "orientation", path: ["orientation"] }, live);
+    identities.provide(host, { name: "orientation", path: ["handle"] }, handle);
+    identities.provide(host, { name: "others", path: [] }, others);
+
+    const app = resumeBundle(host, bundle, { identities });
+    const node = host.querySelector("hr")!;
+    expect(node.getAttribute("role")).toBe("separator");
+    expect(node.getAttribute("aria-orientation")).toBe("vertical");
+    expect(node.getAttribute("data-orientation")).toBe("vertical");
+    expect(node.getAttribute("id")).toBe("from-page");
+    expect(Object.is(identities.resolve(host, { name: "others", path: [] }), others)).toBe(true);
+    app.dispose();
+    host.remove();
   });
 });

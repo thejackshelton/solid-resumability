@@ -283,6 +283,60 @@ describe("S7 — a component whose root is a provider element", () => {
   });
 });
 
+describe("the four-shape conjunction — folded measured intrinsic", () => {
+  const host = shape("FoldedMeasuredHost.tsx", "FoldedMeasuredHost");
+  const unseen = shape("FoldedMeasuredHost.tsx", "FoldedMeasuredUnseen");
+  const counter = shape("FoldedMeasuredCounter.tsx", "FoldedMeasuredCounter");
+
+  it("classifies the standalone host as provable, folding to a bare intrinsic", () => {
+    expect(host.status).toBe("provable");
+    if (host.status !== "provable") return;
+    expect(host.html).toBe("<hr>");
+    expect(host.reasons).toEqual([]);
+  });
+
+  it("carries all four sub-shapes on that one component", () => {
+    expect(host.status).toBe("provable");
+    if (host.status !== "provable") return;
+    expect(host.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "ref")).toBe(
+      true,
+    );
+    expect(
+      host.bindings.some(
+        (binding) =>
+          binding.kind === "attribute" &&
+          binding.attribute === "role" &&
+          binding.initialValue === null &&
+          binding.initialValueFrom === "capture",
+      ),
+    ).toBe(true);
+    expect(
+      host.bindings.some(
+        (binding) =>
+          binding.kind === "attribute" &&
+          binding.attribute === "aria-orientation" &&
+          binding.initialValue === null,
+      ),
+    ).toBe(true);
+    expect(host.bindings.some((binding) => binding.kind === "spread")).toBe(true);
+  });
+
+  it("classifies the unseen pairing the same way — both analyzeFixture arms", () => {
+    expect(unseen.status).toBe("provable");
+    if (unseen.status !== "provable") return;
+    expect(unseen.html).toBe("<hr>");
+    expect(unseen.bindings.some((binding) => binding.kind === "spread")).toBe(true);
+    expect(unseen.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "ref")).toBe(
+      true,
+    );
+  });
+
+  it("refuses the call-valued spread counter, and only that", () => {
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toEqual(["jsx-spread"]);
+  });
+});
+
 describe("the corpus as a whole", () => {
   it("refuses every shape, and refuses each for a different reason", () => {
     // The account's own claim, asserted as one fact. Six shapes, six codes, no

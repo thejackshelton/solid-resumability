@@ -12,6 +12,7 @@ import { ElementIndirectionUnseen } from "./fixtures/shapes/ElementIndirectionHo
 import { RefFanoutUnseen } from "./fixtures/shapes/RefFanoutHost.tsx";
 import { DerivedConditionalUnseen } from "./fixtures/shapes/DerivedConditionalHost.tsx";
 import { MeasuredRestUnseen } from "./fixtures/shapes/MeasuredRestHost.tsx";
+import { FoldedMeasuredSeenLive, FoldedMeasuredUnseenLive } from "./fixtures/shapes/FoldedMeasuredHost.tsx";
 
 /**
  * THE ADVERSARIAL INSTANTIATION GATE.
@@ -829,6 +830,90 @@ describe("adversarial instantiation gate — measured-rest-spread", () => {
     expect(codes(counter).has("jsx-spread")).toBe(true);
     expect(
       MEASURED_REST_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["identity-class-rest"]);
+  });
+});
+
+const CONJUNCTION_HOSTS = `${SHAPES}/FoldedMeasuredHost.tsx`;
+const CONJUNCTION_COUNTER = `${SHAPES}/FoldedMeasuredCounter.tsx`;
+
+/** Clauses of the four-shape conjunction — first-party, no library name. */
+const FOLDED_MEASURED_CLAUSES: ShapeClause[] = [
+  {
+    id: "literal-intrinsic-tag",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-component-element"),
+  },
+  {
+    id: "admitted-array-elements",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+  {
+    id: "both-branches-derivable",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+  {
+    id: "identity-class-rest",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function measureFoldedMeasured(render: () => unknown): string {
+  const host = mount(render);
+  const node = host.querySelector("hr");
+  return node?.outerHTML ?? host.innerHTML;
+}
+
+function foldedMeasuredConjunctionRule(): ShapeRuleRegistration {
+  return {
+    id: "folded-measured-conjunction",
+    clauses: FOLDED_MEASURED_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.html === "<hr>" &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "ref") &&
+      analysis.bindings.some((binding) => binding.kind === "spread") &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "role"),
+    publishedHtml: () => measureFoldedMeasured(FoldedMeasuredUnseenLive),
+    counterInstantiation: { path: CONJUNCTION_COUNTER, component: "FoldedMeasuredCounter" },
+    secondInstantiation: {
+      path: CONJUNCTION_HOSTS,
+      component: "FoldedMeasuredUnseen",
+      render: FoldedMeasuredUnseenLive,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — folded-measured-conjunction", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([foldedMeasuredConjunctionRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the call-valued spread", () => {
+    const lying: ShapeRuleRegistration = { ...foldedMeasuredConjunctionRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("folded-measured-conjunction");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's cargo", () => {
+    const first = measureFoldedMeasured(FoldedMeasuredSeenLive);
+    const lying: ShapeRuleRegistration = {
+      ...foldedMeasuredConjunctionRule(),
+      publishedHtml: () => first,
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("folded-measured-conjunction");
+  });
+
+  it("the counter-instantiation fails exactly the identity-class-rest clause", () => {
+    const counter = classify(CONJUNCTION_COUNTER, "FoldedMeasuredCounter");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-spread")).toBe(true);
+    expect(
+      FOLDED_MEASURED_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
     ).toEqual(["identity-class-rest"]);
   });
 });

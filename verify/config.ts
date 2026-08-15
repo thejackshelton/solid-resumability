@@ -25,6 +25,7 @@ export const ORIGINS = {
 export const PAGES = {
 	fixtures: '/fixtures/fixtures.html',
 	todos: '/todos/todos.html',
+	rule: '/rule/rule.html',
 } as const;
 
 export function pageUrl(variant: Variant, page: keyof typeof PAGES): string {
@@ -320,3 +321,43 @@ export const TODOS_EAGER_JS_CAP_BYTES = 15_500;
  */
 export const TODOS_GROUP_RAW_CAP = 63_000;
 export const TODOS_GROUP_GZ_CAP = 23_500;
+
+/**
+ * Eager-JS ceiling for the resumable rule page, in bytes on the wire.
+ *
+ * Own page, own cap: ceiling is parity with fixtures (20,000 B) and is not
+ * to be moved to fit a build. The recorded baseline is the last measured
+ * eager file size (T045: 13,445 B), not a diff.
+ */
+export const RULE_EAGER_JS_CAP_BYTES = 20_000;
+
+/** Last recorded rule-page eager file bytes (T045). Reported, not asserted. */
+export const RULE_EAGER_JS_BASELINE_BYTES = 13_445;
+
+/**
+ * The rule page's one mount: the installed package's own SeparatorRoot,
+ * addressed by the artifact directory the build stamped into the markup.
+ *
+ * `artifactId` is what `data-resume` carries and what the eager entry names
+ * in its glob map. The box asserts those two strings are the same string.
+ */
+export const RULE_ARTIFACT = 'QhqEt4aD.SeparatorRoot';
+export const RULE_COMPONENT = 'SeparatorRoot';
+export const RULE_MOUNT = `[data-resume="${RULE_ARTIFACT}"]`;
+
+/**
+ * Identities the page publishes at the mount site (`demo/src/rule-page.ts`).
+ *
+ * These are the caller's own props object and rest projection — not attribute
+ * values the page or the box paints. The box feeds them to the artifact's
+ * own compute and asserts the live DOM against that result.
+ */
+export const RULE_ORIENTATION_PROVIDE = { orientation: 'vertical' } as const;
+export const RULE_REST_PROVIDE = { id: 'rule-root' } as const;
+
+/**
+ * The tag-name effect contract for this folded intrinsic: createTagName's
+ * fallback is `"hr"`, and the served host is `<hr>`, so a ref-replay that
+ * ran before the effect (or the initial cell) reads `"hr"` either way.
+ */
+export const RULE_TAG_NAME_CONTRACT = 'hr';

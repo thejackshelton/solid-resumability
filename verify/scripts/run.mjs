@@ -17,7 +17,7 @@ import { existsSync } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
 import path from 'pathe';
 import { fileURLToPath } from 'node:url';
-import { PORTS, VARIANTS } from '../config.ts';
+import { PAGES, PORTS, VARIANTS } from '../config.ts';
 import { startStaticServer } from '../servers/static-server.mjs';
 
 const VERIFY_ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -175,7 +175,7 @@ async function main() {
 			log(`serving ${root} on http://127.0.0.1:${PORTS[variant]}`);
 		}
 		for (const variant of VARIANTS) {
-			for (const page of ['/fixtures/fixtures.html', '/todos/todos.html']) {
+			for (const page of Object.values(PAGES)) {
 				await pollReady(`http://127.0.0.1:${PORTS[variant]}${page}`);
 			}
 		}

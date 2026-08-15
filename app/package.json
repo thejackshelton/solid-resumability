@@ -1,0 +1,26 @@
+{
+  "name": "todos-example",
+  "description": "TodoMVC built on Solid 2.0 — exercises createOptimisticStore, action, refresh, draft-first store setters, Loading, per-item retry affordances, and a global Errored boundary",
+  "version": "0.0.0",
+  "private": true,
+  "author": "Ryan Carniato",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "start": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@solidjs/vite-plugin": "3.0.0-next.28",
+    "@solidjs/web": "2.0.0-rc.0",
+    "@types/node": "25.6.0",
+    "jsdom": "30.0.1",
+    "solid-js": "2.0.0-rc.0",
+    "typescript": "6.0.2",
+    "vite": "7.3.6",
+    "vitest": "4.1.10"
+  }
+}

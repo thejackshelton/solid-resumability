@@ -1,0 +1,99 @@
+/*
+ * The fixtures page's stylesheet. Identical in both variants — it is linked
+ * from the shared `fixtures.html`, so it contributes the same bytes to each
+ * side of the comparison and cannot flatter either one.
+ */
+
+:root {
+  color-scheme: light dark;
+  --ink: #16181d;
+  --muted: #6b7280;
+  --line: #d8dbe2;
+  --bg: #fbfbfd;
+  --card: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.page {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.lede {
+  margin: 0 0 2.5rem;
+  color: var(--muted);
+  max-width: 34rem;
+}
+
+.fixture {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  padding: 1.25rem 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.fixture h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.25rem;
+  color: var(--muted);
+}
+
+.blurb {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.mount > * {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.05rem;
+}
+
+.mount span {
+  min-width: 7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mount button {
+  min-width: 2.5rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f3f4f7;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mount button:hover {
+  background: #e9ebf0;
+}
+
+.nav {
+  margin-top: 2rem;
+}
+
+.nav a {
+  color: inherit;
+}

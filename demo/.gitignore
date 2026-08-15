@@ -1,0 +1,4 @@
+node_modules/
+dist/
+# Written by `pnpm test`, read by `pnpm measure`: a reading, not a source.
+.measure/

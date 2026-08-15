@@ -1,0 +1,6 @@
+# Everything `run.mjs` regenerates. The sources, the two configs and the
+# lockfile are the reproduction; the rest is its output.
+node_modules/
+dist/
+artifacts/
+transcript.txt

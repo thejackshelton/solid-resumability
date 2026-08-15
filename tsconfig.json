@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // The comptime pass runs under plain `node src/comptime/cli.ts` (native
+    // type stripping), which resolves relative specifiers literally — so its
+    // imports carry real `.ts` extensions.
+    "allowImportingTsExtensions": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "preserve",
+    // solid-js@2 ships no ./jsx-runtime export; @solidjs/web owns it, types included.
+    "jsxImportSource": "@solidjs/web",
+    "types": ["vitest/globals", "node"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

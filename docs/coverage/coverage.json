@@ -1,0 +1,1574 @@
+{
+  "schemaVersion": 2,
+  "metric": {
+    "unit": "unweighted component count",
+    "component": "module-scope JSX-returning function, exported or not, many per file",
+    "headlineSegment": "app",
+    "note": "Fractions are per segment. There is no corpus-wide total by design: the `fixtures` segment is synthetic and blending it into the headline would flatter the number."
+  },
+  "corpus": {
+    "root": "app/src",
+    "fixtureDirectory": "fixtures",
+    "segments": [
+      "app",
+      "fixtures"
+    ]
+  },
+  "toolchain": {
+    "solid-js": "2.0.0-rc.0",
+    "@solidjs/web": "2.0.0-rc.0",
+    "@solidjs/vite-plugin": "3.0.0-next.28",
+    "typescript": "6.0.2",
+    "vite": "7.3.6",
+    "yuku-analyzer": "0.8.5"
+  },
+  "headline": {
+    "segment": "app",
+    "provable": 3,
+    "components": 5,
+    "provableFraction": 0.6
+  },
+  "segments": {
+    "app": {
+      "segment": "app",
+      "files": 5,
+      "components": 5,
+      "provable": 3,
+      "fallback": 2,
+      "provableFraction": 0.6
+    },
+    "fixtures": {
+      "segment": "fixtures",
+      "files": 23,
+      "components": 28,
+      "provable": 9,
+      "fallback": 19,
+      "provableFraction": 0.3214
+    }
+  },
+  "ranking": {
+    "app": [
+      {
+        "code": "jsx-component-element",
+        "components": 2,
+        "occurrences": 6,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "handler-unsupported-syntax",
+        "components": 1,
+        "occurrences": 4,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "handler-captures-unprovable-binding",
+        "components": 1,
+        "occurrences": 2,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "jsx-dynamic-attribute",
+        "components": 1,
+        "occurrences": 2,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "jsx-dynamic-child-not-derivable",
+        "components": 1,
+        "occurrences": 2,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "no-signal-source",
+        "components": 1,
+        "occurrences": 1,
+        "onlyBlockerFor": 0
+      }
+    ],
+    "fixtures": [
+      {
+        "code": "jsx-dynamic-child-not-derivable",
+        "components": 7,
+        "occurrences": 7,
+        "onlyBlockerFor": 1
+      },
+      {
+        "code": "no-signal-source",
+        "components": 7,
+        "occurrences": 7,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "jsx-component-element",
+        "components": 5,
+        "occurrences": 6,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "signal-escapes-unanalyzable-use",
+        "components": 4,
+        "occurrences": 9,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "handler-unsupported-syntax",
+        "components": 3,
+        "occurrences": 10,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "handler-calls-non-accessor",
+        "components": 3,
+        "occurrences": 8,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "handler-captures-unprovable-binding",
+        "components": 3,
+        "occurrences": 4,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "handler-not-inline",
+        "components": 3,
+        "occurrences": 3,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "signal-escapes-to-opaque-callee",
+        "components": 2,
+        "occurrences": 3,
+        "onlyBlockerFor": 1
+      },
+      {
+        "code": "jsx-root-not-element",
+        "components": 2,
+        "occurrences": 2,
+        "onlyBlockerFor": 2
+      },
+      {
+        "code": "jsx-spread",
+        "components": 2,
+        "occurrences": 2,
+        "onlyBlockerFor": 1
+      },
+      {
+        "code": "signal-binding-not-destructured",
+        "components": 1,
+        "occurrences": 1,
+        "onlyBlockerFor": 0
+      },
+      {
+        "code": "signal-initializer-not-literal",
+        "components": 1,
+        "occurrences": 1,
+        "onlyBlockerFor": 1
+      },
+      {
+        "code": "signal-result-not-bound",
+        "components": 1,
+        "occurrences": 1,
+        "onlyBlockerFor": 0
+      }
+    ]
+  },
+  "onlyBlockers": {
+    "app": [],
+    "fixtures": [
+      {
+        "component": "app/src/fixtures/ArrayRootCounter.tsx#ArrayRootCounter",
+        "file": "app/src/fixtures/ArrayRootCounter.tsx",
+        "name": "ArrayRootCounter",
+        "code": "jsx-root-not-element",
+        "occurrences": 1
+      },
+      {
+        "component": "app/src/fixtures/ComposedCounter.tsx#ComposedInner",
+        "file": "app/src/fixtures/ComposedCounter.tsx",
+        "name": "ComposedInner",
+        "code": "jsx-dynamic-child-not-derivable",
+        "occurrences": 1
+      },
+      {
+        "component": "app/src/fixtures/ComputedInitializerCounter.tsx#ComputedInitializerCounter",
+        "file": "app/src/fixtures/ComputedInitializerCounter.tsx",
+        "name": "ComputedInitializerCounter",
+        "code": "signal-initializer-not-literal",
+        "occurrences": 1
+      },
+      {
+        "component": "app/src/fixtures/FragmentRootCounter.tsx#FragmentRootCounter",
+        "file": "app/src/fixtures/FragmentRootCounter.tsx",
+        "name": "FragmentRootCounter",
+        "code": "jsx-root-not-element",
+        "occurrences": 1
+      },
+      {
+        "component": "app/src/fixtures/ImpureEscapeCounter.tsx#ImpureEscapeCounter",
+        "file": "app/src/fixtures/ImpureEscapeCounter.tsx",
+        "name": "ImpureEscapeCounter",
+        "code": "signal-escapes-to-opaque-callee",
+        "occurrences": 1
+      },
+      {
+        "component": "app/src/fixtures/SpreadPropsCounter.tsx#SpreadPropsCounter",
+        "file": "app/src/fixtures/SpreadPropsCounter.tsx",
+        "name": "SpreadPropsCounter",
+        "code": "jsx-spread",
+        "occurrences": 1
+      }
+    ]
+  },
+  "taxonomy": {
+    "codes": 27,
+    "observed": 16,
+    "unobserved": [
+      "store-binding-not-provable",
+      "store-read-not-provable",
+      "store-read-escapes",
+      "handler-references-free-name",
+      "show-branch-not-static-at-capture",
+      "region-each-not-store-projection",
+      "region-body-not-inline-arrow",
+      "region-item-not-single-element",
+      "region-key-not-derivable",
+      "region-nested",
+      "jsx-unsupported-children"
+    ],
+    "observedBySegment": {
+      "app": 7,
+      "fixtures": 15
+    },
+    "fileLevelOnly": [
+      "no-exported-component"
+    ]
+  },
+  "files": [
+    {
+      "path": "app/src/api.ts",
+      "segment": "app",
+      "components": 0,
+      "diagnostics": [],
+      "refusals": [
+        {
+          "code": "no-exported-component",
+          "message": "No module-scope function in this module returns JSX.",
+          "line": 1,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "path": "app/src/app.tsx",
+      "segment": "app",
+      "components": 5,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/filter.ts",
+      "segment": "app",
+      "components": 0,
+      "diagnostics": [],
+      "refusals": [
+        {
+          "code": "no-exported-component",
+          "message": "No module-scope function in this module returns JSX.",
+          "line": 1,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "path": "app/src/fixtures/ArrayRootCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/ComposedCounter.tsx",
+      "segment": "fixtures",
+      "components": 2,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/ComputedInitializerCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/FragmentRootCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/ImpureEscapeCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/KeyedRoster.tsx",
+      "segment": "fixtures",
+      "components": 2,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/LocalOnlyCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/OpaqueCalleeCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/OptionsArgCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/PropsDeepPair.tsx",
+      "segment": "fixtures",
+      "components": 3,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/PropsOpaquePair.tsx",
+      "segment": "fixtures",
+      "components": 2,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/PropsPair.tsx",
+      "segment": "fixtures",
+      "components": 3,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/PropsSpreadPair.tsx",
+      "segment": "fixtures",
+      "components": 2,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/ProvableCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/ProvableGreeting.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/ProvableStepper.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/SpreadPropsCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/TupleSignalCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/UnanalyzableUseCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/UnboundSignalCounter.tsx",
+      "segment": "fixtures",
+      "components": 1,
+      "diagnostics": [],
+      "refusals": []
+    },
+    {
+      "path": "app/src/fixtures/impure-helpers.ts",
+      "segment": "fixtures",
+      "components": 0,
+      "diagnostics": [],
+      "refusals": [
+        {
+          "code": "no-exported-component",
+          "message": "No module-scope function in this module returns JSX.",
+          "line": 1,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "path": "app/src/fixtures/roster.ts",
+      "segment": "fixtures",
+      "components": 0,
+      "diagnostics": [],
+      "refusals": [
+        {
+          "code": "no-exported-component",
+          "message": "No module-scope function in this module returns JSX.",
+          "line": 1,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "path": "app/src/fixtures/signal-helpers.ts",
+      "segment": "fixtures",
+      "components": 0,
+      "diagnostics": [],
+      "refusals": [
+        {
+          "code": "no-exported-component",
+          "message": "No module-scope function in this module returns JSX.",
+          "line": 1,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "path": "app/src/main.tsx",
+      "segment": "app",
+      "components": 0,
+      "diagnostics": [],
+      "refusals": [
+        {
+          "code": "no-exported-component",
+          "message": "No module-scope function in this module returns JSX.",
+          "line": 1,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "path": "app/src/todos.ts",
+      "segment": "app",
+      "components": 0,
+      "diagnostics": [],
+      "refusals": [
+        {
+          "code": "no-exported-component",
+          "message": "No module-scope function in this module returns JSX.",
+          "line": 1,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "app/src/app.tsx#Header",
+      "file": "app/src/app.tsx",
+      "name": "Header",
+      "exported": false,
+      "segment": "app",
+      "verdict": "provable",
+      "line": 7,
+      "column": 1,
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/app.tsx#TodoItem",
+      "file": "app/src/app.tsx",
+      "name": "TodoItem",
+      "exported": false,
+      "segment": "app",
+      "verdict": "fallback",
+      "line": 29,
+      "column": 1,
+      "note": "A props-boundary fallback. No call site this pass admits binds `TodoItem`'s props: the keyed region's item slot binds a *body parameter*, never a child component's props, so this verdict is its own and does not follow from `MainSection`'s. Read it as the props boundary the pass has not crossed rather than as five unrelated defects — the `Props*` fixtures hold the same rule, and they are where the boundary can be moved one shape at a time.",
+      "refusalCodes": [
+        "handler-captures-unprovable-binding",
+        "handler-unsupported-syntax",
+        "jsx-component-element",
+        "jsx-dynamic-attribute",
+        "jsx-dynamic-child-not-derivable"
+      ],
+      "refusals": [
+        {
+          "code": "jsx-dynamic-attribute",
+          "message": "Attribute `class` is computed, so its rendered value is not static.",
+          "line": 33,
+          "column": 7
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "message": "Attribute `checked` is computed, so its rendered value is not static.",
+          "line": 46,
+          "column": 11
+        },
+        {
+          "code": "handler-captures-unprovable-binding",
+          "message": "The handler closes over `props`, which is not a provable cell accessor.",
+          "line": 47,
+          "column": 36,
+          "detail": {
+            "binding": "props",
+            "declaredInScope": "function"
+          }
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 47,
+          "column": 36
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 47,
+          "column": 36
+        },
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "line": 49,
+          "column": 16
+        },
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 50,
+          "column": 9
+        },
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "line": 51,
+          "column": 11
+        },
+        {
+          "code": "handler-captures-unprovable-binding",
+          "message": "The handler closes over `props`, which is not a provable cell accessor.",
+          "line": 59,
+          "column": 59,
+          "detail": {
+            "binding": "props",
+            "declaredInScope": "function"
+          }
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 59,
+          "column": 59
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 59,
+          "column": 59
+        }
+      ]
+    },
+    {
+      "id": "app/src/app.tsx#MainSection",
+      "file": "app/src/app.tsx",
+      "name": "MainSection",
+      "exported": false,
+      "segment": "app",
+      "verdict": "provable",
+      "line": 65,
+      "column": 1,
+      "absentRegions": {
+        "count": 1,
+        "present": false,
+        "presentFrom": [
+          "capture"
+        ]
+      },
+      "note": "Proved, not mounted. The analyzer proves `MainSection` and `Footer`; the demo does not substitute them out, and both statements are true at once. Their bodies stay in the group because what flips their guard is a store write, and a store write is the group's — a resumed page never has to build this markup, so there is nothing here for an activation to do. The guard-only artifact is the whole of what the verdict claims.",
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/app.tsx#Footer",
+      "file": "app/src/app.tsx",
+      "name": "Footer",
+      "exported": false,
+      "segment": "app",
+      "verdict": "provable",
+      "line": 93,
+      "column": 1,
+      "absentRegions": {
+        "count": 1,
+        "present": false,
+        "presentFrom": [
+          "capture"
+        ]
+      },
+      "note": "Proved, not mounted. The analyzer proves `MainSection` and `Footer`; the demo does not substitute them out, and both statements are true at once. Their bodies stay in the group because what flips their guard is a store write, and a store write is the group's — a resumed page never has to build this markup, so there is nothing here for an activation to do. The guard-only artifact is the whole of what the verdict claims.",
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/app.tsx#App",
+      "file": "app/src/app.tsx",
+      "name": "App",
+      "exported": true,
+      "segment": "app",
+      "verdict": "fallback",
+      "line": 130,
+      "column": 8,
+      "note": "Architectural residue. `App`'s mount point is where `createTodos()` is provided — the provider call *is* the frame — so a resumed `App` has no frame in which to create the store, and every component below it would be reaching for a store that does not exist yet. 5/5 is therefore incoherent with the substitution model, not merely expensive: there is no amount of analyzer work that makes a component provable when proving it would mean substituting out the one call the page is built around. Its two codes are the symptom, not the cause — closing them would not move this.",
+      "refusalCodes": [
+        "jsx-component-element",
+        "no-signal-source"
+      ],
+      "refusals": [
+        {
+          "code": "no-signal-source",
+          "message": "The component declares no source cell to resume.",
+          "line": 130,
+          "column": 8
+        },
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 133,
+          "column": 5
+        },
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 141,
+          "column": 7
+        },
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 144,
+          "column": 11
+        },
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 145,
+          "column": 13
+        },
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 146,
+          "column": 13
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/ArrayRootCounter.tsx#ArrayRootCounter",
+      "file": "app/src/fixtures/ArrayRootCounter.tsx",
+      "name": "ArrayRootCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 4,
+      "column": 8,
+      "refusalCodes": [
+        "jsx-root-not-element"
+      ],
+      "refusals": [
+        {
+          "code": "jsx-root-not-element",
+          "message": "The component's returned markup is not a single JSX element.",
+          "line": 7,
+          "column": 10
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/ComposedCounter.tsx#ComposedInner",
+      "file": "app/src/fixtures/ComposedCounter.tsx",
+      "name": "ComposedInner",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 20,
+      "column": 8,
+      "refusalCodes": [
+        "jsx-dynamic-child-not-derivable"
+      ],
+      "refusals": [
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "line": 29,
+          "column": 47
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/ComposedCounter.tsx#ComposedOuter",
+      "file": "app/src/fixtures/ComposedCounter.tsx",
+      "name": "ComposedOuter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "provable",
+      "line": 34,
+      "column": 8,
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/fixtures/ComputedInitializerCounter.tsx#ComputedInitializerCounter",
+      "file": "app/src/fixtures/ComputedInitializerCounter.tsx",
+      "name": "ComputedInitializerCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 10,
+      "column": 8,
+      "refusalCodes": [
+        "signal-initializer-not-literal"
+      ],
+      "refusals": [
+        {
+          "code": "signal-initializer-not-literal",
+          "message": "The signal's initial value is computed, so it cannot be frozen into a static artifact.",
+          "line": 11,
+          "column": 42
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/FragmentRootCounter.tsx#FragmentRootCounter",
+      "file": "app/src/fixtures/FragmentRootCounter.tsx",
+      "name": "FragmentRootCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 4,
+      "column": 8,
+      "refusalCodes": [
+        "jsx-root-not-element"
+      ],
+      "refusals": [
+        {
+          "code": "jsx-root-not-element",
+          "message": "The component's returned markup is not a single JSX element.",
+          "line": 7,
+          "column": 10
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/ImpureEscapeCounter.tsx#ImpureEscapeCounter",
+      "file": "app/src/fixtures/ImpureEscapeCounter.tsx",
+      "name": "ImpureEscapeCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 13,
+      "column": 8,
+      "refusalCodes": [
+        "signal-escapes-to-opaque-callee"
+      ],
+      "refusals": [
+        {
+          "code": "signal-escapes-to-opaque-callee",
+          "message": "`count` escapes into `logCount`, which is defined outside this component (app/src/fixtures/impure-helpers.ts); what it does with the signal is invisible to this analysis.",
+          "line": 15,
+          "column": 12,
+          "detail": {
+            "binding": "count",
+            "callee": "logCount",
+            "definedIn": "app/src/fixtures/impure-helpers.ts"
+          }
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/KeyedRoster.tsx#RosterList",
+      "file": "app/src/fixtures/KeyedRoster.tsx",
+      "name": "RosterList",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "provable",
+      "line": 43,
+      "column": 8,
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/fixtures/KeyedRoster.tsx#Roster",
+      "file": "app/src/fixtures/KeyedRoster.tsx",
+      "name": "Roster",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 83,
+      "column": 8,
+      "refusalCodes": [
+        "jsx-component-element",
+        "no-signal-source"
+      ],
+      "refusals": [
+        {
+          "code": "no-signal-source",
+          "message": "The component declares no source cell to resume.",
+          "line": 83,
+          "column": 8
+        },
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 85,
+          "column": 5
+        },
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 86,
+          "column": 7
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/LocalOnlyCounter.tsx#LocalOnlyCounter",
+      "file": "app/src/fixtures/LocalOnlyCounter.tsx",
+      "name": "LocalOnlyCounter",
+      "exported": false,
+      "segment": "fixtures",
+      "verdict": "provable",
+      "line": 4,
+      "column": 1,
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/fixtures/OpaqueCalleeCounter.tsx#OpaqueCalleeCounter",
+      "file": "app/src/fixtures/OpaqueCalleeCounter.tsx",
+      "name": "OpaqueCalleeCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "provable",
+      "line": 5,
+      "column": 8,
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/fixtures/OptionsArgCounter.tsx#OptionsArgCounter",
+      "file": "app/src/fixtures/OptionsArgCounter.tsx",
+      "name": "OptionsArgCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "provable",
+      "line": 4,
+      "column": 8,
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/fixtures/PropsDeepPair.tsx#PropsLeaf",
+      "file": "app/src/fixtures/PropsDeepPair.tsx",
+      "name": "PropsLeaf",
+      "exported": false,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 8,
+      "column": 1,
+      "refusalCodes": [
+        "jsx-dynamic-child-not-derivable",
+        "no-signal-source"
+      ],
+      "refusals": [
+        {
+          "code": "no-signal-source",
+          "message": "The component declares no source cell to resume.",
+          "line": 8,
+          "column": 1
+        },
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "line": 9,
+          "column": 47
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/PropsDeepPair.tsx#PropsMiddle",
+      "file": "app/src/fixtures/PropsDeepPair.tsx",
+      "name": "PropsMiddle",
+      "exported": false,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 12,
+      "column": 1,
+      "refusalCodes": [
+        "jsx-component-element",
+        "no-signal-source"
+      ],
+      "refusals": [
+        {
+          "code": "no-signal-source",
+          "message": "The component declares no source cell to resume.",
+          "line": 12,
+          "column": 1
+        },
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 15,
+          "column": 7
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/PropsDeepPair.tsx#PropsDeepParent",
+      "file": "app/src/fixtures/PropsDeepPair.tsx",
+      "name": "PropsDeepParent",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 20,
+      "column": 8,
+      "refusalCodes": [
+        "jsx-component-element",
+        "signal-escapes-unanalyzable-use"
+      ],
+      "refusals": [
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 25,
+          "column": 7
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "message": "`count` is used in a position this pass cannot prove safe.",
+          "line": 25,
+          "column": 27,
+          "detail": {
+            "binding": "count",
+            "parent": "JSXExpressionContainer"
+          }
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/PropsOpaquePair.tsx#PropsOpaqueChild",
+      "file": "app/src/fixtures/PropsOpaquePair.tsx",
+      "name": "PropsOpaqueChild",
+      "exported": false,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 9,
+      "column": 1,
+      "refusalCodes": [
+        "handler-not-inline",
+        "no-signal-source"
+      ],
+      "refusals": [
+        {
+          "code": "no-signal-source",
+          "message": "The component declares no source cell to resume.",
+          "line": 9,
+          "column": 1
+        },
+        {
+          "code": "handler-not-inline",
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "line": 11,
+          "column": 44,
+          "detail": {
+            "boundAs": "MemberExpression"
+          }
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/PropsOpaquePair.tsx#PropsOpaqueParent",
+      "file": "app/src/fixtures/PropsOpaquePair.tsx",
+      "name": "PropsOpaqueParent",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 17,
+      "column": 8,
+      "refusalCodes": [
+        "jsx-component-element",
+        "signal-escapes-to-opaque-callee"
+      ],
+      "refusals": [
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 24,
+          "column": 7
+        },
+        {
+          "code": "signal-escapes-to-opaque-callee",
+          "message": "`count` escapes into `makeNoisyIncrement`, which is defined outside this component (app/src/fixtures/impure-helpers.ts); what it does with the signal is invisible to this analysis.",
+          "line": 19,
+          "column": 35,
+          "detail": {
+            "binding": "count",
+            "callee": "makeNoisyIncrement",
+            "definedIn": "app/src/fixtures/impure-helpers.ts"
+          }
+        },
+        {
+          "code": "signal-escapes-to-opaque-callee",
+          "message": "`setCount` escapes into `makeNoisyIncrement`, which is defined outside this component (app/src/fixtures/impure-helpers.ts); what it does with the signal is invisible to this analysis.",
+          "line": 19,
+          "column": 42,
+          "detail": {
+            "binding": "setCount",
+            "callee": "makeNoisyIncrement",
+            "definedIn": "app/src/fixtures/impure-helpers.ts"
+          }
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/PropsPair.tsx#PropsCountLabel",
+      "file": "app/src/fixtures/PropsPair.tsx",
+      "name": "PropsCountLabel",
+      "exported": false,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 9,
+      "column": 1,
+      "inlinedBy": "app/src/fixtures/PropsPair.tsx#PropsPairParent",
+      "refusalCodes": [
+        "jsx-dynamic-child-not-derivable",
+        "no-signal-source"
+      ],
+      "refusals": [
+        {
+          "code": "no-signal-source",
+          "message": "The component declares no source cell to resume.",
+          "line": 9,
+          "column": 1
+        },
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "line": 10,
+          "column": 47
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/PropsPair.tsx#PropsStepButton",
+      "file": "app/src/fixtures/PropsPair.tsx",
+      "name": "PropsStepButton",
+      "exported": false,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 13,
+      "column": 1,
+      "inlinedBy": "app/src/fixtures/PropsPair.tsx#PropsPairParent",
+      "refusalCodes": [
+        "handler-not-inline",
+        "no-signal-source"
+      ],
+      "refusals": [
+        {
+          "code": "no-signal-source",
+          "message": "The component declares no source cell to resume.",
+          "line": 13,
+          "column": 1
+        },
+        {
+          "code": "handler-not-inline",
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "line": 15,
+          "column": 42,
+          "detail": {
+            "boundAs": "MemberExpression"
+          }
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/PropsPair.tsx#PropsPairParent",
+      "file": "app/src/fixtures/PropsPair.tsx",
+      "name": "PropsPairParent",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "provable",
+      "line": 21,
+      "column": 8,
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/fixtures/PropsSpreadPair.tsx#PropsSpreadChild",
+      "file": "app/src/fixtures/PropsSpreadPair.tsx",
+      "name": "PropsSpreadChild",
+      "exported": false,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 7,
+      "column": 1,
+      "refusalCodes": [
+        "handler-not-inline",
+        "jsx-dynamic-child-not-derivable",
+        "no-signal-source"
+      ],
+      "refusals": [
+        {
+          "code": "no-signal-source",
+          "message": "The component declares no source cell to resume.",
+          "line": 7,
+          "column": 1
+        },
+        {
+          "code": "handler-not-inline",
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "line": 9,
+          "column": 44,
+          "detail": {
+            "boundAs": "MemberExpression"
+          }
+        },
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "line": 10,
+          "column": 7
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/PropsSpreadPair.tsx#PropsSpreadParent",
+      "file": "app/src/fixtures/PropsSpreadPair.tsx",
+      "name": "PropsSpreadParent",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 15,
+      "column": 8,
+      "refusalCodes": [
+        "jsx-component-element",
+        "jsx-spread",
+        "signal-escapes-unanalyzable-use"
+      ],
+      "refusals": [
+        {
+          "code": "jsx-spread",
+          "message": "Spread attributes hide which props the child component receives.",
+          "line": 21,
+          "column": 25
+        },
+        {
+          "code": "jsx-component-element",
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "line": 21,
+          "column": 7
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "message": "`count` is used in a position this pass cannot prove safe.",
+          "line": 17,
+          "column": 20,
+          "detail": {
+            "binding": "count",
+            "parent": "Property"
+          }
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/ProvableCounter.tsx#ProvableCounter",
+      "file": "app/src/fixtures/ProvableCounter.tsx",
+      "name": "ProvableCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "provable",
+      "line": 4,
+      "column": 8,
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/fixtures/ProvableGreeting.tsx#ProvableGreeting",
+      "file": "app/src/fixtures/ProvableGreeting.tsx",
+      "name": "ProvableGreeting",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "provable",
+      "line": 4,
+      "column": 8,
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/fixtures/ProvableStepper.tsx#ProvableStepper",
+      "file": "app/src/fixtures/ProvableStepper.tsx",
+      "name": "ProvableStepper",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "provable",
+      "line": 4,
+      "column": 8,
+      "refusalCodes": [],
+      "refusals": []
+    },
+    {
+      "id": "app/src/fixtures/SpreadPropsCounter.tsx#SpreadPropsCounter",
+      "file": "app/src/fixtures/SpreadPropsCounter.tsx",
+      "name": "SpreadPropsCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 6,
+      "column": 8,
+      "refusalCodes": [
+        "jsx-spread"
+      ],
+      "refusals": [
+        {
+          "code": "jsx-spread",
+          "message": "Spread attributes hide the element's real props.",
+          "line": 12,
+          "column": 15
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/TupleSignalCounter.tsx#TupleSignalCounter",
+      "file": "app/src/fixtures/TupleSignalCounter.tsx",
+      "name": "TupleSignalCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 4,
+      "column": 8,
+      "refusalCodes": [
+        "handler-calls-non-accessor",
+        "handler-captures-unprovable-binding",
+        "handler-unsupported-syntax",
+        "jsx-dynamic-child-not-derivable",
+        "signal-binding-not-destructured",
+        "signal-escapes-unanalyzable-use"
+      ],
+      "refusals": [
+        {
+          "code": "signal-binding-not-destructured",
+          "message": "The signal is bound as a whole tuple rather than destructured into a getter/setter pair.",
+          "line": 5,
+          "column": 9
+        },
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "line": 9,
+          "column": 39
+        },
+        {
+          "code": "handler-captures-unprovable-binding",
+          "message": "The handler closes over `counter`, which is not a provable cell accessor.",
+          "line": 10,
+          "column": 54,
+          "detail": {
+            "binding": "counter",
+            "declaredInScope": "function"
+          }
+        },
+        {
+          "code": "handler-calls-non-accessor",
+          "message": "The handler calls a computed callee.",
+          "line": 10,
+          "column": 54
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 10,
+          "column": 54
+        },
+        {
+          "code": "handler-calls-non-accessor",
+          "message": "The handler calls a computed callee.",
+          "line": 10,
+          "column": 65
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 10,
+          "column": 65
+        },
+        {
+          "code": "handler-captures-unprovable-binding",
+          "message": "The handler closes over `counter`, which is not a provable cell accessor.",
+          "line": 13,
+          "column": 54,
+          "detail": {
+            "binding": "counter",
+            "declaredInScope": "function"
+          }
+        },
+        {
+          "code": "handler-calls-non-accessor",
+          "message": "The handler calls a computed callee.",
+          "line": 13,
+          "column": 54
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 13,
+          "column": 54
+        },
+        {
+          "code": "handler-calls-non-accessor",
+          "message": "The handler calls a computed callee.",
+          "line": 13,
+          "column": 65
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 13,
+          "column": 65
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "message": "`counter` is used in a position this pass cannot prove safe.",
+          "line": 9,
+          "column": 52,
+          "detail": {
+            "binding": "counter",
+            "parent": "MemberExpression"
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "message": "`counter` is used in a position this pass cannot prove safe.",
+          "line": 10,
+          "column": 54,
+          "detail": {
+            "binding": "counter",
+            "parent": "MemberExpression"
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "message": "`counter` is used in a position this pass cannot prove safe.",
+          "line": 10,
+          "column": 65,
+          "detail": {
+            "binding": "counter",
+            "parent": "MemberExpression"
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "message": "`counter` is used in a position this pass cannot prove safe.",
+          "line": 13,
+          "column": 54,
+          "detail": {
+            "binding": "counter",
+            "parent": "MemberExpression"
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "message": "`counter` is used in a position this pass cannot prove safe.",
+          "line": 13,
+          "column": 65,
+          "detail": {
+            "binding": "counter",
+            "parent": "MemberExpression"
+          }
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/UnanalyzableUseCounter.tsx#UnanalyzableUseCounter",
+      "file": "app/src/fixtures/UnanalyzableUseCounter.tsx",
+      "name": "UnanalyzableUseCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 4,
+      "column": 8,
+      "refusalCodes": [
+        "handler-calls-non-accessor",
+        "handler-captures-unprovable-binding",
+        "handler-unsupported-syntax",
+        "jsx-dynamic-child-not-derivable",
+        "signal-escapes-unanalyzable-use"
+      ],
+      "refusals": [
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "line": 10,
+          "column": 46
+        },
+        {
+          "code": "handler-captures-unprovable-binding",
+          "message": "The handler closes over `wiring`, which is not a provable cell accessor.",
+          "line": 11,
+          "column": 61,
+          "detail": {
+            "binding": "wiring",
+            "declaredInScope": "function"
+          }
+        },
+        {
+          "code": "handler-calls-non-accessor",
+          "message": "The handler calls a computed callee.",
+          "line": 11,
+          "column": 61
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 11,
+          "column": 61
+        },
+        {
+          "code": "handler-calls-non-accessor",
+          "message": "The handler calls a computed callee.",
+          "line": 11,
+          "column": 71
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 11,
+          "column": 71
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "message": "`count` is used in a position this pass cannot prove safe.",
+          "line": 6,
+          "column": 19,
+          "detail": {
+            "binding": "count",
+            "parent": "ArrayExpression"
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "message": "`setCount` is used in a position this pass cannot prove safe.",
+          "line": 6,
+          "column": 26,
+          "detail": {
+            "binding": "setCount",
+            "parent": "ArrayExpression"
+          }
+        }
+      ]
+    },
+    {
+      "id": "app/src/fixtures/UnboundSignalCounter.tsx#UnboundSignalCounter",
+      "file": "app/src/fixtures/UnboundSignalCounter.tsx",
+      "name": "UnboundSignalCounter",
+      "exported": true,
+      "segment": "fixtures",
+      "verdict": "fallback",
+      "line": 4,
+      "column": 8,
+      "refusalCodes": [
+        "handler-calls-non-accessor",
+        "handler-captures-unprovable-binding",
+        "handler-unsupported-syntax",
+        "jsx-dynamic-child-not-derivable",
+        "signal-result-not-bound"
+      ],
+      "refusals": [
+        {
+          "code": "signal-result-not-bound",
+          "message": "The signal is not bound to a variable declaration, so its accessors cannot be tracked.",
+          "line": 5,
+          "column": 26
+        },
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "line": 9,
+          "column": 41
+        },
+        {
+          "code": "handler-captures-unprovable-binding",
+          "message": "The handler closes over `state`, which is not a provable cell accessor.",
+          "line": 10,
+          "column": 56,
+          "detail": {
+            "binding": "state",
+            "declaredInScope": "function"
+          }
+        },
+        {
+          "code": "handler-calls-non-accessor",
+          "message": "The handler calls a computed callee.",
+          "line": 10,
+          "column": 56
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 10,
+          "column": 56
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 10,
+          "column": 56
+        },
+        {
+          "code": "handler-calls-non-accessor",
+          "message": "The handler calls a computed callee.",
+          "line": 10,
+          "column": 71
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 10,
+          "column": 71
+        },
+        {
+          "code": "handler-unsupported-syntax",
+          "message": "The handler contains a `MemberExpression`, which this pass does not prove.",
+          "line": 10,
+          "column": 71
+        }
+      ]
+    }
+  ]
+}

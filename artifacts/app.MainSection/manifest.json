@@ -1,0 +1,68 @@
+{
+  "component": "MainSection",
+  "module": "app/src/app.tsx",
+  "status": "provable",
+  "cells": [],
+  "stores": [
+    {
+      "id": "s0",
+      "context": "TodosContext",
+      "contextModule": "app/src/app.tsx",
+      "actionsSlot": 1,
+      "readSlot": 0,
+      "provider": "app/src/app.tsx",
+      "value": {
+        "module": "app/src/todos.ts",
+        "factory": "createTodos"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "s0a0",
+      "store": "s0",
+      "name": "toggleAll",
+      "path": [
+        1,
+        "toggleAll"
+      ]
+    }
+  ],
+  "reads": [
+    {
+      "id": "s0r",
+      "store": "s0",
+      "name": "todos",
+      "path": [
+        0
+      ]
+    }
+  ],
+  "bindings": [],
+  "regions": [
+    {
+      "id": "r0",
+      "locator": "/",
+      "when": "todos.length > 0",
+      "present": false,
+      "presentFrom": "capture",
+      "captures": [
+        {
+          "name": "todos",
+          "kind": "store-read",
+          "store": "s0",
+          "path": [
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "handlers": [],
+  "wiring": [],
+  "files": [
+    "structure.js",
+    "template.js",
+    "wiring.js"
+  ]
+}

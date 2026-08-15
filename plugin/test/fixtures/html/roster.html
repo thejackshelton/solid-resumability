@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Roster</title>
+  </head>
+  <body>
+    <!--
+      A page shaped like the ones a CARRIED mount is served from: the mount is
+      not empty, because nobody is going to fill it. Its component paints a
+      keyed list out of a store that does not exist until the page runs, so the
+      pass has a template for the panel and nothing to put in the list — and
+      this document, written by hand and indented like one, owes the items and
+      the key on each of them.
+
+      The markup inside the mount is the landed golden's: the emitted template
+      of `artifacts/KeyedRoster.RosterList/`, with its region carrying two
+      items built from that artifact's own `itemTemplate`.
+    -->
+    <main class="page">
+      <div class="mount" data-resume="KeyedRoster.RosterList">
+        <div class="roster-panel">
+          <p class="last">none</p>
+          <ul class="roster">
+            <li class="member" data-key="m1"><span class="name">Ada</span><button class="drop">x</button></li>
+            <li class="member" data-key="m2"><span class="name">Grace</span><button class="drop">x</button></li>
+          </ul>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="/src/pages/roster-resumable.ts"></script>
+  </body>
+</html>

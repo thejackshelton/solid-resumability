@@ -1,0 +1,271 @@
+{
+  "schema": "guessless.receipt/v1",
+  "state": "partial",
+  "query": "exportedNames",
+  "request": {
+    "kind": "exportedNames",
+    "file": "plugin/src/stages/fallback.ts"
+  },
+  "snapshot": "bf99a6427299f44505bca00c6cf5052070b5f6e7acd81fb2b57490331aec5fe7",
+  "results": [
+    {
+      "name": "FallbackOmissionError",
+      "module": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/fallback.ts",
+        "semanticPath": [
+          "module:exports",
+          "occurrence:0"
+        ],
+        "fingerprint": "cf3c11a777af982281b10b6a701d2db5d2cbd790ee9327ea58d7dcaffa3abdb6"
+      }
+    },
+    {
+      "name": "fallbackPlugin",
+      "module": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/fallback.ts",
+        "semanticPath": [
+          "module:exports",
+          "occurrence:0"
+        ],
+        "fingerprint": "cf3c11a777af982281b10b6a701d2db5d2cbd790ee9327ea58d7dcaffa3abdb6"
+      }
+    },
+    {
+      "name": "FallbackRefusalName",
+      "module": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/fallback.ts",
+        "semanticPath": [
+          "module:exports",
+          "occurrence:0"
+        ],
+        "fingerprint": "cf3c11a777af982281b10b6a701d2db5d2cbd790ee9327ea58d7dcaffa3abdb6"
+      }
+    },
+    {
+      "name": "FallbackReport",
+      "module": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/fallback.ts",
+        "semanticPath": [
+          "module:exports",
+          "occurrence:0"
+        ],
+        "fingerprint": "cf3c11a777af982281b10b6a701d2db5d2cbd790ee9327ea58d7dcaffa3abdb6"
+      }
+    },
+    {
+      "name": "omitFallbackImport",
+      "module": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/fallback.ts",
+        "semanticPath": [
+          "module:exports",
+          "occurrence:0"
+        ],
+        "fingerprint": "cf3c11a777af982281b10b6a701d2db5d2cbd790ee9327ea58d7dcaffa3abdb6"
+      }
+    },
+    {
+      "name": "OmittedFallback",
+      "module": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/fallback.ts",
+        "semanticPath": [
+          "module:exports",
+          "occurrence:0"
+        ],
+        "fingerprint": "cf3c11a777af982281b10b6a701d2db5d2cbd790ee9327ea58d7dcaffa3abdb6"
+      }
+    },
+    {
+      "name": "omittedFallbacks",
+      "module": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/fallback.ts",
+        "semanticPath": [
+          "module:exports",
+          "occurrence:0"
+        ],
+        "fingerprint": "cf3c11a777af982281b10b6a701d2db5d2cbd790ee9327ea58d7dcaffa3abdb6"
+      }
+    },
+    {
+      "name": "runFallbackStage",
+      "module": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/fallback.ts",
+        "semanticPath": [
+          "module:exports",
+          "occurrence:0"
+        ],
+        "fingerprint": "cf3c11a777af982281b10b6a701d2db5d2cbd790ee9327ea58d7dcaffa3abdb6"
+      }
+    }
+  ],
+  "unresolved": [
+    {
+      "site": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/analyze.ts",
+        "semanticPath": [
+          "site:import-boundary",
+          "Program",
+          "ImportDeclaration",
+          "ImportSpecifier",
+          "occurrence:0"
+        ],
+        "fingerprint": "559ea55eeb74c32950a748662eb5d834d507d522593d8ee34998651bf1ba8c43"
+      },
+      "reason": "builtin-module-boundary",
+      "detail": "Import 'node:fs' leaves the linked file set."
+    },
+    {
+      "site": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/analyze.ts",
+        "semanticPath": [
+          "site:import-boundary",
+          "Program",
+          "ImportDeclaration",
+          "ImportSpecifier",
+          "occurrence:0"
+        ],
+        "fingerprint": "f26fa4d17bb72b020309959f07bb1e7556c0d7c47689af6fb5bfce8c5cb4f060"
+      },
+      "reason": "builtin-module-boundary",
+      "detail": "Import 'node:fs' leaves the linked file set."
+    },
+    {
+      "site": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/analyze.ts",
+        "semanticPath": [
+          "site:import-boundary",
+          "Program",
+          "ImportDeclaration",
+          "ImportSpecifier",
+          "occurrence:0"
+        ],
+        "fingerprint": "5fb449644ba1f48617db8295b31582316c440764d6cb15c2f721384f7409a685"
+      },
+      "reason": "builtin-module-boundary",
+      "detail": "Import 'node:fs' leaves the linked file set."
+    },
+    {
+      "site": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/analyze.ts",
+        "semanticPath": [
+          "site:import-boundary",
+          "Program",
+          "ImportDeclaration",
+          "ImportSpecifier",
+          "occurrence:0"
+        ],
+        "fingerprint": "6bedb3f0fbbd48b85c1678d2f672ead1bb00d7a1f6c51cb0b991625fc43dc23b"
+      },
+      "reason": "external-module-boundary",
+      "detail": "Import 'pathe' leaves the linked file set."
+    },
+    {
+      "site": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/analyze.ts",
+        "semanticPath": [
+          "site:import-boundary",
+          "Program",
+          "ImportDeclaration",
+          "ImportSpecifier",
+          "occurrence:0"
+        ],
+        "fingerprint": "face8cacab96656d9e198b0333266f7e189e7a849a2730031a5b5e2be3312b32"
+      },
+      "reason": "external-module-boundary",
+      "detail": "Import 'pathe' leaves the linked file set."
+    },
+    {
+      "site": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/analyze.ts",
+        "semanticPath": [
+          "site:import-boundary",
+          "Program",
+          "ImportDeclaration",
+          "ImportSpecifier",
+          "occurrence:0"
+        ],
+        "fingerprint": "14fa5e88378bd97c7405778c3be3fcf34d0148a888fe913878c1d2a41eb3dc6a"
+      },
+      "reason": "unresolved-specifier",
+      "detail": "Import '../../../src/comptime/index.ts' leaves the linked file set."
+    },
+    {
+      "site": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/analyze.ts",
+        "semanticPath": [
+          "site:import-boundary",
+          "Program",
+          "ImportDeclaration",
+          "ImportSpecifier",
+          "occurrence:0"
+        ],
+        "fingerprint": "a5cae443cb8dace7933e5f7736b0629b9bd6541c89f94458ed432dd2384a81e3"
+      },
+      "reason": "unresolved-specifier",
+      "detail": "Import '../../../src/comptime/types.ts' leaves the linked file set."
+    },
+    {
+      "site": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/fallback.ts",
+        "semanticPath": [
+          "site:import-boundary",
+          "Program",
+          "ImportDeclaration",
+          "ImportSpecifier",
+          "occurrence:0"
+        ],
+        "fingerprint": "face8cacab96656d9e198b0333266f7e189e7a849a2730031a5b5e2be3312b32"
+      },
+      "reason": "external-module-boundary",
+      "detail": "Import 'pathe' leaves the linked file set."
+    },
+    {
+      "site": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/stages/fallback.ts",
+        "semanticPath": [
+          "site:import-boundary",
+          "Program",
+          "ImportDeclaration",
+          "ImportSpecifier",
+          "occurrence:0"
+        ],
+        "fingerprint": "84ec8617ed8a27a256a1060afab39730e6ba731f01c4891d7b9f2127e730400c"
+      },
+      "reason": "external-module-boundary",
+      "detail": "Import 'unplugin' leaves the linked file set."
+    },
+    {
+      "site": {
+        "schema": "guessless.symbol-anchor/v1",
+        "file": "plugin/src/types.ts",
+        "semanticPath": [
+          "site:import-boundary",
+          "Program",
+          "ImportDeclaration",
+          "ImportSpecifier",
+          "occurrence:0"
+        ],
+        "fingerprint": "a5cae443cb8dace7933e5f7736b0629b9bd6541c89f94458ed432dd2384a81e3"
+      },
+      "reason": "unresolved-specifier",
+      "detail": "Import '../../src/comptime/types.ts' leaves the linked file set."
+    }
+  ],
+  "integrity": "7e48c1a58ab150e0afec7702a14889eed7e2920e3a63cf3d98e3e090dc78ad74"
+}

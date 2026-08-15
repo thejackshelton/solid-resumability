@@ -1,0 +1,20 @@
+{
+  "// port note": "Upstream this file was `\"extends\": \"../../tsconfig.json\"` (the solid monorepo root at 4879891e). This is a standalone port, so that base config does not exist and Vite fails to resolve it. The base's compilerOptions are inlined verbatim below (target/newLine/strict/skipLibCheck/ignoreDeprecations + `exclude`), with the example's own overrides kept byte-identical. `declaration`/`emitDeclarationOnly` from the base are dropped because they are inert under this file's `noEmit: true` and TypeScript rejects the combination. Effective compiler options are otherwise unchanged from the commit.",
+  "compilerOptions": {
+    "target": "ESNext",
+    "newLine": "LF",
+    "strict": true,
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
+    "noEmit": true,
+    "lib": ["ESNext", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+    "jsxImportSource": "@solidjs/web",
+    "esModuleInterop": true,
+    "types": ["vite/client"]
+  },
+  "exclude": ["node_modules"],
+  "include": ["src/**/*", "vite.config.mjs"]
+}

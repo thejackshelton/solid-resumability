@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>start-mode reproduction</title>
+  </head>
+  <body>
+    <div id="root">
+      <!--
+        Empty in the source, and filled by the resumability plugin's HTML stage
+        with `Counter`'s emitted template. A served page whose mount is still
+        empty is a page the hook never reached.
+      -->
+      <div class="mount" data-component="Counter" data-resume="Counter"></div>
+    </div>
+    <script type="module" src="/src/classic-entry.ts"></script>
+  </body>
+</html>

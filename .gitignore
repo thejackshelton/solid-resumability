@@ -1,0 +1,37 @@
+node_modules/
+
+# Scratch artifact directories the suite emits and removes again in `afterAll`
+# (see test/see-through.test.ts) — never a source. They land inside the repo
+# rather than the OS temp dir because the suite `import()`s what it emits, and
+# Vite resolves what is under the project root. Two homes, both matched: the
+# repo root for the older suites, and test/ for the ones written since.
+.artifacts-*/
+test/.artifacts-*/
+
+# Agent and goal-run state, not project source.
+.claude/
+.fable-opus/
+docs/goals/
+
+# Regenerated output: `cd demo && pnpm build` rebuilds dist/artifacts/generated,
+# `pnpm measure` writes .measure, `verify/scripts/run.mjs` writes .witness.
+demo/.measure/
+verify/.witness/
+demo/dist/
+demo/artifacts/
+demo/src/generated/
+# The todos page's deferral group, generated per page by the plugin's group
+# stage at the path `scripts/check-zero-eager.mjs` freezes it under.
+demo/src/todos-group.ts
+verify/dist/
+
+# `cd plugin && pnpm build` writes dist; the plugin suite emits artifacts into
+# .verify-out to compare them against the demo's checked-in reference tree.
+plugin/dist/
+plugin/node_modules/
+plugin/.verify-out/
+
+# Nothing is tracked yet, so the list above is complete as it stands at a fresh `git init`.
+# For a repo that already tracks these paths: `git rm -r --cached` recipe in docs/goals/clean-cut/notes/T002-rulings.md ruling 6.
+
+# Root artifacts/ is deliberately NOT ignored — it is the checked-in golden.

@@ -1,0 +1,18 @@
+{
+  "name": "start-mode-repro",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-contained reproduction: does unplugin-solid-resumability compose with @solidjs/vite-plugin's start:true mode? Its own package.json, its own lockfile, its own node_modules — nothing in the main repo moves.",
+  "scripts": {
+    "repro": "node run.mjs"
+  },
+  "devDependencies": {
+    "@solidjs/signals": "2.0.0-rc.0",
+    "@solidjs/vite-plugin": "3.0.0-next.28",
+    "@solidjs/web": "2.0.0-rc.0",
+    "solid-js": "2.0.0-rc.0",
+    "unplugin-solid-resumability": "link:../../plugin",
+    "vite": "7.3.6"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "solid-resumability",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "comptime": "node src/comptime/cli.ts",
+    "coverage": "node src/coverage/cli.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@solidjs/signals": "2.0.0-rc.0",
+    "@solidjs/web": "2.0.0-rc.0",
+    "solid-js": "2.0.0-rc.0",
+    "yuku-analyzer": "0.8.5",
+    "yuku-codegen": "0.8.5",
+    "yuku-parser": "0.8.5"
+  },
+  "devDependencies": {
+    "@guessless/engine": "1.0.0",
+    "@solidjs/vite-plugin": "3.0.0-next.28",
+    "@types/node": "25.6.0",
+    "guessless": "1.0.0",
+    "jsdom": "30.0.1",
+    "magic-regexp": "0.11.0",
+    "pathe": "2.0.3",
+    "typescript": "6.0.2",
+    "ufo": "1.6.4",
+    "vitest": "4.1.10"
+  }
+}

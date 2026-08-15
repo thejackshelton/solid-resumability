@@ -1,0 +1,98 @@
+# Machine-checkable citation index for docs/feasibility-report.md
+#
+# Format: <prefix>:<path>, one per line.
+#   solid:     relative to ~/dev/open-source/solid, resolved at commit
+#              4879891e09680b026085e1cb70f22f54912244ee (git cat-file -e)
+#   markless:  relative to ~/dev/open-source/markless
+#   frameless: relative to ~/dev/open-source/frameless
+#   yuku:      relative to ~/dev/open-source/yuku
+#   https://  a full URL, cited verbatim. The dom-expressions runtime entries are
+#              GitHub blob URLs pinned to commit d1f20ac0146be3267a7afdfbcd472d10918972db
+#              (runtime 0.50.0-next.41), the checkout that used to sit in vendor/ before
+#              T006 deleted it: the SHA is the pin, so the URL resolves to the exact bytes.
+#              The report's older `vendor:<path>` prose references mean these URLs —
+#              same commit, same paths, with the line ranges still valid.
+#   src:       relative to solid-resumability/src, the toolchain sources
+#              (this tree was `spike/src` until the T001 rename and then
+#              `src/src` until T007 promoted the project to the repo root;
+#              older receipts still say so)
+#   local:     relative to the solid-resumability project root
+
+# ── Solid 2.0 (next) @ 4879891e ──────────────────────────────────────────────
+solid:packages/solid/src/client/component.ts
+solid:packages/solid/src/client/core.ts
+solid:packages/solid/src/client/hydration.ts
+solid:packages/solid/src/client/flow.ts
+solid:packages/solid/src/server/hydration.ts
+solid:packages/solid-signals/src/signals.ts
+solid:packages/solid-signals/src/core/core.ts
+solid:packages/solid-signals/src/core/effect.ts
+solid:packages/solid-web/src/client.ts
+solid:packages/solid-web/src/index.ts
+solid:package.json
+solid:packages/solid/package.json
+
+# ── dom-expressions runtime @ d1f20ac0 (0.50.0-next.41) ──────────────────────
+https://github.com/ryansolid/dom-expressions/blob/d1f20ac0146be3267a7afdfbcd472d10918972db/packages/runtime/src/client.js
+https://github.com/ryansolid/dom-expressions/blob/d1f20ac0146be3267a7afdfbcd472d10918972db/packages/runtime/src/serializer.js
+https://github.com/ryansolid/dom-expressions/blob/d1f20ac0146be3267a7afdfbcd472d10918972db/packages/runtime/src/frame-client.js
+https://github.com/ryansolid/dom-expressions/blob/d1f20ac0146be3267a7afdfbcd472d10918972db/packages/runtime/src/frame-sink.js
+https://github.com/ryansolid/dom-expressions/blob/d1f20ac0146be3267a7afdfbcd472d10918972db/packages/runtime/src/frame-transport.js
+https://github.com/ryansolid/dom-expressions/blob/d1f20ac0146be3267a7afdfbcd472d10918972db/packages/runtime/package.json
+
+# ── Markless (comptime prior art) ────────────────────────────────────────────
+markless:README.md
+markless:specs/framework/02-compiler-pipeline.md
+markless:specs/framework/05-resumability-payload.md
+markless:specs/framework/06-runtime-resumer.md
+markless:packages/compiler/src/passes/state-lowering.ts
+markless:packages/compiler/src/passes/capture-analysis.ts
+markless:packages/compiler/src/passes/symbol-modules.ts
+markless:packages/compiler/src/passes/payload-arena.ts
+markless:packages/web/src/event-only-resume.ts
+
+# ── Frameless (semantic-record prior art) ────────────────────────────────────
+frameless:packages/compiler/src/pass-registry.ts
+frameless:packages/compiler/src/schema.ts
+frameless:packages/frameworks/qwik/src/emitter/index.ts
+
+# ── Yuku toolchain ───────────────────────────────────────────────────────────
+yuku:README.md
+yuku:npm/yuku-parser/package.json
+yuku:npm/yuku-codegen/package.json
+# The analyzer's public API surface. Cited from the yuku checkout since T001
+# deleted the vendored copy that used to carry it (src:vendor/yuku-analyzer/).
+yuku:npm/yuku-analyzer/index.d.ts
+
+# ── The toolchain (the spike, promoted to the repo root in T007) ─────────────
+local:package.json
+local:vitest.config.ts
+src:fixtures/CounterA.tsx
+src:fixtures/CounterB.tsx
+src:fixtures/counter-helper.ts
+src:comptime/index.ts
+src:comptime/classify.ts
+src:comptime/emit.ts
+src:comptime/cli.ts
+src:resume/index.ts
+src:resume/artifacts.ts
+src:resume/locate.ts
+local:artifacts/CounterA/template.js
+local:artifacts/CounterA/structure.js
+local:artifacts/CounterA/wiring.js
+local:artifacts/CounterA/handlers/s0.js
+local:artifacts/CounterA/handlers/s1.js
+local:artifacts/CounterA/manifest.json
+local:test/parity.test.tsx
+local:test/resume.test.ts
+local:test/classic-baseline.test.tsx
+local:test/comptime-pass.test.ts
+
+# ── Local receipts and board record ──────────────────────────────────────────
+local:docs/goals/solid-resumability/notes/T001-solid-next-map.md
+local:docs/goals/solid-resumability/notes/T002-markless-frameless-yuku-map.md
+local:docs/goals/solid-resumability/notes/T004-spike.md
+local:docs/goals/solid-resumability/notes/T006-dom-expressions-map.md
+local:docs/goals/solid-resumability/state.yaml
+local:docs/feasibility-report.md
+local:docs/feasibility-citations.txt

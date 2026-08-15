@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Shelf</title>
+  </head>
+  <body>
+    <!--
+      A synthetic page, shaped like the pages this rewriter serves: one entry
+      script, one declared mount point that a resumable build fills with the
+      component's emitted markup, and one root element that a captured build
+      fills with a first paint. Both are empty here, which is how a source
+      document states them.
+    -->
+    <main class="page">
+      <div class="mount" data-component="ShelfToolbar" data-resume="shelf-page.ShelfToolbar"></div>
+      <div class="shelf" id="page-root"></div>
+    </main>
+    <script type="module" src="/src/pages/shelf-classic.ts"></script>
+  </body>
+</html>

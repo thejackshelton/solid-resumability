@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solid 2.0 — provable fixtures (__VARIANT__)</title>
+    <link rel="stylesheet" href="/src/styles/demo.css" />
+  </head>
+  <body>
+    <main class="page">
+      <h1>Provable fixtures</h1>
+      <p class="lede">
+        Six mounts the comptime pass proves resumable, served two ways from the same source. The
+        last of them holds a seventh component the page never declares: a parent that ADDRESSES its
+        child instead of absorbing it, so the child arrives in this document with an address of its
+        own and resumes on it. This build is the <strong data-variant>__VARIANT__</strong> variant.
+      </p>
+
+      <!--
+        One source of truth for the page's shape: every `.mount` below is empty
+        in the classic build (Solid renders into it) and pre-filled with the
+        component's emitted template in the resumable build (the resumer takes
+        it over). `demo/build/plugins.mjs` does the filling; the two variants
+        differ in this file by that markup and by one script `src`.
+
+        `data-component` is the component's name, which is what the classic
+        variant needs. `data-resume` is the id of its emitted artifact
+        directory, which is what a resumable build stamps into the markup —
+        the two differ whenever a file holds a component of another name
+        (`PropsPair.tsx` -> `PropsPairParent`), and on the roster below they
+        name two different components: the classic path renders the PROVIDER,
+        the resume path takes over the list inside it.
+
+        The roster is also the one mount this file writes rather than reads.
+        Every `.mount` above it is empty here and filled by the build; that one
+        is filled HERE, by hand, and the build's job on it is the opposite one
+        — `check-template` holds what this file wrote to the template the pass
+        emitted and to a key on every item, and refuses the page otherwise.
+      -->
+      <section class="fixture">
+        <h2>ProvableCounter</h2>
+        <p class="blurb">One literal cell, one text binding, two handlers.</p>
+        <div class="mount" data-component="ProvableCounter" data-resume="ProvableCounter"></div>
+      </section>
+
+      <section class="fixture">
+        <h2>ProvableStepper</h2>
+        <p class="blurb">Two cells, arithmetic derivations, handlers that read both.</p>
+        <div class="mount" data-component="ProvableStepper" data-resume="ProvableStepper"></div>
+      </section>
+
+      <section class="fixture">
+        <h2>ProvableGreeting</h2>
+        <p class="blurb">A string cell and a template-literal binding.</p>
+        <div class="mount" data-component="ProvableGreeting" data-resume="ProvableGreeting"></div>
+      </section>
+
+      <section class="fixture">
+        <h2>PropsPairParent</h2>
+        <p class="blurb">An accessor and a handler crossing one component boundary.</p>
+        <div class="mount" data-component="PropsPairParent" data-resume="PropsPair.PropsPairParent"></div>
+      </section>
+
+      <!--
+        The addressed mount: one `.mount` in this file, two components in the
+        served markup.
+
+        Empty here like every written mount above it, and filled by the build
+        with something none of them carry — the parent's template with a second
+        `[data-resume]` element inside it, and the CHILD's own emitted markup
+        inside that. `ComposedInner` keeps its own cell and its own handler
+        chunk, which is exactly why the parent could not absorb it: a spliced
+        child's bindings are re-homed onto its parent's cells, and a child that
+        declares a signal is state the parent has no slot for.
+
+        Nothing in this file names the child, and nothing may: its address is
+        derived by the analysis from `ComposedCounter.tsx` and emitted into the
+        parent's template. A page that declared it would be a page where the
+        compiler emits a hole the consumer is responsible for filling, and a
+        consumer who got it wrong would ship a mount the resumer throws on.
+      -->
+      <section class="fixture">
+        <h2>ComposedOuter</h2>
+        <p class="blurb">
+          A parent that addresses its child rather than absorbing it. Both counters own their state
+          and their handler chunk; the two buttons move two numbers, one each.
+        </p>
+        <div
+          class="mount"
+          data-component="ComposedOuter"
+          data-resume="ComposedCounter.ComposedOuter"
+        ></div>
+      </section>
+
+      <!--
+        The carried mount, and the only markup in this file the page's own
+        JavaScript could have produced instead.
+
+        These three items are HAND-AUTHORED and BUILD-VERIFIED — not captured
+        from a render, and not written by the pass. `RosterList` paints its list
+        out of a store, so a build has no list to fold: the pass emits the empty
+        `<ul>` and the document owes the items. What the build does with them is
+        check: the panel around them has to be the emitted template byte for
+        byte (parsed, so this indentation is nobody's business), every item has
+        to carry a `data-key`, and no two may carry the same one. A page that
+        drifted from any of that does not build.
+
+        Nothing at RUNTIME trusts this markup. The resume path reads the keys
+        out of it and resolves every dispatch through the live store's own list;
+        an item whose key that list does not have is a refusal, not a guess. So
+        the served order is deliberately the REVERSE of the order
+        `demo/src/roster-store.ts` seeds — Alan is first here and third there —
+        and a dispatch that resolved by position instead of by identity would
+        name the wrong member out loud, in the readout above the list.
+      -->
+      <section class="fixture">
+        <h2>Roster</h2>
+        <p class="blurb">
+          A keyed list carried by this document. Dropping a member names it in the readout above and
+          leaves the list exactly where it was.
+        </p>
+        <div class="mount" data-component="Roster" data-resume="KeyedRoster.RosterList">
+          <div class="roster-panel">
+            <p class="last">none</p>
+            <ul class="roster">
+              <li class="member" data-key="alan">
+                <span class="name">Alan</span><button class="drop">x</button>
+              </li>
+              <li class="member" data-key="grace">
+                <span class="name">Grace</span><button class="drop">x</button>
+              </li>
+              <li class="member" data-key="ada">
+                <span class="name">Ada</span><button class="drop">x</button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <p class="nav"><a href="/todos.html">todos →</a></p>
+    </main>
+    <script type="module" src="/src/pages/fixtures-classic.ts"></script>
+  </body>
+</html>

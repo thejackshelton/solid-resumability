@@ -1,0 +1,21 @@
+{
+  "name": "solid-resumability-verify",
+  "description": "Real-browser verification of the demo's network story: witness drives Chrome over CDP against the built demo pages",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verify": "node scripts/run.mjs",
+    "witness": "witness"
+  },
+  "devDependencies": {
+    "@async/witness": "file:../../witness",
+    "@types/node": "25.6.0",
+    "pathe": "2.0.3",
+    "typescript": "6.0.2",
+    "vite": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

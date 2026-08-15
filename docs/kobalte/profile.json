@@ -1,0 +1,2333 @@
+{
+  "schema": "kobalte-refusal-profile/1",
+  "subject": {
+    "claim": "Every statement in this profile is bounded to the twelve pre-registered functions listed in `components`.",
+    "preRegistered": [
+      "separator/SeparatorRoot",
+      "button/ButtonRoot",
+      "checkbox/CheckboxRoot",
+      "checkbox/CheckboxControl",
+      "checkbox/CheckboxIndicator",
+      "dialog/DialogRoot",
+      "dialog/DialogTrigger",
+      "dialog/DialogContent",
+      "dialog/DialogPortal",
+      "tabs/TabsRoot",
+      "tabs/TabsTrigger",
+      "popover/PopoverContent"
+    ],
+    "count": 12
+  },
+  "provenance": {
+    "source": {
+      "role": "reporting",
+      "repo": "https://github.com/kobaltedev/kobalte.git",
+      "commit": "a892187065cf7e0d07e91db02310bd28a5619236",
+      "tree": "5b5d0ec25487640dfb6c70bec5d3e7bbbd5085e1",
+      "acquisition": "git fetch --depth 1 origin <sha>",
+      "files": 12
+    },
+    "dist": {
+      "role": "corroborating",
+      "spec": "@kobalte/core@2.0.0-alpha.0",
+      "tarball": "https://registry.npmjs.org/@kobalte/core/-/core-2.0.0-alpha.0.tgz",
+      "integrity": "sha512-6l5wJRkk/CRXWzbzwYeNfv38XHWKoL3Bj9ykJQexGcmyM2TQV4IpR1E/wDbhygT9TsI3LYP5qgdLj/l2xx+qiw==",
+      "bytes": 379195,
+      "provenanceNote": "npm SLSA provenance resolves this tarball to the source arm's commit, so the arms are the pre- and post-rolldown views of one artifact.",
+      "files": 6
+    }
+  },
+  "analyzer": {
+    "pass": "src/comptime (write: false)",
+    "entryPoints": [
+      "loadProjectFrom",
+      "findComponent",
+      "classifySite"
+    ],
+    "yukuAnalyzer": "0.8.5",
+    "yukuParser": "0.8.5",
+    "yukuCodegen": "0.8.5",
+    "installed": false,
+    "built": false
+  },
+  "totals": {
+    "components": 12,
+    "provable": 0,
+    "fallback": 12,
+    "provableFraction": "0.0%",
+    "sourceFiles": 12,
+    "distFiles": 6,
+    "armsAgreeOnStatus": true,
+    "componentsWithIdenticalReasonCodes": 11
+  },
+  "ranked": [
+    {
+      "code": "jsx-component-element",
+      "components": 8,
+      "occurrences": 14,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "signal-escapes-unanalyzable-use",
+      "components": 7,
+      "occurrences": 24,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "jsx-spread",
+      "components": 4,
+      "occurrences": 6,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "show-branch-not-static-at-capture",
+      "components": 4,
+      "occurrences": 4,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "jsx-dynamic-attribute",
+      "components": 3,
+      "occurrences": 20,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "signal-escapes-to-opaque-callee",
+      "components": 3,
+      "occurrences": 5,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "no-signal-source",
+      "components": 3,
+      "occurrences": 3,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "handler-not-inline",
+      "components": 2,
+      "occurrences": 8,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "jsx-dynamic-child-not-derivable",
+      "components": 2,
+      "occurrences": 2,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "signal-initializer-not-literal",
+      "components": 1,
+      "occurrences": 1,
+      "onlyBlockerFor": 0
+    }
+  ],
+  "onlyBlockers": [],
+  "errata": [
+    {
+      "id": "E1",
+      "title": "Agreement between the arms is not corroboration of one cause",
+      "filed": "docs/kobalte/impossibility.md",
+      "corrects": "an inference from the totals, not a measurement",
+      "affects": [
+        "totals.armsAgreeOnStatus",
+        "totals.componentsWithIdenticalReasonCodes"
+      ],
+      "code": "jsx-component-element",
+      "standing": "Every code in this profile is correct, both arms, all twelve; a regeneration today is byte-identical and `--verify` says so. Nothing in this erratum asks a row to change.",
+      "misreading": "`armsAgreeOnStatus: true` and `componentsWithIdenticalReasonCodes: 11`, read casually, invite the inference that the two arms **corroborate one cause** for each shared code. For `jsx-component-element` — the code on all twelve — they do not.",
+      "arms": [
+        {
+          "arm": "source",
+          "finding": "The polymorphic indirection's entry module is a bare `export * from` barrel. `loadProjectFrom` queues a module's `imports` only (`src/comptime/project.ts:78`), so the module behind the barrel never enters the analyzed set, its sole export record resolves to nothing, and `resolveChildComponent` bails at `definition() == null` (`classify.ts:373`). The arm never reaches the polymorphic machinery at all."
+        },
+        {
+          "arm": "dist",
+          "finding": "Rolldown has flattened that edge into a direct named import, so the definition resolves, the machinery **is** reached, and the refusal happens later — at `inlinableChild`, on clauses about captures, statement count, whole-props use and a component root."
+        }
+      ],
+      "reading": "Same code, same twelve, two different causes. The agreement is real; the corroboration it appears to offer is not.",
+      "consequence": "**The source arm is not a valid measurement surface for any polymorphic-path widening.** It cannot report whether such a widening worked, because it never executes the machinery the widening would change — a rule that fixed the shape completely would move zero source-arm codes, and a rule that broke it would also move zero.",
+      "ordering": "Future work on that path either measures on the **dist arm**, or lands the re-export-edge rule first and regenerates afterwards. The correct ordering is **rule-then-regenerate, not regenerate-now**; regenerating today produces the same bytes and buys nothing.",
+      "corroboration": "Not taken on trust. `test/fixtures/shapes/gate/` reproduces the mechanism in fourteen lines of first-party source, and `test/shape-corpus.test.ts` asserts the analyzed set of a module importing through a bare `export * from` barrel contains the barrel and not the module behind it."
+    }
+  ],
+  "components": [
+    {
+      "entrypoint": "separator",
+      "function": "SeparatorRoot",
+      "alias": "Root",
+      "publicPath": "@kobalte/core/separator",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/separator/separator-root.tsx",
+      "chunk": "dist/separator/QhqEt4aD.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/separator/separator-root.tsx",
+          "linkedModules": 24,
+          "codes": [
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-spread"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/separator/QhqEt4aD.jsx",
+          "linkedModules": 5,
+          "codes": [
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-spread"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/separator/separator-root.tsx:64:4",
+          "line": 64,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "role={tagName() !== \"hr\" ? \"separator\" : undefined}",
+          "expressionBytes": 51,
+          "message": "Attribute `role` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`SeparatorRoot` was refused with `jsx-dynamic-attribute` at `role={tagName() !== \"hr\" ? \"separator\" : undefined}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/separator/separator-root.tsx:65:4",
+          "line": 65,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "aria-orientation={ mergedProps.orientation === \"vertical\" ? \"vertical\" : undefined }",
+          "expressionBytes": 91,
+          "message": "Attribute `aria-orientation` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`SeparatorRoot` was refused with `jsx-dynamic-attribute` at `aria-orientation={ mergedProps.orientation === \"vertical\" ? \"vertical\" : undefined }`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/separator/separator-root.tsx:68:4",
+          "line": 68,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "data-orientation={mergedProps.orientation}",
+          "expressionBytes": 42,
+          "message": "Attribute `data-orientation` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`SeparatorRoot` was refused with `jsx-dynamic-attribute` at `data-orientation={mergedProps.orientation}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-spread",
+          "loc": "packages/core/src/separator/separator-root.tsx:69:4",
+          "line": 69,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "{...others}",
+          "expressionBytes": 11,
+          "message": "Spread attributes hide the element's real props.",
+          "detail": null,
+          "shape": "`SeparatorRoot` was refused with `jsx-spread` at `{...others}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "button",
+      "function": "ButtonRoot",
+      "alias": "Root",
+      "publicPath": "@kobalte/core/button",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/button/button-root.tsx",
+      "chunk": "dist/button/DvspU6cJ.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/button/button-root.tsx",
+          "linkedModules": 25,
+          "codes": [
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-spread"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/button/DvspU6cJ.jsx",
+          "linkedModules": 5,
+          "codes": [
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-spread"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/button/button-root.tsx:86:4",
+          "line": 86,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "type={isNativeButton() || isNativeInput() ? mergedProps.type : undefined}",
+          "expressionBytes": 73,
+          "message": "Attribute `type` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `type={isNativeButton() || isNativeInput() ? mergedProps.type : undefined}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/button/button-root.tsx:87:4",
+          "line": 87,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "role={!isNativeButton() && !isNativeLink() ? \"button\" : undefined}",
+          "expressionBytes": 66,
+          "message": "Attribute `role` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `role={!isNativeButton() && !isNativeLink() ? \"button\" : undefined}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/button/button-root.tsx:88:4",
+          "line": 88,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "tabindex={ !isNativeButton() && !isNativeLink() && !mergedProps.disabled ? 0 : undefined }",
+          "expressionBytes": 107,
+          "message": "Attribute `tabindex` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `tabindex={ !isNativeButton() && !isNativeLink() && !mergedProps.disabled ? 0 : undefined }`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/button/button-root.tsx:93:4",
+          "line": 93,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "disabled={ isNativeButton() || isNativeInput() ? mergedProps.disabled : undefined }",
+          "expressionBytes": 90,
+          "message": "Attribute `disabled` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `disabled={ isNativeButton() || isNativeInput() ? mergedProps.disabled : undefined }`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/button/button-root.tsx:96:4",
+          "line": 96,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? \"true\" : undefined }",
+          "expressionBytes": 117,
+          "message": "Attribute `aria-disabled` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? \"true\" : undefined }`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/button/button-root.tsx:101:4",
+          "line": 101,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "data-disabled={mergedProps.disabled ? \"\" : undefined}",
+          "expressionBytes": 53,
+          "message": "Attribute `data-disabled` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `data-disabled={mergedProps.disabled ? \"\" : undefined}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-spread",
+          "loc": "packages/core/src/button/button-root.tsx:102:4",
+          "line": 102,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "{...others}",
+          "expressionBytes": 11,
+          "message": "Spread attributes hide the element's real props.",
+          "detail": null,
+          "shape": "`ButtonRoot` was refused with `jsx-spread` at `{...others}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "checkbox",
+      "function": "CheckboxRoot",
+      "alias": "Root",
+      "publicPath": "@kobalte/core/checkbox",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/checkbox/checkbox-root.tsx",
+      "chunk": "dist/checkbox/BDEhc0qI.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/checkbox/checkbox-root.tsx",
+          "linkedModules": 38,
+          "codes": [
+            "jsx-component-element",
+            "jsx-component-element",
+            "jsx-component-element",
+            "jsx-component-element",
+            "jsx-dynamic-child-not-derivable",
+            "signal-escapes-to-opaque-callee",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/checkbox/BDEhc0qI.jsx",
+          "linkedModules": 10,
+          "codes": [
+            "jsx-component-element",
+            "jsx-component-element",
+            "jsx-component-element",
+            "jsx-component-element",
+            "jsx-dynamic-child-not-derivable",
+            "signal-escapes-to-opaque-callee",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/checkbox/checkbox-root.tsx:216:3",
+          "line": 216,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<FormControlContext value={formControlContext}> <CheckboxContext value={context}> <Polymorphic<CheckboxRootRenderProps> as=\"div\" ref={[setRef, mergedProps.ref]} role=\"group\" id={access(formControlProps.id)} onPointerDown …",
+          "expressionBytes": 511,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`CheckboxRoot`'s markup routes through `<FormControlContext>`, a Kobalte context provider element, which is how this component publishes its state to the parts below it; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Publish this component's state without a provider ELEMENT in the returned markup. Solid's context API takes a provider component in the tree, so there is no local Kobalte-side edit here: the state would have to be shared by some other mechanism entirely.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<FormControlContext>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/checkbox/checkbox-root.tsx:217:4",
+          "line": 217,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<CheckboxContext value={context}> <Polymorphic<CheckboxRootRenderProps> as=\"div\" ref={[setRef, mergedProps.ref]} role=\"group\" id={access(formControlProps.id)} onPointerDown={onPointerDown} {...formControlContext.dataset( …",
+          "expressionBytes": 436,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`CheckboxRoot`'s markup routes through `<CheckboxContext>`, a Kobalte context provider element, which is how this component publishes its state to the parts below it; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Publish this component's state without a provider ELEMENT in the returned markup. Solid's context API takes a provider component in the tree, so there is no local Kobalte-side edit here: the state would have to be shared by some other mechanism entirely.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<CheckboxContext>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/checkbox/checkbox-root.tsx:218:5",
+          "line": 218,
+          "column": 5,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<Polymorphic<CheckboxRootRenderProps> as=\"div\" ref={[setRef, mergedProps.ref]} role=\"group\" id={access(formControlProps.id)} onPointerDown={onPointerDown} {...formControlContext.dataset()} {...dataset()} {...others} > <C …",
+          "expressionBytes": 376,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`CheckboxRoot`'s markup routes through `<Polymorphic>`, Kobalte's polymorphic `as` indirection, which is how this component lets a caller swap its host element; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Render the host element directly rather than through `<Polymorphic>`. That removes this component's `as` override, so it is a change to its public shape, not a local tidy-up.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<Polymorphic>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/checkbox/checkbox-root.tsx:228:6",
+          "line": 228,
+          "column": 6,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<CheckboxRootChild state={context}> {mergedProps.children} </CheckboxRootChild>",
+          "expressionBytes": 90,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`CheckboxRoot`'s markup routes through `<CheckboxRootChild>`, a Kobalte component element; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Return an intrinsic root rather than delegating the whole body to `<CheckboxRootChild>`.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<CheckboxRootChild>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "loc": "packages/core/src/checkbox/checkbox-root.tsx:229:7",
+          "line": 229,
+          "column": 7,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "{mergedProps.children}",
+          "expressionBytes": 22,
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "detail": null,
+          "shape": "`{mergedProps.children}` is a caller-supplied children slot: `CheckboxRoot` places arbitrary markup it never sees, so nothing in the build can derive the text this position will carry.",
+          "wouldChange": {
+            "kobalte": "Nothing local. A compound component that did not accept opaque children would not be a compound component; the slot is the feature.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — admit an opaque children slot as a templated hole to be filled at capture."
+          }
+        },
+        {
+          "code": "signal-escapes-to-opaque-callee",
+          "loc": "packages/core/src/checkbox/checkbox-root.tsx:182:26",
+          "line": 182,
+          "column": 26,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "ref",
+          "expressionBytes": 3,
+          "message": "`ref` escapes into `createFormResetListener`, which is defined outside this component (an external module); what it does with the signal is invisible to this analysis.",
+          "detail": {
+            "binding": "ref",
+            "callee": "createFormResetListener",
+            "definedIn": null
+          },
+          "shape": "`ref` is handed to `createFormResetListener`, a Kobalte primitive whose definition this pass did not resolve into the analyzed set at all, so what that primitive does with the signal is invisible and the cell cannot be proved to stay inside `CheckboxRoot`.",
+          "wouldChange": {
+            "kobalte": "Have `createFormResetListener` take a plain value and a callback rather than the signal pair, so the cell never crosses the module edge.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — resolve `createFormResetListener` and summarize its use of the signal instead of treating an unresolved callee as opaque."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/checkbox/checkbox-root.tsx:220:12",
+          "line": 220,
+          "column": 12,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "setRef",
+          "expressionBytes": 6,
+          "message": "`setRef` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "setRef",
+            "parent": "ArrayExpression"
+          },
+          "shape": "`setRef` sits inside the `ref={[…]}` array literal Kobalte uses to fan one host-element ref out to both its own setter and the caller's `props.ref`; an array-literal position is not one the pass can prove safe for a setter.",
+          "wouldChange": {
+            "kobalte": "Merge the two refs behind a single callback rather than handing the setter to an array literal in the `ref` attribute.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — admit an array-literal ref fan-out as a proved-safe setter position."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/checkbox/checkbox-root.tsx:207:3",
+          "line": 207,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "inputRef",
+          "expressionBytes": 8,
+          "message": "`inputRef` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "inputRef",
+            "parent": "Property"
+          },
+          "shape": "`inputRef` is packed as a field of the `context` object literal that `CheckboxRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/checkbox/checkbox-root.tsx:212:3",
+          "line": 212,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "setInputRef",
+          "expressionBytes": 11,
+          "message": "`setInputRef` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "setInputRef",
+            "parent": "Property"
+          },
+          "shape": "`setInputRef` is packed as a field of the `context` object literal that `CheckboxRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/checkbox/checkbox-root.tsx:211:3",
+          "line": 211,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "setIsFocused",
+          "expressionBytes": 12,
+          "message": "`setIsFocused` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "setIsFocused",
+            "parent": "Property"
+          },
+          "shape": "`setIsFocused` is packed as a field of the `context` object literal that `CheckboxRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "checkbox",
+      "function": "CheckboxControl",
+      "alias": "Control",
+      "publicPath": "@kobalte/core/checkbox",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/checkbox/checkbox-control.tsx",
+      "chunk": "dist/checkbox/BDEhc0qI.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/checkbox/checkbox-control.tsx",
+          "linkedModules": 38,
+          "codes": [
+            "handler-not-inline",
+            "handler-not-inline",
+            "jsx-spread",
+            "jsx-spread",
+            "jsx-spread",
+            "no-signal-source"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/checkbox/BDEhc0qI.jsx",
+          "linkedModules": 10,
+          "codes": [
+            "handler-not-inline",
+            "handler-not-inline",
+            "jsx-spread",
+            "jsx-spread",
+            "jsx-spread",
+            "no-signal-source"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "no-signal-source",
+          "loc": "packages/core/src/checkbox/checkbox-control.tsx:41:8",
+          "line": 41,
+          "column": 8,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "function CheckboxControl<T extends ValidComponent = \"div\">( props: PolymorphicProps<T, CheckboxControlProps<T>>, ) { const formControlContext = useFormControlContext(); const context = useCheckboxContext(); const mergedP …",
+          "expressionBytes": 1005,
+          "message": "The component declares no source cell to resume.",
+          "detail": null,
+          "shape": "`CheckboxControl` declares no `createSignal` of its own: it is a leaf that reads `useFormControlContext` and `useCheckboxContext` and renders from what it finds there, so there is no source cell for a resumed page to restore.",
+          "wouldChange": {
+            "kobalte": "Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none."
+          }
+        },
+        {
+          "code": "handler-not-inline",
+          "loc": "packages/core/src/checkbox/checkbox-control.tsx:75:4",
+          "line": 75,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "onClick={onClick}",
+          "expressionBytes": 17,
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "detail": {
+            "boundAs": "Identifier",
+            "binding": "onClick"
+          },
+          "shape": "`CheckboxControl` was refused with `handler-not-inline` at `onClick={onClick}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "handler-not-inline",
+          "loc": "packages/core/src/checkbox/checkbox-control.tsx:76:4",
+          "line": 76,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "onKeyDown={onKeyDown}",
+          "expressionBytes": 21,
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "detail": {
+            "boundAs": "Identifier",
+            "binding": "onKeyDown"
+          },
+          "shape": "`CheckboxControl` was refused with `handler-not-inline` at `onKeyDown={onKeyDown}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-spread",
+          "loc": "packages/core/src/checkbox/checkbox-control.tsx:77:4",
+          "line": 77,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "{...formControlContext.dataset()}",
+          "expressionBytes": 33,
+          "message": "Spread attributes hide the element's real props.",
+          "detail": null,
+          "shape": "`CheckboxControl` was refused with `jsx-spread` at `{...formControlContext.dataset()}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-spread",
+          "loc": "packages/core/src/checkbox/checkbox-control.tsx:78:4",
+          "line": 78,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "{...context.dataset()}",
+          "expressionBytes": 22,
+          "message": "Spread attributes hide the element's real props.",
+          "detail": null,
+          "shape": "`CheckboxControl` was refused with `jsx-spread` at `{...context.dataset()}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-spread",
+          "loc": "packages/core/src/checkbox/checkbox-control.tsx:79:4",
+          "line": 79,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "{...others}",
+          "expressionBytes": 11,
+          "message": "Spread attributes hide the element's real props.",
+          "detail": null,
+          "shape": "`CheckboxControl` was refused with `jsx-spread` at `{...others}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "checkbox",
+      "function": "CheckboxIndicator",
+      "alias": "Indicator",
+      "publicPath": "@kobalte/core/checkbox",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/checkbox/checkbox-indicator.tsx",
+      "chunk": "dist/checkbox/BDEhc0qI.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/checkbox/checkbox-indicator.tsx",
+          "linkedModules": 38,
+          "codes": [
+            "jsx-component-element",
+            "show-branch-not-static-at-capture",
+            "signal-escapes-unanalyzable-use"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/checkbox/BDEhc0qI.jsx",
+          "linkedModules": 10,
+          "codes": [
+            "jsx-component-element",
+            "show-branch-not-static-at-capture",
+            "signal-escapes-unanalyzable-use"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "show-branch-not-static-at-capture",
+          "loc": "packages/core/src/checkbox/checkbox-indicator.tsx:74:9",
+          "line": 74,
+          "column": 9,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "when={present()}",
+          "expressionBytes": 16,
+          "message": "A `<Show>` guard has to be a derivation this pass can fold or measure. This one is neither, so which of the two branches the served markup carries cannot be settled before the page runs — and a region whose state the build does not know is a region the resume path would have to render.",
+          "detail": null,
+          "shape": "The `<Show>` guard is `when={present()}` — a presence accessor Kobalte derives from its disclosure state and reads back off context. The build can neither fold it nor measure it, so which branch the served markup carries is not settled before the page runs.",
+          "wouldChange": {
+            "kobalte": "Make the guard something the build can settle — a literal, or a value captured in the served first paint. A presence accessor driven by open/close state is neither, and it is the behaviour this part exists to provide.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — measure a two-state region whose guard reads a third-party context accessor."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/checkbox/checkbox-indicator.tsx:75:4",
+          "line": 75,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<Polymorphic<CheckboxIndicatorRenderProps> as=\"div\" ref={[setRef, mergedProps.ref]} {...formControlContext.dataset()} {...context.dataset()} {...others} />",
+          "expressionBytes": 178,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`CheckboxIndicator`'s markup routes through `<Polymorphic>`, Kobalte's polymorphic `as` indirection, which is how this component lets a caller swap its host element; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Render the host element directly rather than through `<Polymorphic>`. That removes this component's `as` override, so it is a change to its public shape, not a local tidy-up.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<Polymorphic>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/checkbox/checkbox-indicator.tsx:77:11",
+          "line": 77,
+          "column": 11,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "setRef",
+          "expressionBytes": 6,
+          "message": "`setRef` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "setRef",
+            "parent": "ArrayExpression"
+          },
+          "shape": "`setRef` sits inside the `ref={[…]}` array literal Kobalte uses to fan one host-element ref out to both its own setter and the caller's `props.ref`; an array-literal position is not one the pass can prove safe for a setter.",
+          "wouldChange": {
+            "kobalte": "Merge the two refs behind a single callback rather than handing the setter to an array literal in the `ref` attribute.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — admit an array-literal ref fan-out as a proved-safe setter position."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "dialog",
+      "function": "DialogRoot",
+      "alias": "Root",
+      "publicPath": "@kobalte/core/dialog",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/dialog/dialog-root.tsx",
+      "chunk": "dist/dialog/C9YDO9vc.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/dialog/dialog-root.tsx",
+          "linkedModules": 40,
+          "codes": [
+            "jsx-component-element",
+            "jsx-dynamic-child-not-derivable",
+            "signal-escapes-to-opaque-callee",
+            "signal-escapes-to-opaque-callee",
+            "signal-escapes-to-opaque-callee",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/dialog/C9YDO9vc.jsx",
+          "linkedModules": 10,
+          "codes": [
+            "jsx-component-element",
+            "jsx-dynamic-child-not-derivable",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use"
+          ]
+        }
+      },
+      "delta": {
+        "identical": false,
+        "sourceOnly": [
+          "signal-escapes-to-opaque-callee"
+        ],
+        "distOnly": [],
+        "counts": [
+          {
+            "code": "signal-escapes-to-opaque-callee",
+            "source": 3,
+            "dist": 0
+          }
+        ]
+      },
+      "reasons": [
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:145:9",
+          "line": 145,
+          "column": 9,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<DialogContext value={context}>{mergedProps.children}</DialogContext>",
+          "expressionBytes": 69,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`DialogRoot`'s markup routes through `<DialogContext>`, a Kobalte context provider element, which is how this component publishes its state to the parts below it; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Publish this component's state without a provider ELEMENT in the returned markup. Solid's context API takes a provider component in the tree, so there is no local Kobalte-side edit here: the state would have to be shared by some other mechanism entirely.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<DialogContext>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "jsx-dynamic-child-not-derivable",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:145:40",
+          "line": 145,
+          "column": 40,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "{mergedProps.children}",
+          "expressionBytes": 22,
+          "message": "This text child is not derivable from cell values and literals alone.",
+          "detail": null,
+          "shape": "`{mergedProps.children}` is a caller-supplied children slot: `DialogRoot` places arbitrary markup it never sees, so nothing in the build can derive the text this position will carry.",
+          "wouldChange": {
+            "kobalte": "Nothing local. A compound component that did not accept opaque children would not be a compound component; the slot is the feature.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — admit an opaque children slot as a templated hole to be filled at capture."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:126:3",
+          "line": 126,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "contentId",
+          "expressionBytes": 9,
+          "message": "`contentId` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "contentId",
+            "parent": "Property"
+          },
+          "shape": "`contentId` is packed as a field of the `context` object literal that `DialogRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-to-opaque-callee",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:140:39",
+          "line": 140,
+          "column": 39,
+          "arm": "source",
+          "alsoInDist": false,
+          "expression": "setContentId",
+          "expressionBytes": 12,
+          "message": "`setContentId` escapes into `createRegisterId`, which is defined outside this component (packages/core/src/primitives/create-register-id/create-register-id.ts); what it does with the signal is invisible to this analysis.",
+          "detail": {
+            "binding": "setContentId",
+            "callee": "createRegisterId",
+            "definedIn": "packages/core/src/primitives/create-register-id/create-register-id.ts"
+          },
+          "shape": "`setContentId` is handed to `createRegisterId`, a Kobalte primitive defined in `packages/core/src/primitives/create-register-id/create-register-id.ts`, outside this component, so what that primitive does with the signal is invisible and the cell cannot be proved to stay inside `DialogRoot`.",
+          "wouldChange": {
+            "kobalte": "Have `createRegisterId` take a plain value and a callback rather than the signal pair, so the cell never crosses the module edge.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — summarize what `createRegisterId` does with the signal instead of treating every out-of-component callee as opaque."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:127:3",
+          "line": 127,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "titleId",
+          "expressionBytes": 7,
+          "message": "`titleId` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "titleId",
+            "parent": "Property"
+          },
+          "shape": "`titleId` is packed as a field of the `context` object literal that `DialogRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-to-opaque-callee",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:141:37",
+          "line": 141,
+          "column": 37,
+          "arm": "source",
+          "alsoInDist": false,
+          "expression": "setTitleId",
+          "expressionBytes": 10,
+          "message": "`setTitleId` escapes into `createRegisterId`, which is defined outside this component (packages/core/src/primitives/create-register-id/create-register-id.ts); what it does with the signal is invisible to this analysis.",
+          "detail": {
+            "binding": "setTitleId",
+            "callee": "createRegisterId",
+            "definedIn": "packages/core/src/primitives/create-register-id/create-register-id.ts"
+          },
+          "shape": "`setTitleId` is handed to `createRegisterId`, a Kobalte primitive defined in `packages/core/src/primitives/create-register-id/create-register-id.ts`, outside this component, so what that primitive does with the signal is invisible and the cell cannot be proved to stay inside `DialogRoot`.",
+          "wouldChange": {
+            "kobalte": "Have `createRegisterId` take a plain value and a callback rather than the signal pair, so the cell never crosses the module edge.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — summarize what `createRegisterId` does with the signal instead of treating every out-of-component callee as opaque."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:128:3",
+          "line": 128,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "descriptionId",
+          "expressionBytes": 13,
+          "message": "`descriptionId` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "descriptionId",
+            "parent": "Property"
+          },
+          "shape": "`descriptionId` is packed as a field of the `context` object literal that `DialogRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-to-opaque-callee",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:142:43",
+          "line": 142,
+          "column": 43,
+          "arm": "source",
+          "alsoInDist": false,
+          "expression": "setDescriptionId",
+          "expressionBytes": 16,
+          "message": "`setDescriptionId` escapes into `createRegisterId`, which is defined outside this component (packages/core/src/primitives/create-register-id/create-register-id.ts); what it does with the signal is invisible to this analysis.",
+          "detail": {
+            "binding": "setDescriptionId",
+            "callee": "createRegisterId",
+            "definedIn": "packages/core/src/primitives/create-register-id/create-register-id.ts"
+          },
+          "shape": "`setDescriptionId` is handed to `createRegisterId`, a Kobalte primitive defined in `packages/core/src/primitives/create-register-id/create-register-id.ts`, outside this component, so what that primitive does with the signal is invisible and the cell cannot be proved to stay inside `DialogRoot`.",
+          "wouldChange": {
+            "kobalte": "Have `createRegisterId` take a plain value and a callback rather than the signal pair, so the cell never crosses the module edge.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — summarize what `createRegisterId` does with the signal instead of treating every out-of-component callee as opaque."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:130:3",
+          "line": 130,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "overlayRef",
+          "expressionBytes": 10,
+          "message": "`overlayRef` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "overlayRef",
+            "parent": "Property"
+          },
+          "shape": "`overlayRef` is packed as a field of the `context` object literal that `DialogRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:131:3",
+          "line": 131,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "setOverlayRef",
+          "expressionBytes": 13,
+          "message": "`setOverlayRef` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "setOverlayRef",
+            "parent": "Property"
+          },
+          "shape": "`setOverlayRef` is packed as a field of the `context` object literal that `DialogRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:132:3",
+          "line": 132,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "contentRef",
+          "expressionBytes": 10,
+          "message": "`contentRef` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "contentRef",
+            "parent": "Property"
+          },
+          "shape": "`contentRef` is packed as a field of the `context` object literal that `DialogRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:133:3",
+          "line": 133,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "setContentRef",
+          "expressionBytes": 13,
+          "message": "`setContentRef` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "setContentRef",
+            "parent": "Property"
+          },
+          "shape": "`setContentRef` is packed as a field of the `context` object literal that `DialogRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:129:3",
+          "line": 129,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "triggerRef",
+          "expressionBytes": 10,
+          "message": "`triggerRef` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "triggerRef",
+            "parent": "Property"
+          },
+          "shape": "`triggerRef` is packed as a field of the `context` object literal that `DialogRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-root.tsx:138:3",
+          "line": 138,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "setTriggerRef",
+          "expressionBytes": 13,
+          "message": "`setTriggerRef` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "setTriggerRef",
+            "parent": "Property"
+          },
+          "shape": "`setTriggerRef` is packed as a field of the `context` object literal that `DialogRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "dialog",
+      "function": "DialogTrigger",
+      "alias": "Trigger",
+      "publicPath": "@kobalte/core/dialog",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/dialog/dialog-trigger.tsx",
+      "chunk": "dist/dialog/C9YDO9vc.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/dialog/dialog-trigger.tsx",
+          "linkedModules": 40,
+          "codes": [
+            "jsx-component-element",
+            "no-signal-source"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/dialog/C9YDO9vc.jsx",
+          "linkedModules": 10,
+          "codes": [
+            "jsx-component-element",
+            "no-signal-source"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "no-signal-source",
+          "loc": "packages/core/src/dialog/dialog-trigger.tsx:41:8",
+          "line": 41,
+          "column": 8,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "function DialogTrigger<T extends ValidComponent = \"button\">( props: PolymorphicProps<T, DialogTriggerProps<T>>, ) { const context = useDialogContext(); const p = props as DialogTriggerProps; const others = omit(p, \"ref\", …",
+          "expressionBytes": 829,
+          "message": "The component declares no source cell to resume.",
+          "detail": null,
+          "shape": "`DialogTrigger` declares no `createSignal` of its own: it is a leaf that reads `useDialogContext` and renders from what it finds there, so there is no source cell for a resumed page to restore.",
+          "wouldChange": {
+            "kobalte": "Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/dialog/dialog-trigger.tsx:55:3",
+          "line": 55,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<Button.Root< Component< Omit<DialogTriggerRenderProps, keyof Button.ButtonRootRenderProps> > > ref={[context.setTriggerRef, p.ref]} aria-haspopup=\"dialog\" aria-expanded={context.isOpen() ? \"true\" : \"false\"} aria-control …",
+          "expressionBytes": 444,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`DialogTrigger`'s markup routes through `<Button.Root>`, a Kobalte compound part reached through a `JSXMemberExpression` — the module it comes from IS in the analyzed set here, so the member-expression form alone is what the splice cannot address; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Import the part as a plain binding rather than reaching it through a namespace object (`Button.Root` -> `Root`). That alone does not make it templatable — it is still a component element — but it is the change that takes the member-expression form out of the way.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — admit a `JSXMemberExpression` in `tryInlineComponent`, which today requires a `JSXIdentifier` whose `definition()` lies inside the analyzed set."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "dialog",
+      "function": "DialogContent",
+      "alias": "Content",
+      "publicPath": "@kobalte/core/dialog",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/dialog/dialog-content.tsx",
+      "chunk": "dist/dialog/C9YDO9vc.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/dialog/dialog-content.tsx",
+          "linkedModules": 40,
+          "codes": [
+            "jsx-component-element",
+            "show-branch-not-static-at-capture",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/dialog/C9YDO9vc.jsx",
+          "linkedModules": 10,
+          "codes": [
+            "jsx-component-element",
+            "show-branch-not-static-at-capture",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "show-branch-not-static-at-capture",
+          "loc": "packages/core/src/dialog/dialog-content.tsx:224:9",
+          "line": 224,
+          "column": 9,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "when={context.contentPresent()}",
+          "expressionBytes": 31,
+          "message": "A `<Show>` guard has to be a derivation this pass can fold or measure. This one is neither, so which of the two branches the served markup carries cannot be settled before the page runs — and a region whose state the build does not know is a region the resume path would have to render.",
+          "detail": null,
+          "shape": "The `<Show>` guard is `when={context.contentPresent()}` — a presence accessor Kobalte derives from its disclosure state and reads back off context. The build can neither fold it nor measure it, so which branch the served markup carries is not settled before the page runs.",
+          "wouldChange": {
+            "kobalte": "Make the guard something the build can settle — a literal, or a value captured in the served first paint. A presence accessor driven by open/close state is neither, and it is the behaviour this part exists to provide.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — measure a two-state region whose guard reads a third-party context accessor."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/dialog/dialog-content.tsx:225:4",
+          "line": 225,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<DismissableLayer< Component< Omit<DialogContentRenderProps, keyof DismissableLayerRenderProps> > > ref={[ (el: HTMLElement) => { context.setContentRef(el); setRef(el); }, mergedProps.ref, ]} role=\"dialog\" tabindex={-1}  …",
+          "expressionBytes": 764,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`DialogContent`'s markup routes through `<DismissableLayer>`, Kobalte's dismissable-layer wrapper, which carries the outside-press and escape handling this part exists to provide; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Render the content element directly and attach the dismiss behaviour as a primitive on a ref, rather than wrapping the markup in a behaviour component.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<DismissableLayer>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-content.tsx:207:12",
+          "line": 207,
+          "column": 12,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "ref",
+          "expressionBytes": 3,
+          "message": "`ref` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "ref",
+            "parent": "Property"
+          },
+          "shape": "`ref` is packed into the options object literal Kobalte hands to `createPreventScroll(…)`, so the cell leaves `DialogContent` as a field of an argument the pass cannot follow.",
+          "wouldChange": {
+            "kobalte": "Pass `createPreventScroll` a value it can read rather than the cell itself, so what crosses the call boundary is data instead of a live signal.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — follow a signal through an options-object field into `createPreventScroll` and summarize what it does there."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/dialog/dialog-content.tsx:212:12",
+          "line": 212,
+          "column": 12,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "ref",
+          "expressionBytes": 3,
+          "message": "`ref` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "ref",
+            "parent": "Property"
+          },
+          "shape": "`ref` is packed into the options object literal Kobalte hands to `createFocusTrap(…)`, so the cell leaves `DialogContent` as a field of an argument the pass cannot follow.",
+          "wouldChange": {
+            "kobalte": "Pass `createFocusTrap` a value it can read rather than the cell itself, so what crosses the call boundary is data instead of a live signal.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — follow a signal through an options-object field into `createFocusTrap` and summarize what it does there."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "dialog",
+      "function": "DialogPortal",
+      "alias": "Portal",
+      "publicPath": "@kobalte/core/dialog",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/dialog/dialog-portal.tsx",
+      "chunk": "dist/dialog/C9YDO9vc.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/dialog/dialog-portal.tsx",
+          "linkedModules": 40,
+          "codes": [
+            "jsx-component-element",
+            "no-signal-source",
+            "show-branch-not-static-at-capture"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/dialog/C9YDO9vc.jsx",
+          "linkedModules": 10,
+          "codes": [
+            "jsx-component-element",
+            "no-signal-source",
+            "show-branch-not-static-at-capture"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "no-signal-source",
+          "loc": "packages/core/src/dialog/dialog-portal.tsx:11:8",
+          "line": 11,
+          "column": 8,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "function DialogPortal(props: DialogPortalProps) { const context = useDialogContext(); return ( <Show when={context.contentPresent() || context.overlayPresent()}> <Portal {...props} /> </Show> ); }",
+          "expressionBytes": 207,
+          "message": "The component declares no source cell to resume.",
+          "detail": null,
+          "shape": "`DialogPortal` declares no `createSignal` of its own: it is a leaf that reads `useDialogContext` and renders from what it finds there, so there is no source cell for a resumed page to restore.",
+          "wouldChange": {
+            "kobalte": "Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none."
+          }
+        },
+        {
+          "code": "show-branch-not-static-at-capture",
+          "loc": "packages/core/src/dialog/dialog-portal.tsx:15:9",
+          "line": 15,
+          "column": 9,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "when={context.contentPresent() || context.overlayPresent()}",
+          "expressionBytes": 59,
+          "message": "A `<Show>` guard has to be a derivation this pass can fold or measure. This one is neither, so which of the two branches the served markup carries cannot be settled before the page runs — and a region whose state the build does not know is a region the resume path would have to render.",
+          "detail": null,
+          "shape": "The `<Show>` guard is `when={context.contentPresent() || context.overlayPresent()}` — a presence accessor Kobalte derives from its disclosure state and reads back off context. The build can neither fold it nor measure it, so which branch the served markup carries is not settled before the page runs.",
+          "wouldChange": {
+            "kobalte": "Make the guard something the build can settle — a literal, or a value captured in the served first paint. A presence accessor driven by open/close state is neither, and it is the behaviour this part exists to provide.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — measure a two-state region whose guard reads a third-party context accessor."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/dialog/dialog-portal.tsx:16:4",
+          "line": 16,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<Portal {...props} />",
+          "expressionBytes": 21,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`DialogPortal`'s markup routes through `<Portal>`, `<Portal>` from `@solidjs/web`, which relocates the subtree out of this component's own markup; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Render the content in place instead of through `<Portal>` — which removes the out-of-tree layering this part exists to provide.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<Portal>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "tabs",
+      "function": "TabsRoot",
+      "alias": "Root",
+      "publicPath": "@kobalte/core/tabs",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/tabs/tabs-root.tsx",
+      "chunk": "dist/tabs/CezyXMlG.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/tabs/tabs-root.tsx",
+          "linkedModules": 54,
+          "codes": [
+            "jsx-component-element",
+            "jsx-component-element",
+            "jsx-component-element",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-initializer-not-literal"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/tabs/CezyXMlG.jsx",
+          "linkedModules": 14,
+          "codes": [
+            "jsx-component-element",
+            "jsx-component-element",
+            "jsx-component-element",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use",
+            "signal-initializer-not-literal"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "signal-initializer-not-literal",
+          "loc": "packages/core/src/tabs/tabs-root.tsx:94:66",
+          "line": 94,
+          "column": 66,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "[]",
+          "expressionBytes": 2,
+          "message": "The signal's initial value is computed, so it cannot be frozen into a static artifact.",
+          "detail": null,
+          "shape": "`TabsRoot` seeds this cell from `[]`, a computed initializer rather than a serializable literal — Kobalte starts its DOM-collection cell from a fresh array, which is a new identity on every call.",
+          "wouldChange": {
+            "kobalte": "Seed the collection cell from a serializable literal. For a collection that is not a small edit: it means a representation whose empty state is not a freshly allocated array.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen `StaticValue` past string/number/boolean/null to admit empty array and object literals as frozen initial values."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/tabs/tabs-root.tsx:185:3",
+          "line": 185,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<DomCollectionProvider> <TabsContext value={context}> <Polymorphic<TabsRootRenderProps> as=\"div\" data-orientation={context.orientation()} {...others} /> </TabsContext> </DomCollectionProvider>",
+          "expressionBytes": 223,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`TabsRoot`'s markup routes through `<DomCollectionProvider>`, Kobalte's DOM-collection provider, which registers the descendants roving focus walks; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Register collection items without a provider element in the returned markup.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<DomCollectionProvider>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/tabs/tabs-root.tsx:186:4",
+          "line": 186,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<TabsContext value={context}> <Polymorphic<TabsRootRenderProps> as=\"div\" data-orientation={context.orientation()} {...others} /> </TabsContext>",
+          "expressionBytes": 169,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`TabsRoot`'s markup routes through `<TabsContext>`, a Kobalte context provider element, which is how this component publishes its state to the parts below it; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Publish this component's state without a provider ELEMENT in the returned markup. Solid's context API takes a provider component in the tree, so there is no local Kobalte-side edit here: the state would have to be shared by some other mechanism entirely.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<TabsContext>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/tabs/tabs-root.tsx:187:5",
+          "line": 187,
+          "column": 5,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<Polymorphic<TabsRootRenderProps> as=\"div\" data-orientation={context.orientation()} {...others} />",
+          "expressionBytes": 117,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`TabsRoot`'s markup routes through `<Polymorphic>`, Kobalte's polymorphic `as` indirection, which is how this component lets a caller swap its host element; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Render the host element directly rather than through `<Polymorphic>`. That removes this component's `as` override, so it is a change to its public shape, not a local tidy-up.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<Polymorphic>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/tabs/tabs-root.tsx:98:3",
+          "line": 98,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "items",
+          "expressionBytes": 5,
+          "message": "`items` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "items",
+            "parent": "Property"
+          },
+          "shape": "`items` is packed into the options object literal Kobalte hands to `createDomCollection(…)`, so the cell leaves `TabsRoot` as a field of an argument the pass cannot follow.",
+          "wouldChange": {
+            "kobalte": "Pass `createDomCollection` a value it can read rather than the cell itself, so what crosses the call boundary is data instead of a live signal.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — follow a signal through an options-object field into `createDomCollection` and summarize what it does there."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/tabs/tabs-root.tsx:106:15",
+          "line": 106,
+          "column": 15,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "items",
+          "expressionBytes": 5,
+          "message": "`items` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "items",
+            "parent": "Property"
+          },
+          "shape": "`items` is packed into the options object literal Kobalte hands to `createSingleSelectListState(…)`, so the cell leaves `TabsRoot` as a field of an argument the pass cannot follow.",
+          "wouldChange": {
+            "kobalte": "Pass `createSingleSelectListState` a value it can read rather than the cell itself, so what crosses the call boundary is data instead of a live signal.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — follow a signal through an options-object field into `createSingleSelectListState` and summarize what it does there."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/tabs/tabs-root.tsx:99:18",
+          "line": 99,
+          "column": 18,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "setItems",
+          "expressionBytes": 8,
+          "message": "`setItems` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "setItems",
+            "parent": "Property"
+          },
+          "shape": "`setItems` is packed into the options object literal Kobalte hands to `createDomCollection(…)`, so the cell leaves `TabsRoot` as a field of an argument the pass cannot follow.",
+          "wouldChange": {
+            "kobalte": "Pass `createDomCollection` a value it can read rather than the cell itself, so what crosses the call boundary is data instead of a live signal.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — follow a signal through an options-object field into `createDomCollection` and summarize what it does there."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/tabs/tabs-root.tsx:178:3",
+          "line": 178,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "selectedTab",
+          "expressionBytes": 11,
+          "message": "`selectedTab` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "selectedTab",
+            "parent": "Property"
+          },
+          "shape": "`selectedTab` is packed as a field of the `context` object literal that `TabsRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/tabs/tabs-root.tsx:179:3",
+          "line": 179,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "setSelectedTab",
+          "expressionBytes": 14,
+          "message": "`setSelectedTab` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "setSelectedTab",
+            "parent": "Property"
+          },
+          "shape": "`setSelectedTab` is packed as a field of the `context` object literal that `TabsRoot` publishes through its context provider element, so the cell escapes the component that declared it and becomes state any descendant can reach.",
+          "wouldChange": {
+            "kobalte": "Publish a read-only accessor rather than the cell itself, so the setter never becomes a context field. That changes what the parts below this one are allowed to do, which is an API decision rather than a refactor.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — track a signal through a context value object and into its consumers, which is a whole-graph analysis this pass does not attempt."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "tabs",
+      "function": "TabsTrigger",
+      "alias": "Trigger",
+      "publicPath": "@kobalte/core/tabs",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/tabs/tabs-trigger.tsx",
+      "chunk": "dist/tabs/CezyXMlG.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/tabs/tabs-trigger.tsx",
+          "linkedModules": 54,
+          "codes": [
+            "handler-not-inline",
+            "handler-not-inline",
+            "handler-not-inline",
+            "handler-not-inline",
+            "handler-not-inline",
+            "handler-not-inline",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-spread",
+            "signal-escapes-to-opaque-callee",
+            "signal-escapes-unanalyzable-use"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/tabs/CezyXMlG.jsx",
+          "linkedModules": 14,
+          "codes": [
+            "handler-not-inline",
+            "handler-not-inline",
+            "handler-not-inline",
+            "handler-not-inline",
+            "handler-not-inline",
+            "handler-not-inline",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-dynamic-attribute",
+            "jsx-spread",
+            "signal-escapes-to-opaque-callee",
+            "signal-escapes-unanalyzable-use"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:142:4",
+          "line": 142,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "id={id()}",
+          "expressionBytes": 9,
+          "message": "Attribute `id` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `id={id()}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:144:4",
+          "line": 144,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "tabindex={!isDisabled() ? selectableItem.tabIndex() : undefined}",
+          "expressionBytes": 64,
+          "message": "Attribute `tabindex` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `tabindex={!isDisabled() ? selectableItem.tabIndex() : undefined}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:145:4",
+          "line": 145,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "disabled={isDisabled()}",
+          "expressionBytes": 23,
+          "message": "Attribute `disabled` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `disabled={isDisabled()}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:146:4",
+          "line": 146,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "aria-selected={selectableItem.isSelected() ? \"true\" : \"false\"}",
+          "expressionBytes": 62,
+          "message": "Attribute `aria-selected` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `aria-selected={selectableItem.isSelected() ? \"true\" : \"false\"}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:147:4",
+          "line": 147,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "aria-disabled={isDisabled() ? \"true\" : undefined}",
+          "expressionBytes": 49,
+          "message": "Attribute `aria-disabled` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `aria-disabled={isDisabled() ? \"true\" : undefined}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:148:4",
+          "line": 148,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "aria-controls={selectableItem.isSelected() ? contentId() : undefined}",
+          "expressionBytes": 69,
+          "message": "Attribute `aria-controls` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `aria-controls={selectableItem.isSelected() ? contentId() : undefined}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:149:4",
+          "line": 149,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "data-key={selectableItem.dataKey()}",
+          "expressionBytes": 35,
+          "message": "Attribute `data-key` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-key={selectableItem.dataKey()}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:150:4",
+          "line": 150,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "data-orientation={context.orientation()}",
+          "expressionBytes": 40,
+          "message": "Attribute `data-orientation` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-orientation={context.orientation()}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:151:4",
+          "line": 151,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "data-selected={selectableItem.isSelected() ? \"\" : undefined}",
+          "expressionBytes": 60,
+          "message": "Attribute `data-selected` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-selected={selectableItem.isSelected() ? \"\" : undefined}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:152:4",
+          "line": 152,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "data-highlighted={isHighlighted() ? \"\" : undefined}",
+          "expressionBytes": 51,
+          "message": "Attribute `data-highlighted` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-highlighted={isHighlighted() ? \"\" : undefined}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-dynamic-attribute",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:153:4",
+          "line": 153,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "data-disabled={isDisabled() ? \"\" : undefined}",
+          "expressionBytes": 45,
+          "message": "Attribute `data-disabled` is computed, so its rendered value is not static.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-disabled={isDisabled() ? \"\" : undefined}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "handler-not-inline",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:154:4",
+          "line": 154,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "onPointerDown={composeEventHandlers([ mergedProps.onPointerDown, selectableItem.onPointerDown, ])}",
+          "expressionBytes": 109,
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "detail": {
+            "boundAs": "CallExpression"
+          },
+          "shape": "`TabsTrigger` was refused with `handler-not-inline` at `onPointerDown={composeEventHandlers([ mergedProps.onPointerDown, selectableItem.onPointerDown, ])}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "handler-not-inline",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:158:4",
+          "line": 158,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "onPointerUp={composeEventHandlers([ mergedProps.onPointerUp, selectableItem.onPointerUp, ])}",
+          "expressionBytes": 103,
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "detail": {
+            "boundAs": "CallExpression"
+          },
+          "shape": "`TabsTrigger` was refused with `handler-not-inline` at `onPointerUp={composeEventHandlers([ mergedProps.onPointerUp, selectableItem.onPointerUp, ])}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "handler-not-inline",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:162:4",
+          "line": 162,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "onClick={composeEventHandlers([ mergedProps.onClick, selectableItem.onClick, onClick, ])}",
+          "expressionBytes": 104,
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "detail": {
+            "boundAs": "CallExpression"
+          },
+          "shape": "`TabsTrigger` was refused with `handler-not-inline` at `onClick={composeEventHandlers([ mergedProps.onClick, selectableItem.onClick, onClick, ])}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "handler-not-inline",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:167:4",
+          "line": 167,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "onKeyDown={composeEventHandlers([ mergedProps.onKeyDown, selectableItem.onKeyDown, ])}",
+          "expressionBytes": 97,
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "detail": {
+            "boundAs": "CallExpression"
+          },
+          "shape": "`TabsTrigger` was refused with `handler-not-inline` at `onKeyDown={composeEventHandlers([ mergedProps.onKeyDown, selectableItem.onKeyDown, ])}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "handler-not-inline",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:171:4",
+          "line": 171,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "onMouseDown={composeEventHandlers([ mergedProps.onMouseDown, selectableItem.onMouseDown, ])}",
+          "expressionBytes": 103,
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "detail": {
+            "boundAs": "CallExpression"
+          },
+          "shape": "`TabsTrigger` was refused with `handler-not-inline` at `onMouseDown={composeEventHandlers([ mergedProps.onMouseDown, selectableItem.onMouseDown, ])}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "handler-not-inline",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:175:4",
+          "line": 175,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "onFocus={composeEventHandlers([ mergedProps.onFocus, selectableItem.onFocus, ])}",
+          "expressionBytes": 91,
+          "message": "The event handler is not an inline function, so its body and captures are invisible to this analysis.",
+          "detail": {
+            "boundAs": "CallExpression"
+          },
+          "shape": "`TabsTrigger` was refused with `handler-not-inline` at `onFocus={composeEventHandlers([ mergedProps.onFocus, selectableItem.onFocus, ])}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "jsx-spread",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:179:4",
+          "line": 179,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "{...others}",
+          "expressionBytes": 11,
+          "message": "Spread attributes hide the element's real props.",
+          "detail": null,
+          "shape": "`TabsTrigger` was refused with `jsx-spread` at `{...others}`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:107:4",
+          "line": 107,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "ref",
+          "expressionBytes": 3,
+          "message": "`ref` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "ref",
+            "parent": "Property"
+          },
+          "shape": "`ref` is packed into the options object literal Kobalte hands to `createDomCollectionItem(…)`, so the cell leaves `TabsTrigger` as a field of an argument the pass cannot follow.",
+          "wouldChange": {
+            "kobalte": "Pass `createDomCollectionItem` a value it can read rather than the cell itself, so what crosses the call boundary is data instead of a live signal.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — follow a signal through an options-object field into `createDomCollectionItem` and summarize what it does there."
+          }
+        },
+        {
+          "code": "signal-escapes-to-opaque-callee",
+          "loc": "packages/core/src/tabs/tabs-trigger.tsx:121:3",
+          "line": 121,
+          "column": 3,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "ref",
+          "expressionBytes": 3,
+          "message": "`ref` escapes into `createSelectableItem`, which is defined outside this component (packages/core/src/selection/create-selectable-item.ts); what it does with the signal is invisible to this analysis.",
+          "detail": {
+            "binding": "ref",
+            "callee": "createSelectableItem",
+            "definedIn": "packages/core/src/selection/create-selectable-item.ts"
+          },
+          "shape": "`ref` is handed to `createSelectableItem`, a Kobalte primitive defined in `packages/core/src/selection/create-selectable-item.ts`, outside this component, so what that primitive does with the signal is invisible and the cell cannot be proved to stay inside `TabsTrigger`.",
+          "wouldChange": {
+            "kobalte": "Have `createSelectableItem` take a plain value and a callback rather than the signal pair, so the cell never crosses the module edge.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — summarize what `createSelectableItem` does with the signal instead of treating every out-of-component callee as opaque."
+          }
+        }
+      ]
+    },
+    {
+      "entrypoint": "popover",
+      "function": "PopoverContent",
+      "alias": "Content",
+      "publicPath": "@kobalte/core/popover",
+      "verdict": "fallback",
+      "authoredSource": "packages/core/src/popover/popover-content.tsx",
+      "chunk": "dist/popover/BPBwQznN.jsx",
+      "exported": true,
+      "arms": {
+        "source": {
+          "status": "fallback",
+          "module": "packages/core/src/popover/popover-content.tsx",
+          "linkedModules": 54,
+          "codes": [
+            "jsx-component-element",
+            "jsx-component-element",
+            "show-branch-not-static-at-capture",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use"
+          ]
+        },
+        "dist": {
+          "status": "fallback",
+          "module": "dist/popover/BPBwQznN.jsx",
+          "linkedModules": 12,
+          "codes": [
+            "jsx-component-element",
+            "jsx-component-element",
+            "show-branch-not-static-at-capture",
+            "signal-escapes-unanalyzable-use",
+            "signal-escapes-unanalyzable-use"
+          ]
+        }
+      },
+      "delta": {
+        "identical": true,
+        "sourceOnly": [],
+        "distOnly": [],
+        "counts": []
+      },
+      "reasons": [
+        {
+          "code": "show-branch-not-static-at-capture",
+          "loc": "packages/core/src/popover/popover-content.tsx:226:9",
+          "line": 226,
+          "column": 9,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "when={context.contentPresent()}",
+          "expressionBytes": 31,
+          "message": "A `<Show>` guard has to be a derivation this pass can fold or measure. This one is neither, so which of the two branches the served markup carries cannot be settled before the page runs — and a region whose state the build does not know is a region the resume path would have to render.",
+          "detail": null,
+          "shape": "The `<Show>` guard is `when={context.contentPresent()}` — a presence accessor Kobalte derives from its disclosure state and reads back off context. The build can neither fold it nor measure it, so which branch the served markup carries is not settled before the page runs.",
+          "wouldChange": {
+            "kobalte": "Make the guard something the build can settle — a literal, or a value captured in the served first paint. A presence accessor driven by open/close state is neither, and it is the behaviour this part exists to provide.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — measure a two-state region whose guard reads a third-party context accessor."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/popover/popover-content.tsx:227:4",
+          "line": 227,
+          "column": 4,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<Popper.Positioner> <DismissableLayer< Component< Omit<PopoverContentRenderProps, keyof DismissableLayerRenderProps> > > ref={[ (el: HTMLElement) => { context.setContentRef(el); setRef(el); }, mergedProps.ref, ]} role=\"d …",
+          "expressionBytes": 965,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`PopoverContent`'s markup routes through `<Popper.Positioner>`, a Kobalte compound part reached through a `JSXMemberExpression` — the module it comes from IS in the analyzed set here, so the member-expression form alone is what the splice cannot address; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Import the part as a plain binding rather than reaching it through a namespace object (`Popper.Positioner` -> `Positioner`). That alone does not make it templatable — it is still a component element — but it is the change that takes the member-expression form out of the way.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — admit a `JSXMemberExpression` in `tryInlineComponent`, which today requires a `JSXIdentifier` whose `definition()` lies inside the analyzed set."
+          }
+        },
+        {
+          "code": "jsx-component-element",
+          "loc": "packages/core/src/popover/popover-content.tsx:228:5",
+          "line": 228,
+          "column": 5,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "<DismissableLayer< Component< Omit<PopoverContentRenderProps, keyof DismissableLayerRenderProps> > > ref={[ (el: HTMLElement) => { context.setContentRef(el); setRef(el); }, mergedProps.ref, ]} role=\"dialog\" tabindex={-1} …",
+          "expressionBytes": 917,
+          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
+          "detail": null,
+          "shape": "`PopoverContent`'s markup routes through `<DismissableLayer>`, Kobalte's dismissable-layer wrapper, which carries the outside-press and escape handling this part exists to provide; only intrinsic elements template statically, so the pass stops at this element.",
+          "wouldChange": {
+            "kobalte": "Render the content element directly and attach the dismiss behaviour as a primitive on a ref, rather than wrapping the markup in a behaviour component.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<DismissableLayer>`'s body is absorbed into this template, or admit component elements into static templating outright."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/popover/popover-content.tsx:209:12",
+          "line": 209,
+          "column": 12,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "ref",
+          "expressionBytes": 3,
+          "message": "`ref` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "ref",
+            "parent": "Property"
+          },
+          "shape": "`ref` is packed into the options object literal Kobalte hands to `createPreventScroll(…)`, so the cell leaves `PopoverContent` as a field of an argument the pass cannot follow.",
+          "wouldChange": {
+            "kobalte": "Pass `createPreventScroll` a value it can read rather than the cell itself, so what crosses the call boundary is data instead of a live signal.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — follow a signal through an options-object field into `createPreventScroll` and summarize what it does there."
+          }
+        },
+        {
+          "code": "signal-escapes-unanalyzable-use",
+          "loc": "packages/core/src/popover/popover-content.tsx:214:12",
+          "line": 214,
+          "column": 12,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "ref",
+          "expressionBytes": 3,
+          "message": "`ref` is used in a position this pass cannot prove safe.",
+          "detail": {
+            "binding": "ref",
+            "parent": "Property"
+          },
+          "shape": "`ref` is packed into the options object literal Kobalte hands to `createFocusTrap(…)`, so the cell leaves `PopoverContent` as a field of an argument the pass cannot follow.",
+          "wouldChange": {
+            "kobalte": "Pass `createFocusTrap` a value it can read rather than the cell itself, so what crosses the call boundary is data instead of a live signal.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — follow a signal through an options-object field into `createFocusTrap` and summarize what it does there."
+          }
+        }
+      ]
+    }
+  ]
+}

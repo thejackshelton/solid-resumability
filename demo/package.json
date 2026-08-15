@@ -1,0 +1,31 @@
+{
+  "name": "solid-resumability-demo",
+  "description": "Two builds of the same pages — classic Solid 2.0 and comptime-resumable — plus the byte-accounting harness that compares them",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "emit": "node scripts/emit-artifacts.mjs",
+    "build": "pnpm emit && node scripts/build.mjs",
+    "measure": "node scripts/measure.mjs",
+    "test": "vitest run",
+    "dev:classic": "vite --config vite.classic.config.mjs",
+    "dev:resumable": "vite --config vite.resumable.config.mjs",
+    "preview:classic": "vite preview --config vite.classic.config.mjs",
+    "preview:resumable": "vite preview --config vite.resumable.config.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@solidjs/signals": "2.0.0-rc.0",
+    "@solidjs/vite-plugin": "3.0.0-next.28",
+    "@solidjs/web": "2.0.0-rc.0",
+    "@types/node": "25.6.0",
+    "jsdom": "30.0.1",
+    "pathe": "2.0.3",
+    "solid-js": "2.0.0-rc.0",
+    "typescript": "6.0.2",
+    "unplugin-solid-resumability": "link:../plugin",
+    "vite": "7.3.6",
+    "vitest": "4.1.10"
+  }
+}

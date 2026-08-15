@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // The comptime pass this package bundles carries real `.ts` extensions on
+    // its relative imports (it runs under node's native type stripping in its
+    // home repo), so the plugin has to be willing to read them.
+    "allowImportingTsExtensions": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "verbatimModuleSyntax": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
+  },
+  // `test/fixtures` is corpus, not code: it is compiled by the pass under test,
+  // never by this project's tsc, and it needs a JSX runtime this package has no
+  // business depending on.
+  "include": ["src", "test", "tsdown.config.ts", "vitest.config.ts"],
+  "exclude": ["test/fixtures", "dist", "node_modules", ".verify-out"]
+}

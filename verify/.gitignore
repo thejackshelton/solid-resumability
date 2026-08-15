@@ -1,0 +1,5 @@
+node_modules/
+
+# Witness writes one receipt directory per run; the receipts are evidence of a
+# single run on a single machine, not a source.
+.witness/

@@ -1,0 +1,166 @@
+{
+  "component": "RosterList",
+  "module": "app/src/fixtures/KeyedRoster.tsx",
+  "status": "provable",
+  "cells": [
+    {
+      "id": "c0",
+      "initial": "none",
+      "getter": "last",
+      "setter": "setLast"
+    }
+  ],
+  "stores": [
+    {
+      "id": "s0",
+      "context": "RosterContext",
+      "contextModule": "app/src/fixtures/KeyedRoster.tsx",
+      "actionsSlot": 1,
+      "readSlot": 0,
+      "provider": "app/src/fixtures/KeyedRoster.tsx",
+      "value": {
+        "module": "app/src/fixtures/roster.ts",
+        "factory": "createRoster"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "s0a0",
+      "store": "s0",
+      "name": "drop",
+      "path": [
+        1,
+        "drop"
+      ]
+    }
+  ],
+  "reads": [
+    {
+      "id": "s0r",
+      "store": "s0",
+      "name": "roster",
+      "path": [
+        0
+      ]
+    }
+  ],
+  "bindings": [
+    {
+      "id": "b0",
+      "kind": "text",
+      "locator": "/0",
+      "captures": [
+        {
+          "name": "last",
+          "cell": "c0",
+          "access": "read"
+        }
+      ],
+      "expression": "last()",
+      "initialText": "none"
+    }
+  ],
+  "keyedRegions": [
+    {
+      "id": "k0",
+      "container": "/1",
+      "item": "member",
+      "each": "roster.members",
+      "keyAttribute": "data-key",
+      "keyPath": [
+        "id"
+      ],
+      "itemTemplate": "<li class=\"member\" data-key=\"\"><span class=\"name\"></span><button class=\"drop\">x</button></li>",
+      "captures": [
+        {
+          "name": "roster",
+          "kind": "store-read",
+          "store": "s0",
+          "path": [
+            0
+          ]
+        }
+      ],
+      "bindings": [
+        {
+          "id": "k0b0",
+          "kind": "text",
+          "locator": "/0",
+          "captures": [
+            {
+              "name": "member",
+              "kind": "region-item",
+              "region": "k0"
+            }
+          ]
+        }
+      ],
+      "wiring": [
+        {
+          "locator": "/1",
+          "event": "click",
+          "module": "./handlers/s0.js",
+          "handler": "s0",
+          "captures": [
+            {
+              "name": "drop",
+              "kind": "action",
+              "store": "s0",
+              "path": [
+                1,
+                "drop"
+              ]
+            },
+            {
+              "name": "member",
+              "kind": "region-item",
+              "region": "k0"
+            },
+            {
+              "name": "setLast",
+              "cell": "c0",
+              "access": "write"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "handlers": [
+    {
+      "id": "s0",
+      "event": "click",
+      "locator": "/1",
+      "module": "./handlers/s0.js",
+      "captures": [
+        {
+          "name": "drop",
+          "kind": "action",
+          "store": "s0",
+          "path": [
+            1,
+            "drop"
+          ]
+        },
+        {
+          "name": "member",
+          "kind": "region-item",
+          "region": "k0"
+        },
+        {
+          "name": "setLast",
+          "cell": "c0",
+          "access": "write"
+        }
+      ]
+    }
+  ],
+  "wiring": [],
+  "files": [
+    "handlers/s0.js",
+    "structure.js",
+    "template.js",
+    "wiring.js"
+  ]
+}

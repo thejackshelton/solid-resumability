@@ -1,0 +1,112 @@
+{
+  "component": "CounterA",
+  "module": "src/fixtures/CounterA.tsx",
+  "status": "provable",
+  "cells": [
+    {
+      "id": "c0",
+      "initial": 0,
+      "getter": "count",
+      "setter": "setCount"
+    }
+  ],
+  "bindings": [
+    {
+      "id": "b0",
+      "kind": "text",
+      "locator": "/0",
+      "captures": [
+        {
+          "name": "count",
+          "cell": "c0",
+          "access": "read"
+        }
+      ],
+      "expression": "\"count: \" + count()",
+      "initialText": "count: 0"
+    }
+  ],
+  "handlers": [
+    {
+      "id": "s0",
+      "event": "click",
+      "locator": "/1",
+      "module": "./handlers/s0.js",
+      "captures": [
+        {
+          "name": "count",
+          "cell": "c0",
+          "access": "read"
+        },
+        {
+          "name": "setCount",
+          "cell": "c0",
+          "access": "write"
+        }
+      ]
+    },
+    {
+      "id": "s1",
+      "event": "click",
+      "locator": "/2",
+      "module": "./handlers/s1.js",
+      "captures": [
+        {
+          "name": "count",
+          "cell": "c0",
+          "access": "read"
+        },
+        {
+          "name": "setCount",
+          "cell": "c0",
+          "access": "write"
+        }
+      ]
+    }
+  ],
+  "wiring": [
+    {
+      "locator": "/1",
+      "event": "click",
+      "module": "./handlers/s0.js",
+      "handler": "s0",
+      "captures": [
+        {
+          "name": "count",
+          "cell": "c0",
+          "access": "read"
+        },
+        {
+          "name": "setCount",
+          "cell": "c0",
+          "access": "write"
+        }
+      ]
+    },
+    {
+      "locator": "/2",
+      "event": "click",
+      "module": "./handlers/s1.js",
+      "handler": "s1",
+      "captures": [
+        {
+          "name": "count",
+          "cell": "c0",
+          "access": "read"
+        },
+        {
+          "name": "setCount",
+          "cell": "c0",
+          "access": "write"
+        }
+      ]
+    }
+  ],
+  "files": [
+    "handlers/s0.js",
+    "handlers/s1.js",
+    "structure.js",
+    "template.js",
+    "wiring.js"
+  ]
+}

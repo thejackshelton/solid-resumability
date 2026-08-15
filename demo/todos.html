@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solid 2.0 Todos (__VARIANT__)</title>
+  </head>
+  <body>
+    <!--
+      The ported TodoMVC, unchanged. The pass's verdict for it is app 3/5
+      (docs/coverage/coverage.json) and exactly one of those three is RESUMED
+      here: `Header`. `MainSection` and `Footer` are proved with guard-only
+      artifacts and their bodies stay in the deferred group — what flips their
+      guard is a store write, and a store write is the group's. Three verdicts,
+      one resumption: read the fraction as coverage, never as components
+      resumed. The four this page does not resume share one reactive source and
+      are deferred together.
+
+      The classic build loads the entry script below and renders the whole app.
+      The resumable build swaps that script for `todos-resumable.ts` and fills
+      `#root` at build time with the app's own first paint — the resumed
+      component's markup plus the loading paragraph, captured from a real
+      render (the plugin's prerender stage, plugin/src/stages/prerender.ts).
+      What loads with the page is the resume
+      bootstrap, `Header`'s structure and wiring, and the deferral loader:
+      ZERO component bodies run, and neither the framework nor the store is in
+      the browser. The first interaction fetches them as one chunk; `Header`'s
+      keydown handler arrives separately, on the first keystroke.
+
+      Both variants' numbers: docs/measurements/demo-baseline.md.
+    -->
+    <div id="root"></div>
+    <p class="nav"><a href="/fixtures.html">← fixtures</a></p>
+    <script type="module" src="/src/pages/todos.ts"></script>
+  </body>
+</html>

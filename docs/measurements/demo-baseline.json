@@ -1,0 +1,1889 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-08-14",
+  "method": {
+    "eager": "Every file reachable from the page's HTML entry by static import, transitively, as recorded in vite's build manifest. No exclusions: framework, resume runtime, artifact modules and vite's own preload helper all count.",
+    "lazy": "Chunks reachable from the eager set only through a dynamic import(), plus their static deps.",
+    "transferredNotExecuted": "Bytes fetched after a real interaction signal (a pointer press, or a keystroke in an already-live subtree) and before the event that commits them. They are reported as `prefetchedBytes`, at full weight, under their own trigger, and are never added to the eager total: the eager total is what an untouched page has fetched, which is why a signal-driven transfer cannot enter it and a load-time one would. There are no other categories and no exclusions.",
+    "gzip": "node:zlib gzipSync at its default level, over the built file as shipped.",
+    "build": "Each page is built alone (2 variants x 2 pages) so that chunk grouping across unrelated pages cannot move bytes between the two sides. Built together, the todos page's use of @solidjs/signals' store modules leaks into the fixtures page's chunk (54 kB where the page's own needs are 17 kB) on BOTH sides.",
+    "attribution": "Two units per group, because neither is sufficient alone. `share` is exact but pre-minification: the group's fraction of the rendered bytes rollup put in these chunks. `minified standalone` is in shipped units but is an upper bound — minifying a module alone cannot rename across module boundaries the way the chunk's own minification does, so the parts sum to more than the whole (both sums are printed). `share x chunk` applies the exact proportion to the exact chunk total. The chunk totals themselves are measured, not derived.",
+    "componentExecutions": "Read from demo/.measure/executions.json (fixtures page) and demo/.measure/todos-executions.json (todos page), both written by `pnpm test` from vi.mock loader hooks. The fixtures page's hook wraps the five fixture modules' exports and records module evaluation and component invocation separately; the todos page's wraps @solidjs/web's createComponent, because four of the app's five components are module-local and no export-level hook can see them. Not asserted here.",
+    "notMeasured": "Time. No browser is involved — bytes and module identity only."
+  },
+  "toolchain": {
+    "@solidjs/signals": "2.0.0-rc.0",
+    "@solidjs/vite-plugin": "3.0.0-next.28",
+    "@solidjs/web": "2.0.0-rc.0",
+    "@types/node": "25.6.0",
+    "jsdom": "30.0.1",
+    "pathe": "2.0.3",
+    "solid-js": "2.0.0-rc.0",
+    "typescript": "6.0.2",
+    "unplugin-solid-resumability": "link:../plugin",
+    "vite": "7.3.6",
+    "vitest": "4.1.10"
+  },
+  "comparedPage": "fixtures.html",
+  "classic": {
+    "page": "fixtures.html",
+    "eagerBytes": 33912,
+    "eagerGzipBytes": 12987,
+    "eagerChunks": [
+      {
+        "file": "assets/fixtures-Dr3DxnN9.js",
+        "name": "fixtures",
+        "source": "fixtures.html",
+        "bytes": 33912,
+        "gzipBytes": 12987
+      }
+    ],
+    "lazyChunks": [],
+    "lazyBytes": 0,
+    "lazyGzipBytes": 0,
+    "html": {
+      "file": "fixtures.html",
+      "bytes": 7070,
+      "gzipBytes": 2532
+    },
+    "css": [
+      {
+        "file": "assets/fixtures-DZd5V4VE.css",
+        "bytes": 1097,
+        "gzipBytes": 559
+      }
+    ],
+    "cssBytes": 1097,
+    "cssGzipBytes": 559,
+    "initialTransferBytes": 42079,
+    "initialTransferGzipBytes": 16078,
+    "whereTheBytesGo": [
+      {
+        "group": "signals",
+        "label": "@solidjs/signals (reactive runtime)",
+        "renderedBytes": 112433,
+        "minifiedBytes": 33092,
+        "minifiedGzipBytes": 10529,
+        "modules": [
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/boundaries.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/async.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/constants.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/context.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/core.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/effect.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/error.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/graph.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/heap.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/lanes.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/owner.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/scheduler.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/map.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/signals.js",
+          "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/store.js"
+        ]
+      },
+      {
+        "group": "renderer",
+        "label": "@solidjs/web + solid-js (renderer)",
+        "renderedBytes": 16630,
+        "minifiedBytes": 8325,
+        "minifiedGzipBytes": 3124,
+        "modules": [
+          "demo/node_modules/.pnpm/@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0/node_modules/@solidjs/web/dist/web.js",
+          "demo/node_modules/.pnpm/solid-js@2.0.0-rc.0/node_modules/solid-js/dist/solid.js"
+        ]
+      },
+      {
+        "group": "fixture-components",
+        "label": "fixture component bodies",
+        "renderedBytes": 5556,
+        "minifiedBytes": 3445,
+        "minifiedGzipBytes": 1023,
+        "modules": [
+          "app/src/fixtures/ComposedCounter.tsx",
+          "app/src/fixtures/KeyedRoster.tsx",
+          "app/src/fixtures/PropsPair.tsx",
+          "app/src/fixtures/ProvableCounter.tsx",
+          "app/src/fixtures/ProvableGreeting.tsx",
+          "app/src/fixtures/ProvableStepper.tsx",
+          "app/src/fixtures/roster.ts"
+        ]
+      },
+      {
+        "group": "vite-runtime",
+        "label": "vite runtime (preload helper, modulepreload polyfill)",
+        "renderedBytes": 1168,
+        "minifiedBytes": 731,
+        "minifiedGzipBytes": 420,
+        "modules": [
+          "demo/\u0000vite/modulepreload-polyfill.js"
+        ]
+      },
+      {
+        "group": "demo-glue",
+        "label": "demo page glue",
+        "renderedBytes": 1195,
+        "minifiedBytes": 562,
+        "minifiedGzipBytes": 361,
+        "modules": [
+          "demo/src/classic-page.ts",
+          "demo/src/components.ts",
+          "demo/src/pages/fixtures-classic.ts",
+          "demo/src/roster-store.ts"
+        ]
+      }
+    ],
+    "componentExecutionsBeforeInteraction": 6,
+    "componentModuleLoadsBeforeInteraction": 6
+  },
+  "resumable": {
+    "page": "fixtures.html",
+    "eagerBytes": 18166,
+    "eagerGzipBytes": 5850,
+    "eagerChunks": [
+      {
+        "file": "assets/fixtures-DzOBkuni.js",
+        "name": "fixtures",
+        "source": "fixtures.html",
+        "bytes": 18166,
+        "gzipBytes": 5850
+      }
+    ],
+    "lazyChunks": [
+      {
+        "file": "assets/regions-DdJBHQqy.js",
+        "name": "regions",
+        "source": "../src/resume/regions.ts",
+        "bytes": 1308,
+        "gzipBytes": 658,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "trigger": "dynamic import"
+      },
+      {
+        "file": "assets/roster-store-8mzfQDX2.js",
+        "name": "roster-store",
+        "source": "src/roster-store.ts",
+        "bytes": 334,
+        "gzipBytes": 235,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "trigger": "dynamic import"
+      },
+      {
+        "file": "assets/s0-BH-Tk1En.js",
+        "name": "s0",
+        "source": "artifacts/ProvableStepper/handlers/s0.js",
+        "bytes": 282,
+        "gzipBytes": 195,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "component": "ProvableStepper",
+        "handler": "s0",
+        "event": "click",
+        "locator": "/2",
+        "target": "provable-stepper-up",
+        "trigger": "click on [data-testid=\"provable-stepper-up\"] (ProvableStepper)"
+      },
+      {
+        "file": "assets/s0-BM-E1Zv7.js",
+        "name": "s0",
+        "source": "artifacts/ProvableCounter/handlers/s0.js",
+        "bytes": 235,
+        "gzipBytes": 178,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "component": "ProvableCounter",
+        "handler": "s0",
+        "event": "click",
+        "locator": "/1",
+        "target": "provable-counter-inc",
+        "trigger": "click on [data-testid=\"provable-counter-inc\"] (ProvableCounter)"
+      },
+      {
+        "file": "assets/s0-cbiaNJP7.js",
+        "name": "s0",
+        "source": "artifacts/PropsPair.PropsPairParent/handlers/s0.js",
+        "bytes": 235,
+        "gzipBytes": 178,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "component": "PropsPairParent",
+        "handler": "s0",
+        "event": "click",
+        "locator": "/1",
+        "target": "props-pair-inc",
+        "trigger": "click on [data-testid=\"props-pair-inc\"] (PropsPairParent)"
+      },
+      {
+        "file": "assets/s0-DAIkIsKN.js",
+        "name": "s0",
+        "source": "artifacts/ComposedCounter.ComposedInner/handlers/s0.js",
+        "bytes": 235,
+        "gzipBytes": 180,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "trigger": "dynamic import"
+      },
+      {
+        "file": "assets/s0-DfdU_wfK.js",
+        "name": "s0",
+        "source": "artifacts/KeyedRoster.RosterList/handlers/s0.js",
+        "bytes": 306,
+        "gzipBytes": 224,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "trigger": "dynamic import"
+      },
+      {
+        "file": "assets/s0-DqxUB02D.js",
+        "name": "s0",
+        "source": "artifacts/ComposedCounter.ComposedOuter/handlers/s0.js",
+        "bytes": 235,
+        "gzipBytes": 179,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "component": "ComposedOuter",
+        "handler": "s0",
+        "event": "click",
+        "locator": "/1",
+        "target": "composed-outer-inc",
+        "trigger": "click on [data-testid=\"composed-outer-inc\"] (ComposedOuter)"
+      },
+      {
+        "file": "assets/s0-T66yclaG.js",
+        "name": "s0",
+        "source": "artifacts/ProvableGreeting/handlers/s0.js",
+        "bytes": 188,
+        "gzipBytes": 163,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "component": "ProvableGreeting",
+        "handler": "s0",
+        "event": "click",
+        "locator": "/1",
+        "target": "provable-greeting-solid",
+        "trigger": "click on [data-testid=\"provable-greeting-solid\"] (ProvableGreeting)"
+      },
+      {
+        "file": "assets/s1-Bh2SbUiB.js",
+        "name": "s1",
+        "source": "artifacts/ProvableStepper/handlers/s1.js",
+        "bytes": 231,
+        "gzipBytes": 177,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "component": "ProvableStepper",
+        "handler": "s1",
+        "event": "click",
+        "locator": "/3",
+        "target": "provable-stepper-widen",
+        "trigger": "click on [data-testid=\"provable-stepper-widen\"] (ProvableStepper)"
+      },
+      {
+        "file": "assets/s1-CRSHQqLD.js",
+        "name": "s1",
+        "source": "artifacts/ProvableGreeting/handlers/s1.js",
+        "bytes": 188,
+        "gzipBytes": 165,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "component": "ProvableGreeting",
+        "handler": "s1",
+        "event": "click",
+        "locator": "/2",
+        "target": "provable-greeting-reset",
+        "trigger": "click on [data-testid=\"provable-greeting-reset\"] (ProvableGreeting)"
+      },
+      {
+        "file": "assets/s1-o4YQ9NcG.js",
+        "name": "s1",
+        "source": "artifacts/ProvableCounter/handlers/s1.js",
+        "bytes": 235,
+        "gzipBytes": 179,
+        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "component": "ProvableCounter",
+        "handler": "s1",
+        "event": "click",
+        "locator": "/2",
+        "target": "provable-counter-dec",
+        "trigger": "click on [data-testid=\"provable-counter-dec\"] (ProvableCounter)"
+      }
+    ],
+    "lazyBytes": 4012,
+    "lazyGzipBytes": 2711,
+    "html": {
+      "file": "fixtures.html",
+      "bytes": 8134,
+      "gzipBytes": 2763
+    },
+    "css": [
+      {
+        "file": "assets/fixtures-DZd5V4VE.css",
+        "bytes": 1097,
+        "gzipBytes": 559
+      }
+    ],
+    "cssBytes": 1097,
+    "cssGzipBytes": 559,
+    "initialTransferBytes": 27397,
+    "initialTransferGzipBytes": 9172,
+    "whereTheBytesGo": [
+      {
+        "group": "bootstrap",
+        "label": "resume bootstrap (resumer + registry + locate + page glue)",
+        "renderedBytes": 19299,
+        "minifiedBytes": 11970,
+        "minifiedGzipBytes": 4080,
+        "modules": [
+          "demo/src/pages/fixtures-resumable.ts",
+          "demo/src/resumable-page.ts",
+          "demo/src/resume.ts",
+          "src/resume/cells.ts",
+          "src/resume/locate.ts",
+          "src/resume/registry.ts",
+          "src/resume/resumer.ts",
+          "src/resume/stores.ts"
+        ]
+      },
+      {
+        "group": "artifacts",
+        "label": "structure + wiring artifacts",
+        "renderedBytes": 14131,
+        "minifiedBytes": 4412,
+        "minifiedGzipBytes": 961,
+        "modules": [
+          "demo/artifacts/ComposedCounter.ComposedInner/structure.js",
+          "demo/artifacts/ComposedCounter.ComposedInner/wiring.js",
+          "demo/artifacts/ComposedCounter.ComposedOuter/structure.js",
+          "demo/artifacts/ComposedCounter.ComposedOuter/wiring.js",
+          "demo/artifacts/KeyedRoster.RosterList/structure.js",
+          "demo/artifacts/KeyedRoster.RosterList/wiring.js",
+          "demo/artifacts/PropsPair.PropsPairParent/structure.js",
+          "demo/artifacts/PropsPair.PropsPairParent/wiring.js",
+          "demo/artifacts/ProvableCounter/structure.js",
+          "demo/artifacts/ProvableCounter/wiring.js",
+          "demo/artifacts/ProvableGreeting/structure.js",
+          "demo/artifacts/ProvableGreeting/wiring.js",
+          "demo/artifacts/ProvableStepper/structure.js",
+          "demo/artifacts/ProvableStepper/wiring.js"
+        ]
+      },
+      {
+        "group": "vite-runtime",
+        "label": "vite runtime (preload helper, modulepreload polyfill)",
+        "renderedBytes": 3303,
+        "minifiedBytes": 2030,
+        "minifiedGzipBytes": 1026,
+        "modules": [
+          "demo/\u0000vite/modulepreload-polyfill.js",
+          "demo/\u0000vite/preload-helper.js"
+        ]
+      }
+    ],
+    "lazyWhereTheBytesGo": [
+      {
+        "group": "handler-artifacts",
+        "label": "handler artifacts (lazy)",
+        "renderedBytes": 7445,
+        "minifiedBytes": 1949,
+        "minifiedGzipBytes": 407,
+        "modules": [
+          "demo/artifacts/ComposedCounter.ComposedInner/handlers/s0.js",
+          "demo/artifacts/ComposedCounter.ComposedOuter/handlers/s0.js",
+          "demo/artifacts/KeyedRoster.RosterList/handlers/s0.js",
+          "demo/artifacts/PropsPair.PropsPairParent/handlers/s0.js",
+          "demo/artifacts/ProvableCounter/handlers/s0.js",
+          "demo/artifacts/ProvableCounter/handlers/s1.js",
+          "demo/artifacts/ProvableGreeting/handlers/s0.js",
+          "demo/artifacts/ProvableGreeting/handlers/s1.js",
+          "demo/artifacts/ProvableStepper/handlers/s0.js",
+          "demo/artifacts/ProvableStepper/handlers/s1.js"
+        ]
+      },
+      {
+        "group": "bootstrap",
+        "label": "resume bootstrap (resumer + registry + locate + page glue)",
+        "renderedBytes": 2815,
+        "minifiedBytes": 1284,
+        "minifiedGzipBytes": 627,
+        "modules": [
+          "src/resume/regions.ts"
+        ]
+      },
+      {
+        "group": "demo-glue",
+        "label": "demo page glue",
+        "renderedBytes": 263,
+        "minifiedBytes": 220,
+        "minifiedGzipBytes": 152,
+        "modules": [
+          "demo/src/roster-store.ts"
+        ]
+      },
+      {
+        "group": "fixture-components",
+        "label": "fixture component bodies",
+        "renderedBytes": 719,
+        "minifiedBytes": 162,
+        "minifiedGzipBytes": 139,
+        "modules": [
+          "app/src/fixtures/roster.ts"
+        ]
+      }
+    ],
+    "bootstrap": {
+      "group": "bootstrap",
+      "label": "resume bootstrap (resumer + registry + locate + page glue)",
+      "renderedBytes": 19299,
+      "minifiedBytes": 11970,
+      "minifiedGzipBytes": 4080,
+      "modules": [
+        "demo/src/pages/fixtures-resumable.ts",
+        "demo/src/resumable-page.ts",
+        "demo/src/resume.ts",
+        "src/resume/cells.ts",
+        "src/resume/locate.ts",
+        "src/resume/registry.ts",
+        "src/resume/resumer.ts",
+        "src/resume/stores.ts"
+      ],
+      "sharePercent": 52.5,
+      "shareOfChunkBytes": 9544,
+      "marklessReferenceBytes": 700,
+      "kernel": {
+        "module": "src/resume/cells.ts",
+        "renderedBytes": 916,
+        "minifiedBytes": 514,
+        "minifiedGzipBytes": 294
+      }
+    },
+    "componentExecutionsBeforeInteraction": 0,
+    "componentExecutionsAfterInteraction": 0,
+    "componentModuleLoadsBeforeInteraction": 0,
+    "componentModuleLoadsAfterInteraction": 0
+  },
+  "delta": {
+    "eagerBytes": -15746,
+    "eagerGzipBytes": -7137,
+    "eagerGzipPercent": -55,
+    "initialTransferBytes": -14682,
+    "initialTransferGzipBytes": -6906
+  },
+  "todos": {
+    "page": "todos.html",
+    "claim": "Bytes and executions, and the bytes are now the smaller part of the story. Zero of the app's five component bodies run before the first interaction: `Header` is resumed from artifacts against markup the build captured into the document, and the other four — with `@solidjs/web`, `@solidjs/signals`, the todos store and the API — are one chunk behind one dynamic import that no byte of travels until the user touches the page. The eager payload is the resume bootstrap, one component's structure and wiring, and the deferral loader. Nothing is excluded from it: the group is reported at full weight under `lazyChunks`, with the interaction signal that transfers it and the event that executes it named separately.",
+    "instrument": "a vi.mock loader hook on @solidjs/web's createComponent, which every compiled JSX component element goes through; names are the invoked functions' own",
+    "interaction": "type a title into input.new-todo and press Enter",
+    "classic": {
+      "eagerRawBytes": 62260,
+      "eagerGzipBytes": 23087,
+      "initialTransferBytes": 70308,
+      "initialTransferGzipBytes": 25960,
+      "lazyChunks": [],
+      "componentExecutions": 5,
+      "componentExecutionsBeforeInteraction": 4,
+      "componentsExecuted": [
+        "App",
+        "Header",
+        "MainSection",
+        "Footer",
+        "TodoItem"
+      ]
+    },
+    "resumable": {
+      "eagerRawBytes": 14665,
+      "eagerGzipBytes": 5917,
+      "initialTransferBytes": 22998,
+      "initialTransferGzipBytes": 8921,
+      "gates": {
+        "eagerRawCapBytes": 15000,
+        "eagerRawHeadroomBytes": 335,
+        "eagerRawCapHolds": true,
+        "eagerGzipCompanionCapBytes": 4500,
+        "eagerGzipOverCompanionBytes": 1417,
+        "eagerGzipCompanionHolds": false,
+        "replaySplitCeiling": {
+          "bytes": 569,
+          "gzipBytes": 172
+        },
+        "note": "The raw cap is enforced by demo/scripts/check-zero-eager.mjs and by the witness box (verify/config.ts, TODOS_EAGER_JS_CAP_BYTES) against the wire. The gzip companion is the figure the deferred-group design named beside it; the payload is over it by the amount above, which is reported rather than restated. Moving the deferral loader's replay half behind the lazy boundary — the one split available, since that code cannot run before the group exists — was measured at a ceiling of 172 B gzip, so no split closes this gap and none was made."
+      },
+      "eagerBootstrapModules": [
+        {
+          "module": "src/resume/resumer.ts",
+          "renderedBytes": 8321,
+          "minifiedBytes": 4514,
+          "minifiedGzipBytes": 2001
+        },
+        {
+          "module": "src/resume/defer.ts",
+          "renderedBytes": 5318,
+          "minifiedBytes": 2961,
+          "minifiedGzipBytes": 1342
+        },
+        {
+          "module": "demo/src/todos-resume.ts",
+          "renderedBytes": 3174,
+          "minifiedBytes": 1776,
+          "minifiedGzipBytes": 834
+        },
+        {
+          "module": "src/resume/stores.ts",
+          "renderedBytes": 2924,
+          "minifiedBytes": 1747,
+          "minifiedGzipBytes": 774
+        },
+        {
+          "module": "src/resume/registry.ts",
+          "renderedBytes": 2696,
+          "minifiedBytes": 1405,
+          "minifiedGzipBytes": 649
+        },
+        {
+          "module": "src/resume/cells.ts",
+          "renderedBytes": 916,
+          "minifiedBytes": 514,
+          "minifiedGzipBytes": 294
+        },
+        {
+          "module": "src/resume/locate.ts",
+          "renderedBytes": 409,
+          "minifiedBytes": 250,
+          "minifiedGzipBytes": 207
+        }
+      ],
+      "lazyChunks": [
+        {
+          "file": "assets/regions-DaNynrFN.js",
+          "name": "regions",
+          "source": "../src/resume/regions.ts",
+          "bytes": 1305,
+          "gzipBytes": 660,
+          "importedBy": "assets/todos-aLg5f_Wt.js",
+          "trigger": "dynamic import"
+        },
+        {
+          "file": "assets/s0-4zLaQl8r.js",
+          "name": "s0",
+          "source": "artifacts/app.Header/handlers/s0.js",
+          "bytes": 397,
+          "gzipBytes": 288,
+          "importedBy": "assets/todos-aLg5f_Wt.js",
+          "component": "Header",
+          "handler": "s0",
+          "event": "keydown",
+          "locator": "/1",
+          "target": "input.new-todo",
+          "trigger": "keydown on input.new-todo (Header)"
+        },
+        {
+          "file": "assets/todos-group-jFv9uQSM.js",
+          "name": "todos-group",
+          "source": "src/todos-group.ts",
+          "bytes": 62331,
+          "gzipBytes": 23139,
+          "importedBy": "assets/todos-aLg5f_Wt.js",
+          "group": true,
+          "trigger": "the first event that commits the group — an interaction with the group's own DOM, or a resumed dispatch that needs the store only the group can create",
+          "transferredOn": "a pointer press anywhere in the page, or a keystroke in the resumed mount — the earliest real interaction signal, which buys the transfer and not the execution"
+        }
+      ],
+      "lazyBytes": 64033,
+      "lazyGzipBytes": 24087,
+      "groupChunk": {
+        "file": "assets/todos-group-jFv9uQSM.js",
+        "bytes": 62331,
+        "gzipBytes": 23139,
+        "trigger": "the first event that commits the group — an interaction with the group's own DOM, or a resumed dispatch that needs the store only the group can create",
+        "transferredOn": "a pointer press anywhere in the page, or a keystroke in the resumed mount — the earliest real interaction signal, which buys the transfer and not the execution",
+        "observedTrigger": "click on the deferred group",
+        "contains": [
+          "@solidjs/signals (reactive runtime)",
+          "@solidjs/web + solid-js (renderer)",
+          "app components (todos)",
+          "resume bootstrap (resumer + registry + locate + page glue)",
+          "demo page glue",
+          "demo API mock",
+          "structure + wiring artifacts"
+        ]
+      },
+      "groupAnatomy": {
+        "chunk": "assets/todos-group-jFv9uQSM.js",
+        "bytes": 62331,
+        "gzipBytes": 23139,
+        "moduleCount": 28,
+        "framework": {
+          "moduleCount": 22,
+          "renderedBytes": 245561,
+          "sharePercent": 94.9,
+          "modules": [
+            "@solidjs/signals/dist/prod/boundaries.js",
+            "@solidjs/signals/dist/prod/core/action.js",
+            "@solidjs/signals/dist/prod/core/async.js",
+            "@solidjs/signals/dist/prod/core/constants.js",
+            "@solidjs/signals/dist/prod/core/context.js",
+            "@solidjs/signals/dist/prod/core/core.js",
+            "@solidjs/signals/dist/prod/core/effect.js",
+            "@solidjs/signals/dist/prod/core/error.js",
+            "@solidjs/signals/dist/prod/core/graph.js",
+            "@solidjs/signals/dist/prod/core/heap.js",
+            "@solidjs/signals/dist/prod/core/lanes.js",
+            "@solidjs/signals/dist/prod/core/optimistic.js",
+            "@solidjs/signals/dist/prod/core/owner.js",
+            "@solidjs/signals/dist/prod/core/scheduler.js",
+            "@solidjs/signals/dist/prod/map.js",
+            "@solidjs/signals/dist/prod/signals.js",
+            "@solidjs/signals/dist/prod/store/optimistic.js",
+            "@solidjs/signals/dist/prod/store/projection.js",
+            "@solidjs/signals/dist/prod/store/reconcile.js",
+            "@solidjs/signals/dist/prod/store/store.js",
+            "@solidjs/web/dist/web.js",
+            "solid-js/dist/solid.js"
+          ]
+        },
+        "app": {
+          "moduleCount": 6,
+          "renderedBytes": 13232,
+          "sharePercent": 5.1,
+          "measuredChunkBytes": 6940,
+          "measuredChunkGzipBytes": 2876,
+          "modules": [
+            "app/src/filter.ts",
+            "app/src/todos.ts",
+            "demo/artifacts/app.Header/template.js",
+            "demo/src/api-mock.ts",
+            "demo/src/generated/app.resumable.tsx",
+            "demo/src/todos-group.ts"
+          ]
+        },
+        "splits": [
+          {
+            "id": "three-way",
+            "label": "three-way — signals-core / signals-store / app",
+            "bytes": 63401,
+            "gzipBytes": 24546,
+            "note": "the shape T002 originally ruled: framework split by which page reaches it, app as the residue"
+          },
+          {
+            "id": "two-way",
+            "label": "two-way — framework / app",
+            "bytes": 62571,
+            "gzipBytes": 23433,
+            "note": "one framework chunk, one app chunk"
+          },
+          {
+            "id": "single",
+            "label": "single chunk — what ships",
+            "bytes": 62368,
+            "gzipBytes": 23096,
+            "note": "no manualChunks at all; the group is one dynamic import and one file"
+          }
+        ],
+        "whyOneChunk": "Activation is atomic: every module of the group runs before any member handler does, so a chunk boundary drawn inside it never removes a byte from the first touch — it only adds gzip-boundary overhead. All three chunkings were built and weighed, and every split is LARGER than no split (+1,033 B raw / +1,450 B gz three-way, +203 / +337 two-way). The gzip figure is the structural one: three gzip streams cannot share a dictionary, and that cost is bigger than anything a boundary buys back. Cross-page cacheability, which was the three-way split's whole reason to exist, is unavailable in any case — per-page builds tree-shake 12 of the 14 shared framework modules to different lengths, so the two pages' framework chunks have different content hashes no matter how the boundary is drawn.",
+        "theLever": "What shrinks this chunk is not chunk surgery, it is provable coverage — with the correction phase 2 forced on that sentence. A proved component leaves the group only when its mount can be SUBSTITUTED: then its body becomes structure + wiring artifacts in the eager chunk and a handler chunk fetched on the interaction that needs it, and the framework goes with it once the last body does. `MainSection` and `Footer` are proved and do NOT leave. What flips their guard is a store write, and a store write is the group's — substitute them and the document would carry an empty mount for markup the group has not built yet, and the resumer would throw rather than resume. Their verdicts are analysis with guard-only artifacts; their bodies stay where the group renders them the ordinary way, and this chunk is recorded UNCHANGED across both flips. A no-drop is the correct outcome here, not a missed one — an unexplained drop would be the red gate. At full coverage the group empties only where the ROOT is provable too, and `App`'s mount point is where the store is provided, so on this page it never will be. That end state is not hypothetical elsewhere — the fixtures page, whose five mounts the pass proves every one of, already ships it, and ships it harder than a branch nobody takes: its fallback branch is not BUILT, auto-omitted because every declared mount on the page is provable, so the ordinary renderer is in no chunk of that build at all, eager or lazy (claim 7b). What the page does fetch is a STORE — the carrier's mount point imports one when a dispatch finds no live store, and the module it imports imports nothing itself — while no chunk the page can fetch carries a store-partition module of the framework (claim 7a). A resumed page on this build fetches a STORE without fetching a RENDERER. The todos page is the same page at 3 of 5 proved and exactly one of the three resumed."
+      },
+      "prefetchedBytes": 62331,
+      "prefetchedGzipBytes": 23139,
+      "prefetchTrigger": "focusin in the resumed mount",
+      "componentExecutionsAtPrefetch": 0,
+      "componentExecutions": 4,
+      "componentExecutionsBeforeInteraction": 0,
+      "componentsExecuted": [
+        "App",
+        "MainSection",
+        "Footer",
+        "TodoItem"
+      ],
+      "groupEvaluationsBeforeInteraction": 0,
+      "handlerChunkLoadsBeforeInteraction": 0,
+      "handlerChunkLoadsAfterInteraction": 1,
+      "storesRegisteredBeforeInteraction": [],
+      "storesRegistered": [
+        "s0"
+      ],
+      "whereTheBytesGo": [
+        {
+          "group": "bootstrap",
+          "label": "resume bootstrap (resumer + registry + locate + page glue)",
+          "renderedBytes": 23820,
+          "minifiedBytes": 13234,
+          "minifiedGzipBytes": 5094,
+          "modules": [
+            "demo/src/pages/todos-resumable.ts",
+            "demo/src/todos-resume.ts",
+            "src/resume/cells.ts",
+            "src/resume/defer.ts",
+            "src/resume/locate.ts",
+            "src/resume/registry.ts",
+            "src/resume/resumer.ts",
+            "src/resume/stores.ts"
+          ]
+        },
+        {
+          "group": "vite-runtime",
+          "label": "vite runtime (preload helper, modulepreload polyfill)",
+          "renderedBytes": 3303,
+          "minifiedBytes": 2030,
+          "minifiedGzipBytes": 1026,
+          "modules": [
+            "demo/\u0000vite/modulepreload-polyfill.js",
+            "demo/\u0000vite/preload-helper.js"
+          ]
+        },
+        {
+          "group": "artifacts",
+          "label": "structure + wiring artifacts",
+          "renderedBytes": 1884,
+          "minifiedBytes": 441,
+          "minifiedGzipBytes": 269,
+          "modules": [
+            "demo/artifacts/app.Header/structure.js",
+            "demo/artifacts/app.Header/wiring.js"
+          ]
+        }
+      ],
+      "lazyWhereTheBytesGo": [
+        {
+          "group": "signals",
+          "label": "@solidjs/signals (reactive runtime)",
+          "renderedBytes": 226982,
+          "minifiedBytes": 69606,
+          "minifiedGzipBytes": 20616,
+          "modules": [
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/boundaries.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/action.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/async.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/constants.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/context.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/core.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/effect.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/error.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/graph.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/heap.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/lanes.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/optimistic.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/owner.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/scheduler.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/map.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/signals.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/optimistic.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/projection.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/reconcile.js",
+            "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/store.js"
+          ]
+        },
+        {
+          "group": "renderer",
+          "label": "@solidjs/web + solid-js (renderer)",
+          "renderedBytes": 18579,
+          "minifiedBytes": 9520,
+          "minifiedGzipBytes": 3530,
+          "modules": [
+            "demo/node_modules/.pnpm/@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0/node_modules/@solidjs/web/dist/web.js",
+            "demo/node_modules/.pnpm/solid-js@2.0.0-rc.0/node_modules/solid-js/dist/solid.js"
+          ]
+        },
+        {
+          "group": "app-components",
+          "label": "app components (todos)",
+          "renderedBytes": 9821,
+          "minifiedBytes": 5635,
+          "minifiedGzipBytes": 2006,
+          "modules": [
+            "app/src/filter.ts",
+            "app/src/todos.ts",
+            "demo/src/generated/app.resumable.tsx"
+          ]
+        },
+        {
+          "group": "bootstrap",
+          "label": "resume bootstrap (resumer + registry + locate + page glue)",
+          "renderedBytes": 2815,
+          "minifiedBytes": 1284,
+          "minifiedGzipBytes": 627,
+          "modules": [
+            "src/resume/regions.ts"
+          ]
+        },
+        {
+          "group": "demo-glue",
+          "label": "demo page glue",
+          "renderedBytes": 1386,
+          "minifiedBytes": 975,
+          "minifiedGzipBytes": 509,
+          "modules": [
+            "demo/src/todos-group.ts"
+          ]
+        },
+        {
+          "group": "api-mock",
+          "label": "demo API mock",
+          "renderedBytes": 1271,
+          "minifiedBytes": 815,
+          "minifiedGzipBytes": 420,
+          "modules": [
+            "demo/src/api-mock.ts"
+          ]
+        },
+        {
+          "group": "handler-artifacts",
+          "label": "handler artifacts (lazy)",
+          "renderedBytes": 910,
+          "minifiedBytes": 354,
+          "minifiedGzipBytes": 265,
+          "modules": [
+            "demo/artifacts/app.Header/handlers/s0.js"
+          ]
+        },
+        {
+          "group": "artifacts",
+          "label": "structure + wiring artifacts",
+          "renderedBytes": 754,
+          "minifiedBytes": 144,
+          "minifiedGzipBytes": 132,
+          "modules": [
+            "demo/artifacts/app.Header/template.js"
+          ]
+        }
+      ]
+    },
+    "delta": {
+      "eagerRawBytes": -47595,
+      "eagerGzipBytes": -17170,
+      "eagerGzipPercent": -74.4,
+      "initialTransferGzipBytes": -17039,
+      "componentExecutions": -1
+    }
+  },
+  "phaseDelta": {
+    "phase1": {
+      "source": "docs/goals/finish-line/notes/T006-phase-gate.md",
+      "date": "2026-08-12",
+      "todosEagerRawBytes": 12830,
+      "todosComponentExecutionsBeforeInteraction": 0,
+      "groupBytes": 62331,
+      "groupGzipBytes": 23140,
+      "coverage": {
+        "app": {
+          "provable": 1,
+          "components": 5
+        },
+        "fixtures": {
+          "provable": 6,
+          "components": 24
+        }
+      },
+      "witnessBoxes": 6,
+      "fixturesFallbackChunkBytes": 32415
+    },
+    "phase2": {
+      "todosEagerRawBytes": 14665,
+      "todosEagerRawCapBytes": 15000,
+      "todosEagerRawHeadroomBytes": 335,
+      "todosComponentExecutionsBeforeInteraction": 0,
+      "fixturesComponentExecutionsBeforeInteraction": 0,
+      "fixturesEagerRawBytes": 18166,
+      "fixturesFallbackChunkBytes": 0,
+      "groupBytes": 62331,
+      "groupGzipBytes": 23139,
+      "coverage": {
+        "app": {
+          "provable": 3,
+          "components": 5
+        },
+        "fixtures": {
+          "provable": 9,
+          "components": 28
+        }
+      },
+      "witnessBoxes": 8
+    },
+    "whyNotGroupBytes": "The group did not shrink and it was not supposed to. `MainSection` and `Footer` flipped to provable in phase 2, and neither one may be substituted out of the group: what flips their guard is a store WRITE, a store write is the group's, and a substituted mount would sit in the document empty while the markup that fills it is still inside the chunk nobody has fetched — the resumer throws on an empty mount rather than resuming one. So both flips are ANALYSIS verdicts carrying guard-only artifacts, both bodies stay where the group renders them the ordinary way, and gate A's anatomy is re-recorded UNCHANGED at 22 framework + 6 app modules. T006 predicted 22 + 5 and that prediction is VOID, not missed: it assumed the flips would move bodies, and the doctrine that forbids the move was ruled after it. A no-drop is the correct outcome for this page; an unexplained drop would be the red gate."
+  },
+  "pages": {
+    "classic": {
+      "fixtures": {
+        "variant": "classic",
+        "page": "fixtures",
+        "entryChunk": "assets/fixtures-Dr3DxnN9.js",
+        "eagerBytes": 33912,
+        "eagerGzipBytes": 12987,
+        "eagerChunks": [
+          {
+            "file": "assets/fixtures-Dr3DxnN9.js",
+            "name": "fixtures",
+            "source": "fixtures.html",
+            "bytes": 33912,
+            "gzipBytes": 12987
+          }
+        ],
+        "lazyChunks": [],
+        "lazyBytes": 0,
+        "lazyGzipBytes": 0,
+        "css": [
+          {
+            "file": "assets/fixtures-DZd5V4VE.css",
+            "bytes": 1097,
+            "gzipBytes": 559
+          }
+        ],
+        "cssBytes": 1097,
+        "cssGzipBytes": 559,
+        "html": {
+          "file": "fixtures.html",
+          "bytes": 7070,
+          "gzipBytes": 2532
+        },
+        "initialTransferBytes": 42079,
+        "initialTransferGzipBytes": 16078,
+        "whereTheBytesGo": [
+          {
+            "group": "signals",
+            "label": "@solidjs/signals (reactive runtime)",
+            "renderedBytes": 112433,
+            "minifiedBytes": 33092,
+            "minifiedGzipBytes": 10529,
+            "modules": [
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/boundaries.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/async.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/constants.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/context.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/core.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/effect.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/error.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/graph.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/heap.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/lanes.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/owner.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/scheduler.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/map.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/signals.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/store.js"
+            ]
+          },
+          {
+            "group": "renderer",
+            "label": "@solidjs/web + solid-js (renderer)",
+            "renderedBytes": 16630,
+            "minifiedBytes": 8325,
+            "minifiedGzipBytes": 3124,
+            "modules": [
+              "demo/node_modules/.pnpm/@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0/node_modules/@solidjs/web/dist/web.js",
+              "demo/node_modules/.pnpm/solid-js@2.0.0-rc.0/node_modules/solid-js/dist/solid.js"
+            ]
+          },
+          {
+            "group": "fixture-components",
+            "label": "fixture component bodies",
+            "renderedBytes": 5556,
+            "minifiedBytes": 3445,
+            "minifiedGzipBytes": 1023,
+            "modules": [
+              "app/src/fixtures/ComposedCounter.tsx",
+              "app/src/fixtures/KeyedRoster.tsx",
+              "app/src/fixtures/PropsPair.tsx",
+              "app/src/fixtures/ProvableCounter.tsx",
+              "app/src/fixtures/ProvableGreeting.tsx",
+              "app/src/fixtures/ProvableStepper.tsx",
+              "app/src/fixtures/roster.ts"
+            ]
+          },
+          {
+            "group": "vite-runtime",
+            "label": "vite runtime (preload helper, modulepreload polyfill)",
+            "renderedBytes": 1168,
+            "minifiedBytes": 731,
+            "minifiedGzipBytes": 420,
+            "modules": [
+              "demo/\u0000vite/modulepreload-polyfill.js"
+            ]
+          },
+          {
+            "group": "demo-glue",
+            "label": "demo page glue",
+            "renderedBytes": 1195,
+            "minifiedBytes": 562,
+            "minifiedGzipBytes": 361,
+            "modules": [
+              "demo/src/classic-page.ts",
+              "demo/src/components.ts",
+              "demo/src/pages/fixtures-classic.ts",
+              "demo/src/roster-store.ts"
+            ]
+          }
+        ],
+        "lazyWhereTheBytesGo": [],
+        "kernel": null,
+        "eagerBootstrapModules": [
+          {
+            "module": "demo/src/classic-page.ts",
+            "renderedBytes": 450,
+            "minifiedBytes": 291,
+            "minifiedGzipBytes": 234
+          },
+          {
+            "module": "demo/src/roster-store.ts",
+            "renderedBytes": 183,
+            "minifiedBytes": 150,
+            "minifiedGzipBytes": 123
+          },
+          {
+            "module": "demo/src/components.ts",
+            "renderedBytes": 551,
+            "minifiedBytes": 106,
+            "minifiedGzipBytes": 106
+          }
+        ]
+      },
+      "todos": {
+        "variant": "classic",
+        "page": "todos",
+        "entryChunk": "assets/todos-eAzfPkbH.js",
+        "eagerBytes": 62260,
+        "eagerGzipBytes": 23087,
+        "eagerChunks": [
+          {
+            "file": "assets/todos-eAzfPkbH.js",
+            "name": "todos",
+            "source": "todos.html",
+            "bytes": 62260,
+            "gzipBytes": 23087
+          }
+        ],
+        "lazyChunks": [],
+        "lazyBytes": 0,
+        "lazyGzipBytes": 0,
+        "css": [
+          {
+            "file": "assets/todos-f2TZ4gxc.css",
+            "bytes": 6188,
+            "gzipBytes": 1883
+          }
+        ],
+        "cssBytes": 6188,
+        "cssGzipBytes": 1883,
+        "html": {
+          "file": "todos.html",
+          "bytes": 1860,
+          "gzipBytes": 990
+        },
+        "initialTransferBytes": 70308,
+        "initialTransferGzipBytes": 25960,
+        "whereTheBytesGo": [
+          {
+            "group": "signals",
+            "label": "@solidjs/signals (reactive runtime)",
+            "renderedBytes": 226982,
+            "minifiedBytes": 69606,
+            "minifiedGzipBytes": 20616,
+            "modules": [
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/boundaries.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/action.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/async.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/constants.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/context.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/core.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/effect.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/error.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/graph.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/heap.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/lanes.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/optimistic.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/owner.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/scheduler.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/map.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/signals.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/optimistic.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/projection.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/reconcile.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/store.js"
+            ]
+          },
+          {
+            "group": "renderer",
+            "label": "@solidjs/web + solid-js (renderer)",
+            "renderedBytes": 18473,
+            "minifiedBytes": 9466,
+            "minifiedGzipBytes": 3511,
+            "modules": [
+              "demo/node_modules/.pnpm/@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0/node_modules/@solidjs/web/dist/web.js",
+              "demo/node_modules/.pnpm/solid-js@2.0.0-rc.0/node_modules/solid-js/dist/solid.js"
+            ]
+          },
+          {
+            "group": "app-components",
+            "label": "app components (todos)",
+            "renderedBytes": 10444,
+            "minifiedBytes": 6087,
+            "minifiedGzipBytes": 2204,
+            "modules": [
+              "app/src/app.tsx",
+              "app/src/filter.ts",
+              "app/src/todos.ts"
+            ]
+          },
+          {
+            "group": "api-mock",
+            "label": "demo API mock",
+            "renderedBytes": 1271,
+            "minifiedBytes": 815,
+            "minifiedGzipBytes": 420,
+            "modules": [
+              "demo/src/api-mock.ts"
+            ]
+          },
+          {
+            "group": "vite-runtime",
+            "label": "vite runtime (preload helper, modulepreload polyfill)",
+            "renderedBytes": 1168,
+            "minifiedBytes": 731,
+            "minifiedGzipBytes": 420,
+            "modules": [
+              "demo/\u0000vite/modulepreload-polyfill.js"
+            ]
+          },
+          {
+            "group": "demo-glue",
+            "label": "demo page glue",
+            "renderedBytes": 45,
+            "minifiedBytes": 45,
+            "minifiedGzipBytes": 62,
+            "modules": [
+              "demo/src/pages/todos.ts"
+            ]
+          }
+        ],
+        "lazyWhereTheBytesGo": [],
+        "kernel": null,
+        "eagerBootstrapModules": [
+          {
+            "module": "demo/src/api-mock.ts",
+            "renderedBytes": 1271,
+            "minifiedBytes": 815,
+            "minifiedGzipBytes": 420
+          }
+        ]
+      }
+    },
+    "resumable": {
+      "fixtures": {
+        "variant": "resumable",
+        "page": "fixtures",
+        "entryChunk": "assets/fixtures-DzOBkuni.js",
+        "eagerBytes": 18166,
+        "eagerGzipBytes": 5850,
+        "eagerChunks": [
+          {
+            "file": "assets/fixtures-DzOBkuni.js",
+            "name": "fixtures",
+            "source": "fixtures.html",
+            "bytes": 18166,
+            "gzipBytes": 5850
+          }
+        ],
+        "lazyChunks": [
+          {
+            "file": "assets/regions-DdJBHQqy.js",
+            "name": "regions",
+            "source": "../src/resume/regions.ts",
+            "bytes": 1308,
+            "gzipBytes": 658,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "trigger": "dynamic import"
+          },
+          {
+            "file": "assets/roster-store-8mzfQDX2.js",
+            "name": "roster-store",
+            "source": "src/roster-store.ts",
+            "bytes": 334,
+            "gzipBytes": 235,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "trigger": "dynamic import"
+          },
+          {
+            "file": "assets/s0-BH-Tk1En.js",
+            "name": "s0",
+            "source": "artifacts/ProvableStepper/handlers/s0.js",
+            "bytes": 282,
+            "gzipBytes": 195,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "component": "ProvableStepper",
+            "handler": "s0",
+            "event": "click",
+            "locator": "/2",
+            "target": "provable-stepper-up",
+            "trigger": "click on [data-testid=\"provable-stepper-up\"] (ProvableStepper)"
+          },
+          {
+            "file": "assets/s0-BM-E1Zv7.js",
+            "name": "s0",
+            "source": "artifacts/ProvableCounter/handlers/s0.js",
+            "bytes": 235,
+            "gzipBytes": 178,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "component": "ProvableCounter",
+            "handler": "s0",
+            "event": "click",
+            "locator": "/1",
+            "target": "provable-counter-inc",
+            "trigger": "click on [data-testid=\"provable-counter-inc\"] (ProvableCounter)"
+          },
+          {
+            "file": "assets/s0-cbiaNJP7.js",
+            "name": "s0",
+            "source": "artifacts/PropsPair.PropsPairParent/handlers/s0.js",
+            "bytes": 235,
+            "gzipBytes": 178,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "component": "PropsPairParent",
+            "handler": "s0",
+            "event": "click",
+            "locator": "/1",
+            "target": "props-pair-inc",
+            "trigger": "click on [data-testid=\"props-pair-inc\"] (PropsPairParent)"
+          },
+          {
+            "file": "assets/s0-DAIkIsKN.js",
+            "name": "s0",
+            "source": "artifacts/ComposedCounter.ComposedInner/handlers/s0.js",
+            "bytes": 235,
+            "gzipBytes": 180,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "trigger": "dynamic import"
+          },
+          {
+            "file": "assets/s0-DfdU_wfK.js",
+            "name": "s0",
+            "source": "artifacts/KeyedRoster.RosterList/handlers/s0.js",
+            "bytes": 306,
+            "gzipBytes": 224,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "trigger": "dynamic import"
+          },
+          {
+            "file": "assets/s0-DqxUB02D.js",
+            "name": "s0",
+            "source": "artifacts/ComposedCounter.ComposedOuter/handlers/s0.js",
+            "bytes": 235,
+            "gzipBytes": 179,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "component": "ComposedOuter",
+            "handler": "s0",
+            "event": "click",
+            "locator": "/1",
+            "target": "composed-outer-inc",
+            "trigger": "click on [data-testid=\"composed-outer-inc\"] (ComposedOuter)"
+          },
+          {
+            "file": "assets/s0-T66yclaG.js",
+            "name": "s0",
+            "source": "artifacts/ProvableGreeting/handlers/s0.js",
+            "bytes": 188,
+            "gzipBytes": 163,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "component": "ProvableGreeting",
+            "handler": "s0",
+            "event": "click",
+            "locator": "/1",
+            "target": "provable-greeting-solid",
+            "trigger": "click on [data-testid=\"provable-greeting-solid\"] (ProvableGreeting)"
+          },
+          {
+            "file": "assets/s1-Bh2SbUiB.js",
+            "name": "s1",
+            "source": "artifacts/ProvableStepper/handlers/s1.js",
+            "bytes": 231,
+            "gzipBytes": 177,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "component": "ProvableStepper",
+            "handler": "s1",
+            "event": "click",
+            "locator": "/3",
+            "target": "provable-stepper-widen",
+            "trigger": "click on [data-testid=\"provable-stepper-widen\"] (ProvableStepper)"
+          },
+          {
+            "file": "assets/s1-CRSHQqLD.js",
+            "name": "s1",
+            "source": "artifacts/ProvableGreeting/handlers/s1.js",
+            "bytes": 188,
+            "gzipBytes": 165,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "component": "ProvableGreeting",
+            "handler": "s1",
+            "event": "click",
+            "locator": "/2",
+            "target": "provable-greeting-reset",
+            "trigger": "click on [data-testid=\"provable-greeting-reset\"] (ProvableGreeting)"
+          },
+          {
+            "file": "assets/s1-o4YQ9NcG.js",
+            "name": "s1",
+            "source": "artifacts/ProvableCounter/handlers/s1.js",
+            "bytes": 235,
+            "gzipBytes": 179,
+            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "component": "ProvableCounter",
+            "handler": "s1",
+            "event": "click",
+            "locator": "/2",
+            "target": "provable-counter-dec",
+            "trigger": "click on [data-testid=\"provable-counter-dec\"] (ProvableCounter)"
+          }
+        ],
+        "lazyBytes": 4012,
+        "lazyGzipBytes": 2711,
+        "css": [
+          {
+            "file": "assets/fixtures-DZd5V4VE.css",
+            "bytes": 1097,
+            "gzipBytes": 559
+          }
+        ],
+        "cssBytes": 1097,
+        "cssGzipBytes": 559,
+        "html": {
+          "file": "fixtures.html",
+          "bytes": 8134,
+          "gzipBytes": 2763
+        },
+        "initialTransferBytes": 27397,
+        "initialTransferGzipBytes": 9172,
+        "whereTheBytesGo": [
+          {
+            "group": "bootstrap",
+            "label": "resume bootstrap (resumer + registry + locate + page glue)",
+            "renderedBytes": 19299,
+            "minifiedBytes": 11970,
+            "minifiedGzipBytes": 4080,
+            "modules": [
+              "demo/src/pages/fixtures-resumable.ts",
+              "demo/src/resumable-page.ts",
+              "demo/src/resume.ts",
+              "src/resume/cells.ts",
+              "src/resume/locate.ts",
+              "src/resume/registry.ts",
+              "src/resume/resumer.ts",
+              "src/resume/stores.ts"
+            ]
+          },
+          {
+            "group": "artifacts",
+            "label": "structure + wiring artifacts",
+            "renderedBytes": 14131,
+            "minifiedBytes": 4412,
+            "minifiedGzipBytes": 961,
+            "modules": [
+              "demo/artifacts/ComposedCounter.ComposedInner/structure.js",
+              "demo/artifacts/ComposedCounter.ComposedInner/wiring.js",
+              "demo/artifacts/ComposedCounter.ComposedOuter/structure.js",
+              "demo/artifacts/ComposedCounter.ComposedOuter/wiring.js",
+              "demo/artifacts/KeyedRoster.RosterList/structure.js",
+              "demo/artifacts/KeyedRoster.RosterList/wiring.js",
+              "demo/artifacts/PropsPair.PropsPairParent/structure.js",
+              "demo/artifacts/PropsPair.PropsPairParent/wiring.js",
+              "demo/artifacts/ProvableCounter/structure.js",
+              "demo/artifacts/ProvableCounter/wiring.js",
+              "demo/artifacts/ProvableGreeting/structure.js",
+              "demo/artifacts/ProvableGreeting/wiring.js",
+              "demo/artifacts/ProvableStepper/structure.js",
+              "demo/artifacts/ProvableStepper/wiring.js"
+            ]
+          },
+          {
+            "group": "vite-runtime",
+            "label": "vite runtime (preload helper, modulepreload polyfill)",
+            "renderedBytes": 3303,
+            "minifiedBytes": 2030,
+            "minifiedGzipBytes": 1026,
+            "modules": [
+              "demo/\u0000vite/modulepreload-polyfill.js",
+              "demo/\u0000vite/preload-helper.js"
+            ]
+          }
+        ],
+        "lazyWhereTheBytesGo": [
+          {
+            "group": "handler-artifacts",
+            "label": "handler artifacts (lazy)",
+            "renderedBytes": 7445,
+            "minifiedBytes": 1949,
+            "minifiedGzipBytes": 407,
+            "modules": [
+              "demo/artifacts/ComposedCounter.ComposedInner/handlers/s0.js",
+              "demo/artifacts/ComposedCounter.ComposedOuter/handlers/s0.js",
+              "demo/artifacts/KeyedRoster.RosterList/handlers/s0.js",
+              "demo/artifacts/PropsPair.PropsPairParent/handlers/s0.js",
+              "demo/artifacts/ProvableCounter/handlers/s0.js",
+              "demo/artifacts/ProvableCounter/handlers/s1.js",
+              "demo/artifacts/ProvableGreeting/handlers/s0.js",
+              "demo/artifacts/ProvableGreeting/handlers/s1.js",
+              "demo/artifacts/ProvableStepper/handlers/s0.js",
+              "demo/artifacts/ProvableStepper/handlers/s1.js"
+            ]
+          },
+          {
+            "group": "bootstrap",
+            "label": "resume bootstrap (resumer + registry + locate + page glue)",
+            "renderedBytes": 2815,
+            "minifiedBytes": 1284,
+            "minifiedGzipBytes": 627,
+            "modules": [
+              "src/resume/regions.ts"
+            ]
+          },
+          {
+            "group": "demo-glue",
+            "label": "demo page glue",
+            "renderedBytes": 263,
+            "minifiedBytes": 220,
+            "minifiedGzipBytes": 152,
+            "modules": [
+              "demo/src/roster-store.ts"
+            ]
+          },
+          {
+            "group": "fixture-components",
+            "label": "fixture component bodies",
+            "renderedBytes": 719,
+            "minifiedBytes": 162,
+            "minifiedGzipBytes": 139,
+            "modules": [
+              "app/src/fixtures/roster.ts"
+            ]
+          }
+        ],
+        "kernel": {
+          "module": "src/resume/cells.ts",
+          "renderedBytes": 916,
+          "minifiedBytes": 514,
+          "minifiedGzipBytes": 294
+        },
+        "eagerBootstrapModules": [
+          {
+            "module": "src/resume/resumer.ts",
+            "renderedBytes": 8321,
+            "minifiedBytes": 4514,
+            "minifiedGzipBytes": 2001
+          },
+          {
+            "module": "demo/src/resume.ts",
+            "renderedBytes": 2802,
+            "minifiedBytes": 2671,
+            "minifiedGzipBytes": 467
+          },
+          {
+            "module": "src/resume/stores.ts",
+            "renderedBytes": 2924,
+            "minifiedBytes": 1747,
+            "minifiedGzipBytes": 774
+          },
+          {
+            "module": "src/resume/registry.ts",
+            "renderedBytes": 2696,
+            "minifiedBytes": 1405,
+            "minifiedGzipBytes": 649
+          },
+          {
+            "module": "demo/src/resumable-page.ts",
+            "renderedBytes": 1214,
+            "minifiedBytes": 849,
+            "minifiedGzipBytes": 534
+          },
+          {
+            "module": "src/resume/cells.ts",
+            "renderedBytes": 916,
+            "minifiedBytes": 514,
+            "minifiedGzipBytes": 294
+          },
+          {
+            "module": "src/resume/locate.ts",
+            "renderedBytes": 409,
+            "minifiedBytes": 250,
+            "minifiedGzipBytes": 207
+          }
+        ]
+      },
+      "todos": {
+        "variant": "resumable",
+        "page": "todos",
+        "entryChunk": "assets/todos-aLg5f_Wt.js",
+        "eagerBytes": 14665,
+        "eagerGzipBytes": 5917,
+        "eagerChunks": [
+          {
+            "file": "assets/todos-aLg5f_Wt.js",
+            "name": "todos",
+            "source": "todos.html",
+            "bytes": 14665,
+            "gzipBytes": 5917
+          }
+        ],
+        "lazyChunks": [
+          {
+            "file": "assets/regions-DaNynrFN.js",
+            "name": "regions",
+            "source": "../src/resume/regions.ts",
+            "bytes": 1305,
+            "gzipBytes": 660,
+            "importedBy": "assets/todos-aLg5f_Wt.js",
+            "trigger": "dynamic import"
+          },
+          {
+            "file": "assets/s0-4zLaQl8r.js",
+            "name": "s0",
+            "source": "artifacts/app.Header/handlers/s0.js",
+            "bytes": 397,
+            "gzipBytes": 288,
+            "importedBy": "assets/todos-aLg5f_Wt.js",
+            "component": "Header",
+            "handler": "s0",
+            "event": "keydown",
+            "locator": "/1",
+            "target": "input.new-todo",
+            "trigger": "keydown on input.new-todo (Header)"
+          },
+          {
+            "file": "assets/todos-group-jFv9uQSM.js",
+            "name": "todos-group",
+            "source": "src/todos-group.ts",
+            "bytes": 62331,
+            "gzipBytes": 23139,
+            "importedBy": "assets/todos-aLg5f_Wt.js",
+            "group": true,
+            "trigger": "the first event that commits the group — an interaction with the group's own DOM, or a resumed dispatch that needs the store only the group can create",
+            "transferredOn": "a pointer press anywhere in the page, or a keystroke in the resumed mount — the earliest real interaction signal, which buys the transfer and not the execution"
+          }
+        ],
+        "lazyBytes": 64033,
+        "lazyGzipBytes": 24087,
+        "css": [
+          {
+            "file": "assets/todos-f2TZ4gxc.css",
+            "bytes": 6188,
+            "gzipBytes": 1883
+          }
+        ],
+        "cssBytes": 6188,
+        "cssGzipBytes": 1883,
+        "html": {
+          "file": "todos.html",
+          "bytes": 2145,
+          "gzipBytes": 1121
+        },
+        "initialTransferBytes": 22998,
+        "initialTransferGzipBytes": 8921,
+        "whereTheBytesGo": [
+          {
+            "group": "bootstrap",
+            "label": "resume bootstrap (resumer + registry + locate + page glue)",
+            "renderedBytes": 23820,
+            "minifiedBytes": 13234,
+            "minifiedGzipBytes": 5094,
+            "modules": [
+              "demo/src/pages/todos-resumable.ts",
+              "demo/src/todos-resume.ts",
+              "src/resume/cells.ts",
+              "src/resume/defer.ts",
+              "src/resume/locate.ts",
+              "src/resume/registry.ts",
+              "src/resume/resumer.ts",
+              "src/resume/stores.ts"
+            ]
+          },
+          {
+            "group": "vite-runtime",
+            "label": "vite runtime (preload helper, modulepreload polyfill)",
+            "renderedBytes": 3303,
+            "minifiedBytes": 2030,
+            "minifiedGzipBytes": 1026,
+            "modules": [
+              "demo/\u0000vite/modulepreload-polyfill.js",
+              "demo/\u0000vite/preload-helper.js"
+            ]
+          },
+          {
+            "group": "artifacts",
+            "label": "structure + wiring artifacts",
+            "renderedBytes": 1884,
+            "minifiedBytes": 441,
+            "minifiedGzipBytes": 269,
+            "modules": [
+              "demo/artifacts/app.Header/structure.js",
+              "demo/artifacts/app.Header/wiring.js"
+            ]
+          }
+        ],
+        "lazyWhereTheBytesGo": [
+          {
+            "group": "signals",
+            "label": "@solidjs/signals (reactive runtime)",
+            "renderedBytes": 226982,
+            "minifiedBytes": 69606,
+            "minifiedGzipBytes": 20616,
+            "modules": [
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/boundaries.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/action.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/async.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/constants.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/context.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/core.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/effect.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/error.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/graph.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/heap.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/lanes.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/optimistic.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/owner.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/scheduler.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/map.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/signals.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/optimistic.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/projection.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/reconcile.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/store.js"
+            ]
+          },
+          {
+            "group": "renderer",
+            "label": "@solidjs/web + solid-js (renderer)",
+            "renderedBytes": 18579,
+            "minifiedBytes": 9520,
+            "minifiedGzipBytes": 3530,
+            "modules": [
+              "demo/node_modules/.pnpm/@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0/node_modules/@solidjs/web/dist/web.js",
+              "demo/node_modules/.pnpm/solid-js@2.0.0-rc.0/node_modules/solid-js/dist/solid.js"
+            ]
+          },
+          {
+            "group": "app-components",
+            "label": "app components (todos)",
+            "renderedBytes": 9821,
+            "minifiedBytes": 5635,
+            "minifiedGzipBytes": 2006,
+            "modules": [
+              "app/src/filter.ts",
+              "app/src/todos.ts",
+              "demo/src/generated/app.resumable.tsx"
+            ]
+          },
+          {
+            "group": "bootstrap",
+            "label": "resume bootstrap (resumer + registry + locate + page glue)",
+            "renderedBytes": 2815,
+            "minifiedBytes": 1284,
+            "minifiedGzipBytes": 627,
+            "modules": [
+              "src/resume/regions.ts"
+            ]
+          },
+          {
+            "group": "demo-glue",
+            "label": "demo page glue",
+            "renderedBytes": 1386,
+            "minifiedBytes": 975,
+            "minifiedGzipBytes": 509,
+            "modules": [
+              "demo/src/todos-group.ts"
+            ]
+          },
+          {
+            "group": "api-mock",
+            "label": "demo API mock",
+            "renderedBytes": 1271,
+            "minifiedBytes": 815,
+            "minifiedGzipBytes": 420,
+            "modules": [
+              "demo/src/api-mock.ts"
+            ]
+          },
+          {
+            "group": "handler-artifacts",
+            "label": "handler artifacts (lazy)",
+            "renderedBytes": 910,
+            "minifiedBytes": 354,
+            "minifiedGzipBytes": 265,
+            "modules": [
+              "demo/artifacts/app.Header/handlers/s0.js"
+            ]
+          },
+          {
+            "group": "artifacts",
+            "label": "structure + wiring artifacts",
+            "renderedBytes": 754,
+            "minifiedBytes": 144,
+            "minifiedGzipBytes": 132,
+            "modules": [
+              "demo/artifacts/app.Header/template.js"
+            ]
+          }
+        ],
+        "kernel": {
+          "module": "src/resume/cells.ts",
+          "renderedBytes": 916,
+          "minifiedBytes": 514,
+          "minifiedGzipBytes": 294
+        },
+        "eagerBootstrapModules": [
+          {
+            "module": "src/resume/resumer.ts",
+            "renderedBytes": 8321,
+            "minifiedBytes": 4514,
+            "minifiedGzipBytes": 2001
+          },
+          {
+            "module": "src/resume/defer.ts",
+            "renderedBytes": 5318,
+            "minifiedBytes": 2961,
+            "minifiedGzipBytes": 1342
+          },
+          {
+            "module": "demo/src/todos-resume.ts",
+            "renderedBytes": 3174,
+            "minifiedBytes": 1776,
+            "minifiedGzipBytes": 834
+          },
+          {
+            "module": "src/resume/stores.ts",
+            "renderedBytes": 2924,
+            "minifiedBytes": 1747,
+            "minifiedGzipBytes": 774
+          },
+          {
+            "module": "src/resume/registry.ts",
+            "renderedBytes": 2696,
+            "minifiedBytes": 1405,
+            "minifiedGzipBytes": 649
+          },
+          {
+            "module": "src/resume/cells.ts",
+            "renderedBytes": 916,
+            "minifiedBytes": 514,
+            "minifiedGzipBytes": 294
+          },
+          {
+            "module": "src/resume/locate.ts",
+            "renderedBytes": 409,
+            "minifiedBytes": 250,
+            "minifiedGzipBytes": 207
+          }
+        ]
+      }
+    }
+  },
+  "instrumentation": {
+    "fixtures": {
+      "source": "demo/test/fixtures-page.test.ts",
+      "page": "fixtures.html",
+      "variant": "resumable",
+      "components": [
+        "ProvableCounter",
+        "ProvableStepper",
+        "ProvableGreeting",
+        "PropsPairParent",
+        "ComposedOuter",
+        "RosterList"
+      ],
+      "componentModuleLoadsBeforeInteraction": 0,
+      "componentModuleLoadsAfterInteraction": 0,
+      "componentExecutionsBeforeInteraction": 0,
+      "componentExecutionsAfterInteraction": 0,
+      "handlerChunkLoadsBeforeInteraction": 0,
+      "handlerChunkLoadsAfterInteraction": 7,
+      "handlerChunkLoadsAfterSecondInteraction": 7,
+      "handlerChunksTotal": 10,
+      "classicComponentModuleLoads": 6,
+      "classicComponentExecutions": 6
+    },
+    "todos": {
+      "source": "demo/test/todos-resume.test.tsx",
+      "page": "todos.html",
+      "instrument": "a vi.mock loader hook on @solidjs/web's createComponent, which every compiled JSX component element goes through; names are the invoked functions' own",
+      "appComponents": [
+        "App",
+        "Header",
+        "TodoItem",
+        "MainSection",
+        "Footer"
+      ],
+      "interaction": "type a title into input.new-todo and press Enter",
+      "classic": {
+        "componentExecutions": 5,
+        "componentsExecuted": [
+          "App",
+          "Header",
+          "MainSection",
+          "Footer",
+          "TodoItem"
+        ],
+        "allComponentsExecuted": [
+          "App",
+          "Errored",
+          "TodosContext",
+          "Header",
+          "Loading",
+          "MainSection",
+          "Show",
+          "Footer",
+          "Show",
+          "For",
+          "TodoItem",
+          "Show",
+          "Show"
+        ],
+        "componentExecutionsBeforeInteraction": 4
+      },
+      "resumable": {
+        "componentExecutions": 4,
+        "componentsExecuted": [
+          "App",
+          "MainSection",
+          "Footer",
+          "TodoItem"
+        ],
+        "allComponentsExecuted": [
+          "App",
+          "Errored",
+          "TodosContext",
+          "Loading",
+          "MainSection",
+          "Show",
+          "Footer",
+          "Show",
+          "For",
+          "TodoItem",
+          "Show",
+          "Show"
+        ],
+        "componentExecutionsBeforeInteraction": 0,
+        "groupTrigger": "click on the deferred group",
+        "prefetchTrigger": "focusin in the resumed mount",
+        "prefetchesBeforeInteraction": 1,
+        "importsAtPrefetch": 0,
+        "componentExecutionsAtPrefetch": 0,
+        "storesRegisteredAtPrefetch": [],
+        "groupEvaluationsBeforeInteraction": 0,
+        "groupEvaluationsAfterInteraction": 1,
+        "groupEvaluationsAfterSecondInteraction": 1,
+        "handlerChunkLoadsBeforeInteraction": 0,
+        "handlerChunkLoadsAfterInteraction": 1,
+        "handlerChunkLoadsAfterSecondInteraction": 1,
+        "storesRegisteredBeforeInteraction": [],
+        "storesRegistered": [
+          "s0"
+        ]
+      }
+    },
+    "source": "demo/test/fixtures-page.test.ts",
+    "page": "fixtures.html",
+    "variant": "resumable",
+    "components": [
+      "ProvableCounter",
+      "ProvableStepper",
+      "ProvableGreeting",
+      "PropsPairParent",
+      "ComposedOuter",
+      "RosterList"
+    ],
+    "componentModuleLoadsBeforeInteraction": 0,
+    "componentModuleLoadsAfterInteraction": 0,
+    "componentExecutionsBeforeInteraction": 0,
+    "componentExecutionsAfterInteraction": 0,
+    "handlerChunkLoadsBeforeInteraction": 0,
+    "handlerChunkLoadsAfterInteraction": 7,
+    "handlerChunkLoadsAfterSecondInteraction": 7,
+    "handlerChunksTotal": 10,
+    "classicComponentModuleLoads": 6,
+    "classicComponentExecutions": 6
+  }
+}

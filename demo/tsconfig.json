@@ -1,0 +1,23 @@
+{
+  "// note": "Mirrors app/tsconfig.json's compiler options (the inlined solid-monorepo base) so the demo type-checks its imports of app/** under exactly the settings those files were written for. `include` reaches outside the demo because the pages import the frozen corpus directly; nothing here emits.",
+  "compilerOptions": {
+    "target": "ESNext",
+    "newLine": "LF",
+    "strict": true,
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
+    "noEmit": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "jsx": "preserve",
+    "jsxImportSource": "@solidjs/web",
+    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": false,
+    "types": ["vite/client", "vitest/globals", "node"]
+  },
+  "exclude": ["node_modules", "dist"],
+  "include": ["src/**/*", "test/**/*", "vitest.config.ts"]
+}

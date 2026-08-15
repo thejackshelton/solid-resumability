@@ -1,0 +1,25 @@
+/*
+ * Demo-only overlay on top of `app/src/app.css`, which is imported unchanged.
+ *
+ * Two rules, and both variants get both — the stylesheet is shared, so nothing
+ * here can move bytes between the two sides of the measurement.
+ *
+ * 1. A todo's title is a `<label>`, and double-clicking one while demoing
+ *    selects the text instead of doing something interesting. The app's own
+ *    stylesheet is the frozen corpus and is not edited to fix that.
+ *
+ * 2. The resumable variant mounts `Header`'s template inside a container the
+ *    resumer can attach its delegated listener to. `display: contents` means
+ *    that container generates no box at all, so the app's stylesheet — whose
+ *    every rule is a descendant selector — resolves exactly as it does on the
+ *    classic page. See `demo/src/todos-resume.ts`.
+ */
+
+.resume-mount {
+  display: contents;
+}
+
+.todo-list li label {
+  user-select: none;
+  -webkit-user-select: none;
+}

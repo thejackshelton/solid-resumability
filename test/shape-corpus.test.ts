@@ -1,9 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { Analyzer } from "yuku-analyzer";
 
-import { analyzeFixture, classify, loadProject } from "../src/comptime/index.ts";
-import type { Analysis, ReasonCode } from "../src/comptime/types.ts";
+import { contains } from "../src/comptime/ast.ts";
+import { freeIdentifiersInCompute } from "../src/comptime/emit.ts";
+import { analyzeFixture, classify, loadProject, runComptime } from "../src/comptime/index.ts";
+import type { Analysis, AttributeBindingInfo, ReasonCode } from "../src/comptime/types.ts";
 
 /**
  * THE SHAPE CORPUS — the re-runnable half of `docs/kobalte/impossibility.md`.
@@ -334,6 +339,118 @@ describe("the four-shape conjunction — folded measured intrinsic", () => {
   it("refuses the call-valued spread counter, and only that", () => {
     expect(counter.status).toBe("fallback");
     expect(codes(counter)).toEqual(["jsx-spread"]);
+  });
+});
+
+describe("compute closure — first-party host for both defect shapes", () => {
+  const analysis = shape("ComputeClosureHost.tsx", "ComputeClosureHost");
+
+  function attribute(name: string): AttributeBindingInfo {
+    if (analysis.status !== "provable") throw new Error("expected a provable host");
+    const binding = analysis.bindings.find(
+      (entry) => entry.kind === "attribute" && entry.attribute === name,
+    );
+    if (binding == null || binding.kind !== "attribute") {
+      throw new Error(`expected attribute binding ${name}`);
+    }
+    return binding;
+  }
+
+  it("classifies the host as provable", () => {
+    expect(analysis.status).toBe("provable");
+    expect(codes(analysis)).toEqual([]);
+  });
+
+  it("closes the summarized-accessor compute over its proven cell-read slot", () => {
+    const binding = attribute("data-label");
+    expect(binding.captures.some((slot) => slot.name === "label" && "cell" in slot)).toBe(true);
+    expect(freeIdentifiersInCompute(slotPattern(binding.captures), binding.expression)).toEqual([]);
+    expect(binding.expression).toContain("label()");
+  });
+
+  it("substitutes the slot name at the proven member-read base", () => {
+    const binding = attribute("data-mode");
+    expect(binding.captures).toEqual([
+      expect.objectContaining({
+        name: "mode",
+        kind: "identity",
+        source: { name: "merged", path: ["mode"] },
+      }),
+    ]);
+    expect(binding.expression).toBe("mode.mode");
+    expect(freeIdentifiersInCompute(slotPattern(binding.captures), binding.expression)).toEqual([]);
+  });
+
+  it("emits the host — the gate admits the rewritten computes", () => {
+    const outRoot = mkdtempSync(join(tmpdir(), "compute-closure-"));
+    scratchDirs.push(outRoot);
+    const result = runComptime(`${SHAPES}/ComputeClosureHost.tsx`, {
+      component: "ComputeClosureHost",
+      outRoot,
+    });
+    expect(result.analysis.status).toBe("provable");
+    expect(result.emitted).not.toBeNull();
+    expect(freeInStructure(join(result.emitted!.dir, "structure.js"))).toEqual([]);
+  });
+});
+
+const scratchDirs: string[] = [];
+afterAll(() => {
+  for (const dir of scratchDirs) rmSync(dir, { recursive: true, force: true });
+});
+
+function slotPattern(slots: Array<{ name: string }>): string {
+  if (slots.length === 0) return "_slots";
+  return `{ ${slots.map((slot) => slot.name).join(", ")} }`;
+}
+
+const LANGUAGE_GLOBALS = new Set(["undefined", "NaN", "Infinity"]);
+
+function structureFiles(root: string): string[] {
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const name of entries) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) walk(full);
+      else if (name === "structure.js") out.push(full);
+    }
+  };
+  walk(root);
+  return out.sort();
+}
+
+function freeInStructure(file: string): Array<{ owner: string; name: string }> {
+  const source = readFileSync(file, "utf8");
+  const analyzer = new Analyzer();
+  const mod = analyzer.addFile(file, source);
+  const free: Array<{ owner: string; name: string }> = [];
+  for (const fn of [...mod.findAll("FunctionExpression"), ...mod.findAll("FunctionDeclaration")]) {
+    const parent = mod.parentOf(fn) as { type?: string; key?: { name?: string; value?: string } } | null;
+    const key = parent?.type === "Property" ? (parent.key?.name ?? parent.key?.value) : undefined;
+    if (key !== "compute" && key !== "when" && key !== "each") continue;
+    for (const reference of mod.unresolvedReferences) {
+      if (reference.inTypePosition) continue;
+      if (!contains(fn, reference.node)) continue;
+      if (LANGUAGE_GLOBALS.has(reference.name)) continue;
+      free.push({ owner: String(key), name: reference.name });
+    }
+  }
+  return free;
+}
+
+describe("compute closure — every emitted artifact", () => {
+  it("closes every compute, when, and each over slot names only", () => {
+    const files = [...structureFiles("artifacts"), ...structureFiles("demo/artifacts")];
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      expect(freeInStructure(file), file).toEqual([]);
+    }
   });
 });
 

@@ -274,6 +274,15 @@ export function isCellSlot(slot: CaptureSlot): slot is CellCaptureSlot {
  */
 export type InitialFrom = "derivation" | "capture";
 
+/**
+ * One resolved AST node paired with the capture slot that node stands for.
+ * Compared by node identity at print time, never by identifier spelling.
+ */
+export interface SlotRewrite {
+  node: object;
+  name: string;
+}
+
 /** What every binding carries, whatever it owns on the element it addresses. */
 interface BindingCommon {
   id: string;
@@ -285,6 +294,8 @@ interface BindingCommon {
    * artifact still records which. */
   origin: CodeOrigin;
   loc: SourceLoc;
+  /** Resolved-node ↔ slot pairings recorded when the derivation was proven. */
+  slotRewrites?: readonly SlotRewrite[];
 }
 
 /** A binding that owns its element's `textContent`. */

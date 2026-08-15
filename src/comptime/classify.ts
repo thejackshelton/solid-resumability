@@ -173,6 +173,7 @@ import type {
   BindingInfo,
   CaptureSlot,
   CellInfo,
+  SlotRewrite,
   ClaimedChild,
   ClassConditionInfo,
   ClassifyOptions,
@@ -279,12 +280,15 @@ interface Accessor {
 /** A folded text derivation. `source` goes into `structure.js`'s `compute`, so
  * it must be expressed purely in capture slots; `inlined` records whether any
  * part came from OUTSIDE the component. When nothing did, `source` is the
- * author's expression verbatim, which keeps the artifacts byte-identical. */
+ * author's expression verbatim, which keeps the artifacts byte-identical.
+ * `rewrites` are resolved-node ↔ slot pairings; the printer substitutes at
+ * exactly those nodes. */
 interface Derived {
   value: StaticValue;
   slots: CaptureSlot[];
   source: string;
   inlined: boolean;
+  rewrites: SlotRewrite[];
   /**
    * True once any part of the derivation reached through a store read, which has
    * no build-time value. `value` is then meaningless and nothing folds it: the
@@ -427,6 +431,65 @@ function isGlobalUndefined(mod: Module, node: Node): boolean {
   const inner = unwrap(node);
   if (inner == null || inner.type !== "Identifier" || inner.name !== "undefined") return false;
   return (mod.referenceOf(inner)?.symbol ?? null) === null;
+}
+
+/** The identifier at the bottom of a non-computed member chain, or null. */
+function memberBase(node: Node): Node | null {
+  let current: Node | null = unwrap(node);
+  while (current != null && current.type === "MemberExpression") {
+    if (current.computed === true) return null;
+    current = unwrap(current.object);
+  }
+  return current != null && current.type === "Identifier" ? current : null;
+}
+
+function joinRewrites(...groups: Array<SlotRewrite[] | undefined>): SlotRewrite[] {
+  const out: SlotRewrite[] = [];
+  for (const group of groups) {
+    if (group !== undefined) out.push(...group);
+  }
+  return out;
+}
+
+/**
+ * Prints `root` after substituting each recorded slot name at its resolved
+ * node. Mutation is restored so the analyzed AST is unchanged. Empty
+ * `rewrites` is `printExpression` — already-closed expressions stay
+ * byte-identical.
+ */
+function printWithSlotRewrites(root: Node, rewrites: readonly SlotRewrite[]): string {
+  if (rewrites.length === 0) return printExpression(root);
+  const restores: Array<() => void> = [];
+  try {
+    for (const rewrite of rewrites) {
+      restores.push(replaceNodeWithIdentifier(rewrite.node, rewrite.name));
+    }
+    return printExpression(root);
+  } finally {
+    for (let index = restores.length - 1; index >= 0; index--) restores[index]!();
+  }
+}
+
+function replaceNodeWithIdentifier(node: object, name: string): () => void {
+  const target = node as Node;
+  const saved: Record<string, unknown> = {};
+  for (const key of Object.keys(target)) saved[key] = target[key];
+  for (const key of Object.keys(target)) delete target[key];
+  target.type = "Identifier";
+  target.name = name;
+  if (typeof saved.start === "number") target.start = saved.start;
+  if (typeof saved.end === "number") target.end = saved.end;
+  return () => {
+    for (const key of Object.keys(target)) delete target[key];
+    Object.assign(target, saved);
+  };
+}
+
+function derivedSource(
+  expression: Node,
+  parts: { inlined: boolean; source: string; rewrites: SlotRewrite[] },
+): string {
+  return parts.inlined ? parts.source : printWithSlotRewrites(expression, parts.rewrites);
 }
 
 /** A value this seat will freeze as a cell initial: a literal, `void 0`, or
@@ -1226,6 +1289,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       source: JSON.stringify(value),
       inlined: false,
       measured: false,
+      rewrites: [],
     };
   }
 
@@ -1947,6 +2011,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       initialValueFrom: derived.measured ? "capture" : "derivation",
       origin: derived.inlined ? "helper" : "component",
       loc: frame.locOf(attribute),
+      slotRewrites: derived.rewrites,
     });
 
     if (property || derived.measured) return "";
@@ -1982,6 +2047,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     const statics: string[] = [];
     const conditions: ClassConditionInfo[] = [];
     const slots = new Map<string, CaptureSlot>();
+    const rewrites: SlotRewrite[] = [];
     let measured = false;
     let inlined = false;
 
@@ -2031,6 +2097,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         measured = measured || condition.measured;
         inlined = inlined || condition.inlined;
         for (const slot of condition.slots) slots.set(slot.name, slot);
+        rewrites.push(...condition.rewrites);
         conditions.push({
           name,
           expression: condition.source,
@@ -2056,6 +2123,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         captures: sortedSlots([...slots.values()]),
         origin: inlined ? "helper" : "component",
         loc: frame.locOf(attribute),
+        slotRewrites: rewrites,
       });
     }
 
@@ -2083,13 +2151,19 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     if (expression.type === "UnaryExpression" && expression.operator === "!") {
       const argument = deriveCondition(frame, expression.argument);
       if (argument === null) return null;
+      const rewrites = argument.rewrites;
       return {
         value: argument.measured ? false : !argument.value,
         measured: argument.measured,
         slots: argument.slots,
         // Parenthesized when reassembled, for the reason arithmetic is.
-        source: argument.inlined ? `!(${argument.source})` : printExpression(expression),
+        source: derivedSource(expression, {
+          inlined: argument.inlined,
+          source: `!(${argument.source})`,
+          rewrites,
+        }),
         inlined: argument.inlined,
+        rewrites,
       };
     }
 
@@ -2099,14 +2173,18 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       if (left === null || right === null) return null;
       const measured = left.measured || right.measured;
       const inlined = left.inlined || right.inlined;
+      const rewrites = joinRewrites(left.rewrites, right.rewrites);
       return {
         value: measured ? false : compare(expression.operator, left.value, right.value),
         measured,
         slots: [...left.slots, ...right.slots],
-        source: inlined
-          ? `(${left.source} ${expression.operator} ${right.source})`
-          : printExpression(expression),
+        source: derivedSource(expression, {
+          inlined,
+          source: `(${left.source} ${expression.operator} ${right.source})`,
+          rewrites,
+        }),
         inlined,
+        rewrites,
       };
     }
 
@@ -2561,6 +2639,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       origin: derived.inlined ? "helper" : "component",
       // A binding lifted out of another module reports a location in THAT source.
       loc: frame.locOf(container),
+      slotRewrites: derived.rewrites,
     });
 
     return escapeText(initialText);
@@ -2593,7 +2672,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     if (expression.type === "Literal") {
       const literal = literalValue(expression);
       return literal.ok
-        ? { value: literal.value, slots: [], source: verbatim(), inlined: false, measured: false }
+        ? { value: literal.value, slots: [], source: verbatim(), inlined: false, measured: false, rewrites: [] }
         : null;
     }
 
@@ -2602,7 +2681,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     // the cell-initializer widening.
     if (expression.type === "Identifier") {
       if (isGlobalUndefined(mod, expression)) {
-        return { value: null, slots: [], source: verbatim(), inlined: false, measured: false };
+        return { value: null, slots: [], source: verbatim(), inlined: false, measured: false, rewrites: [] };
       }
       if (env === null) return null;
       const symbol = mod.referenceOf(expression)?.symbol ?? null;
@@ -2623,12 +2702,14 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       const read = env === null && frame.props === null && mod === moduleInfo ? storeReadChain(expression) : null;
       if (read !== null) {
         derivedReads.add(read.base);
+        const rewrites = [{ node: read.base, name: read.info.name }];
         return {
           value: "",
           slots: [{ name: read.info.name, kind: "store-read", store: read.info.store, path: read.info.path }],
-          source: verbatim(),
+          source: printWithSlotRewrites(expression, rewrites),
           inlined: false,
           measured: true,
+          rewrites,
         };
       }
 
@@ -2639,12 +2720,15 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       const itemRead =
         env === null && frame.props === null && mod === moduleInfo ? regionItemChain(expression) : null;
       if (itemRead !== null) {
+        const base = memberBase(expression);
+        const rewrites = base != null ? [{ node: base, name: itemRead.name }] : [];
         return {
           value: "",
           slots: [itemRead],
-          source: verbatim(),
+          source: printWithSlotRewrites(expression, rewrites),
           inlined: false,
           measured: true,
+          rewrites,
         };
       }
 
@@ -2654,22 +2738,29 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         if (recorded !== null) return recorded;
         const identity = identityOf(expression);
         if (identity !== null) {
+          const slot = identitySlotOf(identity);
+          const base = memberBase(expression);
+          const rewrites = base != null ? [{ node: base, name: slot.name }] : [];
           return {
             value: "",
-            slots: [identitySlotOf(identity)],
-            source: verbatim(),
+            slots: [slot],
+            source: printWithSlotRewrites(expression, rewrites),
             inlined: false,
             measured: true,
+            rewrites,
           };
         }
         const standalone = standaloneIdentityMember(expression);
         if (standalone !== null) {
+          const base = memberBase(expression);
+          const rewrites = base != null ? [{ node: base, name: standalone.name }] : [];
           return {
             value: "",
             slots: [standalone],
-            source: verbatim(),
+            source: printWithSlotRewrites(expression, rewrites),
             inlined: false,
             measured: true,
+            rewrites,
           };
         }
       }
@@ -2701,6 +2792,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           source: `${accessor.name}()`,
           inlined: true,
           measured: false,
+          rewrites: [],
         };
       }
 
@@ -2716,14 +2808,16 @@ export function classifySite(module: Module, component: ComponentSite, options?:
             : envAccessor(env, symbol.id);
 
       if (accessor !== undefined) {
+        const rewrites = [{ node: callee, name: accessor.name }];
         if (accessor.derived) {
           if (accessor.access !== "read" || expression.arguments.length !== 0) return null;
           return {
             value: "",
-            slots: [],
-            source: env === null ? verbatim() : `${accessor.name}()`,
+            slots: [{ name: accessor.name, cell: accessor.cellId, access: "read" }],
+            source: env === null ? printWithSlotRewrites(expression, rewrites) : `${accessor.name}()`,
             inlined: env !== null,
             measured: true,
+            rewrites,
           };
         }
         if (accessor.access !== "read" || expression.arguments.length !== 0) return null;
@@ -2734,9 +2828,10 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           slots: [{ name: accessor.name, cell: cell.id, access: "read" }],
           // In a helper frame the printed callee is the HELPER's parameter name,
           // meaningless to the artifact; the slot name is what gets written.
-          source: env === null ? verbatim() : `${accessor.name}()`,
+          source: env === null ? printWithSlotRewrites(expression, rewrites) : `${accessor.name}()`,
           inlined: env !== null,
           measured: false,
+          rewrites,
         };
       }
 
@@ -2757,19 +2852,25 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       const value = measured ? "" : fold(expression.operator, left.value, right.value);
       if (value === undefined) return null;
       const inlined = left.inlined || right.inlined;
+      const rewrites = joinRewrites(left.rewrites, right.rewrites);
       return {
         value,
         measured,
         slots: [...left.slots, ...right.slots],
         // Parenthesized when reassembled: the parts no longer sit in the source
         // positions whose precedence made them safe.
-        source: inlined ? `(${left.source} ${expression.operator} ${right.source})` : verbatim(),
+        source: derivedSource(expression, {
+          inlined,
+          source: `(${left.source} ${expression.operator} ${right.source})`,
+          rewrites,
+        }),
         inlined,
+        rewrites,
       };
     }
 
     if (isVoid0(expression)) {
-      return { value: null, slots: [], source: verbatim(), inlined: false, measured: false };
+      return { value: null, slots: [], source: verbatim(), inlined: false, measured: false, rewrites: [] };
     }
 
     if (expression.type === "ConditionalExpression") {
@@ -2779,14 +2880,18 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       if (condition === null || consequent === null || alternate === null) return null;
       const measured = condition.measured || consequent.measured || alternate.measured;
       const inlined = condition.inlined || consequent.inlined || alternate.inlined;
+      const rewrites = joinRewrites(condition.rewrites, consequent.rewrites, alternate.rewrites);
       return {
         value: measured ? "" : condition.value ? consequent.value : alternate.value,
         measured,
         slots: [...condition.slots, ...consequent.slots, ...alternate.slots],
-        source: inlined
-          ? `(${condition.source} ? ${consequent.source} : ${alternate.source})`
-          : verbatim(),
+        source: derivedSource(expression, {
+          inlined,
+          source: `(${condition.source} ? ${consequent.source} : ${alternate.source})`,
+          rewrites,
+        }),
         inlined,
+        rewrites,
       };
     }
 
@@ -2798,8 +2903,13 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         value: argument.measured ? "" : expression.operator === "-" ? -numeric : numeric,
         measured: argument.measured,
         slots: argument.slots,
-        source: argument.inlined ? `(${expression.operator}${argument.source})` : verbatim(),
+        source: derivedSource(expression, {
+          inlined: argument.inlined,
+          source: `(${expression.operator}${argument.source})`,
+          rewrites: argument.rewrites,
+        }),
         inlined: argument.inlined,
+        rewrites: argument.rewrites,
       };
     }
 
@@ -2809,6 +2919,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       let inlined = false;
       let measured = false;
       const slots: CaptureSlot[] = [];
+      const rewrites: SlotRewrite[] = [];
 
       for (let i = 0; i < expression.quasis.length; i++) {
         const quasi = expression.quasis[i];
@@ -2822,10 +2933,18 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           inlined = inlined || part.inlined;
           measured = measured || part.measured;
           slots.push(...part.slots);
+          rewrites.push(...part.rewrites);
         }
       }
 
-      return { value: measured ? "" : value, slots, source: inlined ? `\`${rebuilt}\`` : verbatim(), inlined, measured };
+      return {
+        value: measured ? "" : value,
+        slots,
+        source: derivedSource(expression, { inlined, source: `\`${rebuilt}\``, rewrites }),
+        inlined,
+        measured,
+        rewrites,
+      };
     }
 
     return null;
@@ -3262,7 +3381,14 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       if (!literal.ok) return null;
       return {
         kind: "value",
-        derived: { value: literal.value, slots: [], source: printExpression(value), inlined: true, measured: false },
+        derived: {
+          value: literal.value,
+          slots: [],
+          source: printExpression(value),
+          inlined: true,
+          measured: false,
+          rewrites: [],
+        },
       };
     }
 

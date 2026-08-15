@@ -5,8 +5,8 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { Analyzer } from "yuku-analyzer";
 
-import { analyzeFixture, classify, runComptime } from "../src/comptime/index.ts";
-import type { EmitResult } from "../src/comptime/types.ts";
+import { analyzeFixture, classify, emit, runComptime } from "../src/comptime/index.ts";
+import type { EmitResult, ProvableAnalysis } from "../src/comptime/types.ts";
 import { textBinding } from "./bindings.ts";
 
 /**
@@ -223,6 +223,44 @@ describe("comptime pass — Fixture B is refused", () => {
     if (analysis.status !== "fallback") throw new Error("expected a fallback analysis");
 
     expect(analysis.reasons.map((reason) => reason.code)).toContain("jsx-dynamic-child-not-derivable");
+  });
+});
+
+describe("comptime pass — emit refuses an unclosed compute", () => {
+  it("names the binding and the free identifier", () => {
+    const analysis: ProvableAnalysis = {
+      status: "provable",
+      component: "Host",
+      module: "host.tsx",
+      cells: [],
+      stores: [],
+      actions: [],
+      reads: [],
+      inlined: [],
+      claimedChildren: [],
+      bindings: [
+        {
+          id: "b0",
+          kind: "text",
+          locator: "/",
+          captures: [{ name: "count", cell: "c0", access: "read" }],
+          expression: "other()",
+          initialText: "",
+          initialTextFrom: "derivation",
+          origin: "component",
+          loc: { start: 0, end: 0, line: 1, column: 1 },
+        },
+      ],
+      regions: [],
+      keyedRegions: [],
+      handlers: [],
+      wiring: [],
+      html: "<p></p>",
+      reasons: [],
+    };
+    expect(() => emit(analysis, scratch())).toThrow(
+      /emit: b0 compute is not closed: free identifier `other` is not bound by the parameter pattern/,
+    );
   });
 });
 

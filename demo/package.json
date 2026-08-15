@@ -27,5 +27,8 @@
     "unplugin-solid-resumability": "link:../plugin",
     "vite": "7.3.6",
     "vitest": "4.1.10"
+  },
+  "dependencies": {
+    "@kobalte/core": "2.0.0-alpha.0"
   }
 }

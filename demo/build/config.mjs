@@ -1,14 +1,14 @@
 /**
  * The build config, parameterised by variant and page.
  *
- * Both variants build the same two pages from the same root with the same
+ * Both variants build the same pages from the same root with the same
  * plugin pipeline, the same minifier and the same target. Anything that could
  * move bytes lives here so it cannot differ between them by accident; the
  * per-variant halves add only what has to differ.
  *
  * ── Why each page is built on its own ──────────────────────────────────────
- * `pnpm build` runs four builds (2 variants x 2 pages), each into its own
- * `dist/<variant>/<page>/`. That is not how one would ship a two-page site;
+ * `pnpm build` runs one build per (variant, page), each into its own
+ * `dist/<variant>/<page>/`. That is not how one would ship a multi-page site;
  * it is how one has to *measure* one, because rollup assigns a module to a
  * chunk by which entry points reach it, so building two pages together lets
  * one page's dependencies decide the other page's chunk boundaries.
@@ -34,7 +34,7 @@ import { apiMock, moduleSizes, variantLabel } from "./plugins.mjs";
 import { demoResumability } from "./resumability.mjs";
 
 export const VARIANTS = ["classic", "resumable"];
-export const PAGES = ["fixtures", "todos"];
+export const PAGES = ["fixtures", "todos", "rule"];
 
 const PORTS = { classic: 3010, resumable: 3011 };
 

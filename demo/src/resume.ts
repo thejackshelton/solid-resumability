@@ -49,7 +49,12 @@ import { createResumer } from "../../src/resume/resumer.ts";
  * exactly the complement.
  */
 const STATIC_MODULES = import.meta.glob<Record<string, unknown>>(
-  ["../artifacts/*/structure.js", "../artifacts/*/wiring.js", "!../artifacts/app.*/**"],
+  [
+    "../artifacts/*/structure.js",
+    "../artifacts/*/wiring.js",
+    "!../artifacts/app.*/**",
+    "!../artifacts/*.SeparatorRoot/**",
+  ],
   { eager: true },
 );
 
@@ -57,6 +62,7 @@ const STATIC_MODULES = import.meta.glob<Record<string, unknown>>(
 const HANDLER_MODULES = import.meta.glob<HandlerModule>([
   "../artifacts/*/handlers/*.js",
   "!../artifacts/app.*/**",
+  "!../artifacts/*.SeparatorRoot/**",
 ]);
 
 export const registry = createRegistry(STATIC_MODULES, HANDLER_MODULES);

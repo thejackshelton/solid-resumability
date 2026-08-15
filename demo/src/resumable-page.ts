@@ -34,6 +34,7 @@
 
 import { createStoreRegistry } from "../../src/resume/stores.ts";
 import { resume } from "./resume.ts";
+import type { IdentityRegistry } from "../../src/resume/identities.ts";
 import type { ResumedApp } from "../../src/resume/resumer.ts";
 
 /**
@@ -75,7 +76,10 @@ export interface MountedPage {
   dispose(): void;
 }
 
-export async function resumeAll(root: ParentNode = document): Promise<MountedPage> {
+export async function resumeAll(
+  root: ParentNode = document,
+  options?: { identities?: IdentityRegistry },
+): Promise<MountedPage> {
   const resumed: ResumedApp[] = [];
   const fellBack: string[] = [];
   const pending: Array<{ host: HTMLElement; name: string }> = [];
@@ -84,7 +88,9 @@ export async function resumeAll(root: ParentNode = document): Promise<MountedPag
     // `data-resume` is the artifact id the build stamped into the markup;
     // `data-component` is the name the ordinary path knows the component by.
     // They differ whenever the component's file is not named after it.
-    const app = host.dataset.resume ? resume(host, host.dataset.resume, { stores }) : null;
+    const app = host.dataset.resume
+      ? resume(host, host.dataset.resume, { stores, identities: options?.identities })
+      : null;
     if (app) resumed.push(app);
     else pending.push({ host, name: host.dataset.component! });
   }

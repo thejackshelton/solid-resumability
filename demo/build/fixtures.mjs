@@ -15,7 +15,8 @@
  * keeps `demo/test/**` reading `readTemplate(fixture)` exactly as it did.
  */
 
-import { resolve, dirname } from "pathe";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve, dirname, join } from "pathe";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -252,6 +253,55 @@ export function classicName(fixture) {
  * `app.` qualification is the pass's own, for a module-local component whose
  * file stem is not its name.
  */
+/**
+ * The installed package's defining module for one public entry.
+ *
+ * The public entry is a barrel; `runComptime` classifies the entry file only
+ * (`src/comptime/index.ts:45-46`), so the mount source has to be the file that
+ * declares the function. Read off the barrel's relative import so a
+ * content-hashed chunk name is never written down here.
+ */
+function installedDefiningSource(entrypoint) {
+  const barrel = join(DEMO_ROOT, "node_modules/@kobalte/core/dist", entrypoint, "index.jsx");
+  if (!existsSync(barrel)) {
+    throw new Error(`demo: installed package has no ${entrypoint} solid entry at ${barrel}`);
+  }
+  const match = /from\s+"(\.\/[^"]+\.jsx)"/.exec(readFileSync(barrel, "utf8"));
+  if (match == null) {
+    throw new Error(`demo: ${entrypoint} barrel has no relative .jsx defining import`);
+  }
+  return join("node_modules/@kobalte/core/dist", entrypoint, match[1]);
+}
+
+/** Same key `runComptime` writes: stem === name stays bare, otherwise `stem.name`. */
+function artifactName(source, component) {
+  const file = source.split("/").pop();
+  const stem = file.replace(/\.[^.]+$/, "");
+  return stem === component ? component : `${stem}.${component}`;
+}
+
+/**
+ * The one mount the rule page resumes — the installed package's own
+ * function, not a first-party wrapper. Kept off `FIXTURES` so the fixtures
+ * page's tests and eager glob stay a claim about that page alone.
+ *
+ * `artifact` must equal the directory `runComptime` emits
+ * (`src/comptime/index.ts:87`); the plugin's declared `artifact` is what
+ * prune and the HTML fill keep, and a mismatch is pruned as stale.
+ */
+const RULE_SOURCE = installedDefiningSource("separator");
+
+export const RULE = [
+  {
+    component: "SeparatorRoot",
+    source: RULE_SOURCE,
+    artifact: artifactName(RULE_SOURCE, "SeparatorRoot"),
+    page: "rule",
+    blurb: "One folded intrinsic, measured attributes, identity rest-spread.",
+    componentChildren: 0,
+  },
+];
+
 export const RESUMED = [
   {
     component: "Header",

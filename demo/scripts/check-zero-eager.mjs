@@ -123,10 +123,11 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "pathe";
 import { gzipSync } from "node:zlib";
 
-import { DEMO_ROOT, REPO_ROOT } from "../build/fixtures.mjs";
+import { DEMO_ROOT, REPO_ROOT, RULE } from "../build/fixtures.mjs";
 
 const DIST = join(DEMO_ROOT, "dist/resumable/todos");
 const FIXTURES_DIST = join(DEMO_ROOT, "dist/resumable/fixtures");
+const RULE_DIST = join(DEMO_ROOT, "dist/resumable/rule");
 
 /**
  * The eager cap, in raw bytes on the wire for the one entry chunk.
@@ -139,6 +140,13 @@ const FIXTURES_DIST = join(DEMO_ROOT, "dist/resumable/fixtures");
  * ~9.5 kB minified) does not fit under it.
  */
 export const EAGER_JS_CAP_BYTES = 15000;
+
+/**
+ * The rule page's own eager cap. Ceiling is parity with fixtures (20,000 B);
+ * the first measured build's byte figure is the ratchet baseline, recorded
+ * in the WP3 receipt rather than written back here.
+ */
+export const RULE_EAGER_JS_CAP_BYTES = 20000;
 
 /**
  * The group's own caps, raw and gzipped (G3'). Kept in step with
@@ -609,6 +617,34 @@ check(
         .filter(Boolean)
         .join("; "),
 );
+
+/* ── 7c. the rule page's own eager cap ─────────────────────────────────── */
+
+if (!existsSync(RULE_DIST)) {
+  process.stderr.write(`check-zero-eager: ${relative(REPO_ROOT, RULE_DIST)} does not exist. Run \`pnpm build\` first.\n`);
+  process.exit(1);
+}
+
+const ruleHtml = readFileSync(join(RULE_DIST, "rule.html"), "utf8");
+const ruleManifest = JSON.parse(readFileSync(join(RULE_DIST, ".vite/manifest.json"), "utf8"));
+const ruleEntry = ruleManifest["rule.html"];
+if (!ruleEntry) {
+  process.stderr.write("check-zero-eager: the rule build manifest has no entry for rule.html\n");
+  process.exit(1);
+}
+
+const ruleBytes = statSync(join(RULE_DIST, ruleEntry.file)).size;
+check(
+  `the rule eager chunk is at most ${RULE_EAGER_JS_CAP_BYTES} raw bytes`,
+  ruleBytes <= RULE_EAGER_JS_CAP_BYTES,
+  `${ruleEntry.file} is ${ruleBytes} B (${RULE_EAGER_JS_CAP_BYTES - ruleBytes} B of headroom)`,
+);
+check(
+  "the rule document carries the resume mount",
+  ruleHtml.includes(`data-resume="${RULE[0].artifact}"`),
+  RULE[0].artifact,
+);
+check("the rule document carries the folded intrinsic", /<hr\b/.test(ruleHtml));
 
 /* ── 8. the frozen corpus ──────────────────────────────────────────────── */
 

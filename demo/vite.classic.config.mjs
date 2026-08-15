@@ -1,5 +1,5 @@
 /**
- * Classic variant — the two pages as ordinary Solid 2.0 applications.
+ * Classic variant — the pages as ordinary Solid 2.0 applications.
  *
  * This file is for `pnpm dev:classic` / `pnpm preview:classic`, which serve
  * both pages together. The measured production builds go one page at a time

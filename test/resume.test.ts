@@ -1,6 +1,9 @@
-import { vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { cellKernel } from "../src/resume/cells.ts";
+import { createIdentityRegistry } from "../src/resume/identities.ts";
+import type { Bundle, HandlerModule, IdentityCaptureSlotSpec } from "../src/resume/registry.ts";
+import { resumeBundle } from "../src/resume/resumer.ts";
 import { resumeSuite } from "./resume-suite.ts";
 
 /**
@@ -61,3 +64,150 @@ vi.mock("../artifacts/CounterA/handlers/s0.js", handlerHook("s0"));
 vi.mock("../artifacts/CounterA/handlers/s1.js", handlerHook("s1"));
 
 await resumeSuite({ backend: cellKernel, backendName: "cells.ts kernel", probe });
+
+const MEASURED_TEMPLATE = "<hr>";
+
+const REST_SOURCE = { name: "rest", path: [] as const };
+
+const REST_SLOT: IdentityCaptureSlotSpec = {
+  name: "rest",
+  kind: "identity",
+  bindingClass: "derived-rest-props-result",
+  source: { name: "rest", path: [] },
+};
+
+function measuredHost(): HTMLElement {
+  const host = document.createElement("div");
+  host.innerHTML = MEASURED_TEMPLATE;
+  document.body.appendChild(host);
+  return host;
+}
+
+function incrementHandler(): HandlerModule {
+  return {
+    id: "s0",
+    event: "click",
+    locator: "/",
+    captures: [
+      { name: "n", cell: "c0", access: "read" },
+      { name: "setN", cell: "c0", access: "write" },
+    ],
+    create({ n, setN }: Record<string, unknown>) {
+      return () => (setN as (value: number) => void)((n as () => number)() + 1);
+    },
+  };
+}
+
+function measuredBundle(overrides: Partial<Bundle> = {}): Bundle {
+  return {
+    component: "Host",
+    template: { html: MEASURED_TEMPLATE, root: "/" },
+    cells: [],
+    regions: [],
+    keyedRegions: [],
+    stores: [],
+    actions: [],
+    reads: [],
+    bindings: [
+      {
+        id: "b0",
+        kind: "attribute",
+        locator: "/",
+        attribute: "role",
+        initialValue: null,
+        captures: [REST_SLOT],
+        compute(slots: Record<string, unknown>) {
+          return (slots.rest as { role: string }).role;
+        },
+      },
+    ],
+    wiring: [],
+    loadHandler: async () => {
+      throw new Error("no handler on this bundle");
+    },
+    ...overrides,
+  };
+}
+
+describe("mount-time measured-attribute restore", () => {
+  it("paints a measured attribute from a page-provided rest-props identity", () => {
+    const rest = { role: "separator" };
+    const identities = createIdentityRegistry();
+    const host = measuredHost();
+    identities.provide(host, REST_SOURCE, rest);
+
+    const app = resumeBundle(host, measuredBundle(), { identities });
+    expect(host.querySelector("hr")!.getAttribute("role")).toBe("separator");
+    app.dispose();
+  });
+
+  it("throws at mount without an identity registry and leaves the node unpainted", () => {
+    const host = measuredHost();
+    expect(() => resumeBundle(host, measuredBundle(), {})).toThrow(/needs an identity registry for slot rest/);
+    expect(host.querySelector("hr")!.getAttribute("role")).toBeNull();
+  });
+
+  it("throws at mount when the rest source is missing and leaves the node unpainted", () => {
+    const identities = createIdentityRegistry();
+    const host = measuredHost();
+    expect(() => resumeBundle(host, measuredBundle(), { identities })).toThrow(
+      /no live identity is registered as "rest"/,
+    );
+    expect(host.querySelector("hr")!.getAttribute("role")).toBeNull();
+  });
+
+  it("a later apply of the same compute is a no-op on the DOM", async () => {
+    let computes = 0;
+    const rest = { role: "separator" };
+    const identities = createIdentityRegistry();
+    const host = measuredHost();
+    identities.provide(host, REST_SOURCE, rest);
+    const increment = incrementHandler();
+
+    const app = resumeBundle(
+      host,
+      measuredBundle({
+        cells: [{ id: "c0", initial: 0, getter: "n", setter: "setN" }],
+        bindings: [
+          {
+            id: "b0",
+            kind: "attribute",
+            locator: "/",
+            attribute: "role",
+            initialValue: null,
+            captures: [REST_SLOT, { name: "n", cell: "c0", access: "read" }],
+            compute(slots: Record<string, unknown>) {
+              computes++;
+              (slots.n as () => number)();
+              return (slots.rest as { role: string }).role;
+            },
+          },
+        ],
+        wiring: [
+          {
+            locator: "/",
+            event: "click",
+            module: "./handlers/s0.js",
+            handler: "s0",
+            captures: increment.captures,
+          },
+        ],
+        loadHandler: async () => increment,
+      }),
+      { identities },
+    );
+
+    const node = host.querySelector("hr")!;
+    expect(node.getAttribute("role")).toBe("separator");
+    expect(computes).toBe(1);
+
+    node.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await app.settled();
+
+    expect(computes).toBe(2);
+    expect(app.stats.patches).toBe(0);
+    expect(node.getAttribute("role")).toBe("separator");
+    expect(node.getAttributeNames()).toEqual(["role"]);
+    app.dispose();
+  });
+});

@@ -236,3 +236,157 @@ describe("a resumed handler dispatches through the identity join", () => {
     app.dispose();
   });
 });
+
+/**
+ * Mount-time measured-attribute restore. The page is the caller: it owns the
+ * live rest object and provides it at the fill site. The artifact's compute
+ * reads that identity; nothing here reconstructs a component body.
+ */
+const MEASURED_TEMPLATE = "<hr>";
+
+const REST_SOURCE = { name: "rest", path: [] as const };
+
+const REST_SLOT: IdentityCaptureSlotSpec = {
+  name: "rest",
+  kind: "identity",
+  bindingClass: "derived-rest-props-result",
+  source: { name: "rest", path: [] },
+};
+
+function measuredHost(): HTMLElement {
+  const host = document.createElement("div");
+  host.innerHTML = MEASURED_TEMPLATE;
+  document.body.appendChild(host);
+  return host;
+}
+
+function measuredBundle(
+  overrides: Partial<Bundle> = {},
+  compute: (slots: Record<string, unknown>) => unknown = (slots) => (slots.rest as { role: string }).role,
+): Bundle {
+  return {
+    component: "Host",
+    template: { html: MEASURED_TEMPLATE, root: "/" },
+    cells: [],
+    regions: [],
+    keyedRegions: [],
+    stores: [],
+    actions: [],
+    reads: [],
+    bindings: [
+      {
+        id: "b0",
+        kind: "attribute",
+        locator: "/",
+        attribute: "role",
+        initialValue: null,
+        captures: [REST_SLOT],
+        compute,
+      },
+    ],
+    wiring: [],
+    loadHandler: async () => {
+      throw new Error("no handler on this bundle");
+    },
+    ...overrides,
+  };
+}
+
+describe("mount-time restore of a measured attribute from a rest-props identity", () => {
+  it("writes the attribute from the page-provided rest object", () => {
+    const rest: { role: string; toJSON?: () => unknown } = { role: "separator" };
+    Object.defineProperty(rest, "toJSON", {
+      value: () => {
+        throw new Error("identity cargo was serialized");
+      },
+    });
+    const identities = createIdentityRegistry();
+    const host = measuredHost();
+    identities.provide(host, REST_SOURCE, rest);
+
+    const app = resumeBundle(host, measuredBundle(), { identities });
+    expect(host.querySelector("hr")!.getAttribute("role")).toBe("separator");
+    expect(Object.is(identities.resolve(host, REST_SOURCE), rest)).toBe(true);
+    app.dispose();
+  });
+
+  it("throws at mount when no identity registry is given — and does not paint the attribute", () => {
+    const host = measuredHost();
+    expect(() => resumeBundle(host, measuredBundle(), {})).toThrow(/needs an identity registry for slot rest/);
+    expect(host.querySelector("hr")!.getAttribute("role")).toBeNull();
+  });
+
+  it("throws at mount when the rest source was never provided — and does not paint the attribute", () => {
+    const identities = createIdentityRegistry();
+    const host = measuredHost();
+    expect(() => resumeBundle(host, measuredBundle(), { identities })).toThrow(
+      /no live identity is registered as "rest"/,
+    );
+    expect(host.querySelector("hr")!.getAttribute("role")).toBeNull();
+  });
+
+  it("apply after restore leaves the attribute unchanged", async () => {
+    let computes = 0;
+    const rest = { role: "separator" };
+    const identities = createIdentityRegistry();
+    const host = measuredHost();
+    identities.provide(host, REST_SOURCE, rest);
+
+    const increment: HandlerModule = {
+      id: "s0",
+      event: "click",
+      locator: "/",
+      captures: [{ name: "n", cell: "c0", access: "read" }, { name: "setN", cell: "c0", access: "write" }],
+      create({ n, setN }: Record<string, unknown>) {
+        return () => (setN as (value: number) => void)((n as () => number)() + 1);
+      },
+    };
+
+    const app = resumeBundle(
+      host,
+      measuredBundle({
+        cells: [{ id: "c0", initial: 0, getter: "n", setter: "setN" }],
+        bindings: [
+          {
+            id: "b0",
+            kind: "attribute",
+            locator: "/",
+            attribute: "role",
+            initialValue: null,
+            captures: [REST_SLOT, { name: "n", cell: "c0", access: "read" }],
+            compute(slots: Record<string, unknown>) {
+              computes++;
+              (slots.n as () => number)();
+              return (slots.rest as { role: string }).role;
+            },
+          },
+        ],
+        wiring: [
+          {
+            locator: "/",
+            event: "click",
+            module: "./handlers/s0.js",
+            handler: "s0",
+            captures: increment.captures,
+          },
+        ],
+        loadHandler: async () => increment,
+      }),
+      { identities },
+    );
+
+    const node = host.querySelector("hr")!;
+    expect(node.getAttribute("role")).toBe("separator");
+    expect(computes).toBe(1);
+    expect([...node.attributes].map((attr) => attr.name).sort()).toEqual(["role"]);
+
+    node.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await app.settled();
+
+    expect(computes).toBe(2);
+    expect(app.stats.patches).toBe(0);
+    expect(node.getAttribute("role")).toBe("separator");
+    expect([...node.attributes].map((attr) => attr.name).sort()).toEqual(["role"]);
+    app.dispose();
+  });
+});

@@ -359,9 +359,10 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
   // The one thing served markup cannot say. A property-backed attribute is DOM
   // state rather than bytes — `input.checked` is not the `checked` attribute —
   // so the value the build folded is written here, before any behaviour exists
-  // to observe the difference. A measured one carries no `initialValue` and is
-  // left to the capture that owes it. No derivation runs: this is the folded
-  // answer, not a recomputation, so nothing here needs a live store.
+  // to observe the difference. A measured one carries `initialValue: null` and
+  // is restored after `apply` exists, by running the artifact's own compute.
+  // No derivation runs HERE: this is the folded answer, not a recomputation,
+  // so nothing in this loop needs a live store.
   for (const binding of bindings) {
     const spec = binding.spec;
     if (spec.kind === "attribute" && spec.attribute === "ref") continue;
@@ -400,6 +401,24 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
   };
 
   /**
+   * Identity captures on a binding that must write NOW — mount-time measured
+   * restore and a later `apply()` — resolve against the page's registry by
+   * reference. Handler identity slots still ride the lazy `regions.ts#fill`
+   * so a page that never writes a measured attribute still never fetches it.
+   * Missing registry or missing provide throws: a silently-wrong attribute
+   * is worse than a broken page.
+   */
+  const resolveIdentitySlots = (slots: Slots, captures: CaptureSlotSpec[]): void => {
+    for (const slot of captures) {
+      if (!isIdentitySlot(slot)) continue;
+      if (!options.identities) {
+        throw new Error(`resume: ${component} needs an identity registry for slot ${slot.name}`);
+      }
+      slots[slot.name] = options.identities.resolve(container, slot.source);
+    }
+  };
+
+  /**
    * One binding, re-derived and written to the DOM. Returns whether anything
    * actually moved, which is what a patch counts.
    *
@@ -415,6 +434,7 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
     const spec = binding.spec;
     const element = binding.element;
     const slots = slotsFor(spec.captures);
+    resolveIdentitySlots(slots, spec.captures);
 
     if (spec.kind === "class") {
       let moved = false;
@@ -445,6 +465,18 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
     element.textContent = text;
     return true;
   };
+
+  // Measured attributes bake no bytes, so this is the sole first-paint writer.
+  // It runs after the template-verbatim check (served markup still equals the
+  // template at that instant) and after ref replay + rest-spread assign.
+  // `apply` is equality-guarded: a later patch of the same value is a no-op.
+  for (const binding of bindings) {
+    const spec = binding.spec;
+    if (spec.kind !== "attribute" || spec.attribute === "ref") continue;
+    if (spec.initialValue != null) continue;
+    if (typeof spec.compute !== "function") continue;
+    apply(binding);
+  }
 
   /**
    * The wait an action slot imposes when its store is not live yet, or `null`.

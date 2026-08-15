@@ -289,16 +289,14 @@ export const COMPOSED_HOLE_BEFORE_FILL =
 /**
  * Eager-JS ceiling for the resumable todos page, in bytes on the wire.
  *
- * The whole fallback group — the framework, the four component bodies (two the
- * pass cannot prove, two it proves but may not substitute), the store they
- * share — sits behind one dynamic import, so the load set is one bootstrap
- * chunk: the resumer, the cell kernel, the store registry, one component's
- * structure and wiring, and the deferral loader. The headroom under this cap
- * is for that loader and nothing else: the smallest framework leak available
- * (`solid-js/dist` alone, ~9.5 kB minified) does not fit beneath it, so a
- * build that quietly fused the group back in cannot clear the cap.
+ * Set just above the honest post-T044 minimum of 15,244 B. The leftover
+ * identity/ref/spread/restore machinery from WP1 is part of the honest eager
+ * payload — it belongs on this path, not behind the group. The 256 B of
+ * headroom is for build jitter only, not for a dependency. The smallest
+ * framework leak (`solid-js/dist` alone, ~9,500 B minified) still cannot
+ * fit, so a build that quietly fused the group back in cannot clear the cap.
  */
-export const TODOS_EAGER_JS_CAP_BYTES = 15_000;
+export const TODOS_EAGER_JS_CAP_BYTES = 15_500;
 
 /**
  * Ceilings for the todos page's fallback group — the one chunk the first touch

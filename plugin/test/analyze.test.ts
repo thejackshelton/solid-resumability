@@ -139,6 +139,20 @@ const EXPECTED_FILES = [
 ];
 
 /**
+ * Files the reference tree carries that the seven mounts never emit. Read off
+ * the tree and WRITTEN DOWN — T041 added `QhqEt4aD.SeparatorRoot/` to
+ * `demo/artifacts/`, and this test's mounts do not produce it. Used only by
+ * the reference-side equality; the emitted-side list and the byte-parity
+ * loop stay the forty-three files above.
+ */
+const REFERENCE_ONLY_FILES = [
+  'QhqEt4aD.SeparatorRoot/manifest.json',
+  'QhqEt4aD.SeparatorRoot/structure.js',
+  'QhqEt4aD.SeparatorRoot/template.js',
+  'QhqEt4aD.SeparatorRoot/wiring.js',
+];
+
+/**
  * Five of the forty-three quoted outright. If the pass ever changes what it
  * emits for the one application component in the corpus, these fail with a
  * number a reader can look up rather than with "the two directories differ".
@@ -183,8 +197,11 @@ describe('artifact byte parity with the emit script this stage replaces', () => 
   it('emits exactly the files the reference tree carries', () => {
     expect(listFiles(artifactDir)).toEqual(EXPECTED_FILES);
     // The reference side is untouched by this test and must stay the corpus it
-    // is being compared against.
-    expect(listFiles(REFERENCE_ARTIFACTS)).toEqual(EXPECTED_FILES);
+    // is being compared against. The union admits the T041 SeparatorRoot
+    // files the seven mounts never emit; EXPECTED_FILES itself is unchanged.
+    expect(listFiles(REFERENCE_ARTIFACTS)).toEqual(
+      [...EXPECTED_FILES, ...REFERENCE_ONLY_FILES].sort(),
+    );
   });
 
   it.each(EXPECTED_FILES)('%s is byte-identical to the reference artifact', (file) => {

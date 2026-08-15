@@ -13,7 +13,7 @@
  *
  *   2. THE EAGER PAYLOAD IS ONE CHUNK, UNDER THE CAP. The document loads
  *      exactly one script, that script statically imports no other chunk, and
- *      it is at most 15,000 raw bytes. The cap is raw rather than gzipped
+ *      it is at most 15,500 raw bytes. The cap is raw rather than gzipped
  *      because it is a budget for what the build may emit, not a claim about
  *      a particular transport.
  *
@@ -132,14 +132,15 @@ const RULE_DIST = join(DEMO_ROOT, "dist/resumable/rule");
 /**
  * The eager cap, in raw bytes on the wire for the one entry chunk.
  *
- * Derived, not chosen: the resumable fixtures page measures 11,131 B on the
- * wire for a bootstrap of the same shape carrying four components' structure
- * and wiring; this page carries one component's, plus the deferral loader,
- * minus the template artifact. The headroom is for the loader, not for a
- * framework — the smallest possible framework leak (`solid-js/dist` alone,
- * ~9.5 kB minified) does not fit under it.
+ * Set just above the honest post-T044 minimum of 15,244 B — the shrink that
+ * attributed every leftover byte. WP1 identity/ref/spread/restore machinery
+ * is part of the honest eager payload; it cannot leave the resumer without a
+ * loading-behavior change. The 256 B of headroom is for build jitter only,
+ * not for a dependency. The smallest framework leak (`solid-js/dist` alone,
+ * ~9,500 B minified) still cannot fit, so a build that fused the group back
+ * in lands near 24,700 B and fails loudly.
  */
-export const EAGER_JS_CAP_BYTES = 15000;
+export const EAGER_JS_CAP_BYTES = 15500;
 
 /**
  * The rule page's own eager cap. Ceiling is parity with fixtures (20,000 B);

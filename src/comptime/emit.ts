@@ -282,9 +282,11 @@ ${classes}
 }
 
 function emitCell(cell: ProvableAnalysis["cells"][number]): string {
+  const projection =
+    cell.projection === undefined ? "" : `, projection: ${js(cell.projection)}`;
   return cell.setter === undefined
-    ? `  { id: ${js(cell.id)}, initial: ${js(cell.initial)}, getter: ${js(cell.getter)} },`
-    : `  { id: ${js(cell.id)}, initial: ${js(cell.initial)}, getter: ${js(cell.getter)}, setter: ${js(cell.setter)} },`;
+    ? `  { id: ${js(cell.id)}, initial: ${js(cell.initial)}, getter: ${js(cell.getter)}${projection} },`
+    : `  { id: ${js(cell.id)}, initial: ${js(cell.initial)}, getter: ${js(cell.getter)}, setter: ${js(cell.setter)}${projection} },`;
 }
 
 function derivedCellIds(analysis: ProvableAnalysis): Set<string> {
@@ -614,6 +616,7 @@ function emitManifest(analysis: ProvableAnalysis, files: string[]): string {
           initial: cell.initial,
           getter: cell.getter,
           ...(cell.setter === undefined ? {} : { setter: cell.setter }),
+          ...(cell.projection === undefined ? {} : { projection: cell.projection }),
         })),
         // Present only for a component that has one. A key with an empty array
         // in it would rewrite every artifact emitted before this slice, and

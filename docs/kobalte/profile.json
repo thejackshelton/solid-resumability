@@ -52,9 +52,9 @@
   },
   "totals": {
     "components": 12,
-    "provable": 1,
-    "fallback": 11,
-    "provableFraction": "8.3%",
+    "provable": 2,
+    "fallback": 10,
+    "provableFraction": "16.7%",
     "sourceFiles": 12,
     "distFiles": 6,
     "armsAgreeOnStatus": true,
@@ -92,12 +92,6 @@
       "onlyBlockerFor": 0
     },
     {
-      "code": "jsx-dynamic-attribute",
-      "components": 2,
-      "occurrences": 16,
-      "onlyBlockerFor": 1
-    },
-    {
       "code": "handler-not-inline",
       "components": 2,
       "occurrences": 8,
@@ -107,6 +101,12 @@
       "code": "jsx-dynamic-child-not-derivable",
       "components": 2,
       "occurrences": 2,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "jsx-dynamic-attribute",
+      "components": 1,
+      "occurrences": 11,
       "onlyBlockerFor": 0
     },
     {
@@ -122,13 +122,7 @@
       "onlyBlockerFor": 0
     }
   ],
-  "onlyBlockers": [
-    {
-      "function": "ButtonRoot",
-      "authoredSource": "packages/core/src/button/button-root.tsx",
-      "code": "jsx-dynamic-attribute"
-    }
-  ],
+  "onlyBlockers": [],
   "errata": [
     {
       "id": "E1",
@@ -195,34 +189,22 @@
       "function": "ButtonRoot",
       "alias": "Root",
       "publicPath": "@kobalte/core/button",
-      "verdict": "fallback",
+      "verdict": "provable",
       "authoredSource": "packages/core/src/button/button-root.tsx",
       "chunk": "dist/button/DvspU6cJ.jsx",
       "exported": true,
       "arms": {
         "source": {
-          "status": "fallback",
+          "status": "provable",
           "module": "packages/core/src/button/button-root.tsx",
           "linkedModules": 25,
-          "codes": [
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute"
-          ]
+          "codes": []
         },
         "dist": {
-          "status": "fallback",
+          "status": "provable",
           "module": "dist/button/DvspU6cJ.jsx",
           "linkedModules": 5,
-          "codes": [
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute"
-          ]
+          "codes": []
         }
       },
       "delta": {
@@ -231,93 +213,7 @@
         "distOnly": [],
         "counts": []
       },
-      "reasons": [
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:86:4",
-          "line": 86,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "type={isNativeButton() || isNativeInput() ? mergedProps.type : undefined}",
-          "expressionBytes": 73,
-          "message": "Attribute `type` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `type={isNativeButton() || isNativeInput() ? mergedProps.type : undefined}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:87:4",
-          "line": 87,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "role={!isNativeButton() && !isNativeLink() ? \"button\" : undefined}",
-          "expressionBytes": 66,
-          "message": "Attribute `role` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `role={!isNativeButton() && !isNativeLink() ? \"button\" : undefined}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:88:4",
-          "line": 88,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "tabindex={ !isNativeButton() && !isNativeLink() && !mergedProps.disabled ? 0 : undefined }",
-          "expressionBytes": 107,
-          "message": "Attribute `tabindex` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `tabindex={ !isNativeButton() && !isNativeLink() && !mergedProps.disabled ? 0 : undefined }`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:93:4",
-          "line": 93,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "disabled={ isNativeButton() || isNativeInput() ? mergedProps.disabled : undefined }",
-          "expressionBytes": 90,
-          "message": "Attribute `disabled` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `disabled={ isNativeButton() || isNativeInput() ? mergedProps.disabled : undefined }`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:96:4",
-          "line": 96,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? \"true\" : undefined }",
-          "expressionBytes": 117,
-          "message": "Attribute `aria-disabled` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? \"true\" : undefined }`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        }
-      ]
+      "reasons": []
     },
     {
       "entrypoint": "checkbox",

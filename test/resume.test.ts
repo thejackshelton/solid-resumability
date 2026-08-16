@@ -10,6 +10,7 @@ import { createIdentityRegistry } from "../src/resume/identities.ts";
 import { createRegistry, type Bundle, type HandlerModule, type IdentityCaptureSlotSpec } from "../src/resume/registry.ts";
 import { resumeBundle } from "../src/resume/resumer.ts";
 import { DerivedCellDrift, DerivedCellHost } from "./fixtures/shapes/DerivedCellHost.tsx";
+import { ElementProjectionHost } from "./fixtures/shapes/ElementProjectionHost.tsx";
 import { resumeSuite } from "./resume-suite.ts";
 
 /**
@@ -312,5 +313,75 @@ describe("derived-cell settled-equivalence", () => {
     expect(verdict.ok).toBe(false);
     expect(verdict.live).toContain("moved");
     expect(verdict.resumed).toContain("init");
+  });
+});
+
+function snapshotButton(host: HTMLElement): string {
+  const node = host.querySelector("button");
+  return node?.outerHTML ?? host.innerHTML;
+}
+
+async function settledEquivalenceButton(
+  file: string,
+  component: string,
+  liveRender: () => unknown,
+): Promise<{ ok: boolean; live: string; resumed: string }> {
+  const liveHost = document.createElement("div");
+  document.body.appendChild(liveHost);
+  const dispose = render(liveRender as never, liveHost);
+  await flush();
+  const live = snapshotButton(liveHost);
+  dispose();
+  liveHost.remove();
+
+  const result = runComptime(file, { component, outRoot: derivedCellScratch() });
+  if (result.analysis.status !== "provable" || result.emitted === null) {
+    return { ok: false, live, resumed: `unemitted:${result.analysis.status}` };
+  }
+
+  const dir = result.emitted.dir;
+  const load = async (fileName: string) =>
+    (await import(pathToFileURL(join(dir, fileName)).href)) as Record<string, unknown>;
+  const template = await load("template.js");
+  const structure = await load("structure.js");
+  const wiring = await load("wiring.js");
+  const registry = createRegistry(
+    {
+      [`/artifacts/${component}/template.js`]: template,
+      [`/artifacts/${component}/structure.js`]: structure,
+      [`/artifacts/${component}/wiring.js`]: wiring,
+    },
+    {},
+  );
+  const bundle = registry.get(component);
+  if (!bundle) return { ok: false, live, resumed: "no-bundle" };
+
+  const resumedHost = document.createElement("div");
+  resumedHost.innerHTML = bundle.template!.html;
+  document.body.appendChild(resumedHost);
+  const identities = createIdentityRegistry();
+  const extra = (node: Element) => {
+    void node;
+  };
+  identities.provide(resumedHost, { name: "props", path: ["extra"] }, extra);
+  const app = resumeBundle(resumedHost, bundle, { identities });
+  await flush();
+  const resumed = snapshotButton(resumedHost);
+  app.dispose();
+  resumedHost.remove();
+
+  return { ok: live === resumed, live, resumed };
+}
+
+describe("element-projection settled-equivalence", () => {
+  it("restores the live host tag, not the folded fallback", async () => {
+    const verdict = await settledEquivalenceButton(
+      "test/fixtures/shapes/ElementProjectionHost.tsx",
+      "ElementProjectionHost",
+      () => ElementProjectionHost(),
+    );
+    expect(verdict.live).toContain("native");
+    expect(verdict.resumed).toContain("native");
+    expect(verdict.ok).toBe(true);
   });
 });

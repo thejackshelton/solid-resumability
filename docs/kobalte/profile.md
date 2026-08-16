@@ -46,16 +46,16 @@ Each arm is seeded from its entrypoint module — `packages/core/src/<entrypoint
 
 ## Headline
 
-**1 / 12 of the pre-registered functions classify `provable` (8.3%).**
+**2 / 12 of the pre-registered functions classify `provable` (16.7%).**
 
-1 of the 12 classify provable and 11 refuse. Both halves are reported below in the same form.
+2 of the 12 classify provable and 10 refuse. Both halves are reported below in the same form.
 
 The two arms **agree on status for all 12**, and 11 of 12 carry identical reason-code multisets. The divergences are in the delta section. **That agreement is not corroboration of one cause. Read the errata immediately below before treating it as one.**
 
 | Segment | Files | Components | Provable | Fallback | Provable fraction |
 |---|---|---|---|---|---|
-| `kobalte-source` | 12 | 12 | 1 | 11 | 8.3% |
-| `kobalte-dist` | 6 | 12 | 1 | 11 | 8.3% |
+| `kobalte-source` | 12 | 12 | 2 | 10 | 16.7% |
+| `kobalte-dist` | 6 | 12 | 2 | 10 | 16.7% |
 
 The two segments are the same twelve functions read from the same artifact before and after rolldown, so the rows are a corroboration rather than two populations. The file counts differ because rolldown merges an entrypoint's parts into one chunk.
 
@@ -117,17 +117,11 @@ No refusal reasons: this function classified `provable`.
 | Authored source (source arm) | `packages/core/src/button/button-root.tsx` |
 | Chunk (dist arm) | `dist/button/DvspU6cJ.jsx` |
 | Exported from its module | yes |
-| Verdict, source arm | **fallback** |
-| Verdict, dist arm | **fallback** |
-| Reason set | 5 occurrence(s) across 1 code(s) |
+| Verdict, source arm | **provable** |
+| Verdict, dist arm | **provable** |
+| Reason set | 0 occurrence(s) across 0 code(s) |
 
-| Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
-|---|---|---|---|---|---|---|
-| `jsx-dynamic-attribute` | `86:4` | `type={isNativeButton() \|\| isNativeInput() ? mergedProps.type : undefined}` | `ButtonRoot` was refused with `jsx-dynamic-attribute` at `type={isNativeButton() \|\| isNativeInput() ? mergedProps.type : undefined}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-dynamic-attribute` | `87:4` | `role={!isNativeButton() && !isNativeLink() ? "button" : undefined}` | `ButtonRoot` was refused with `jsx-dynamic-attribute` at `role={!isNativeButton() && !isNativeLink() ? "button" : undefined}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-dynamic-attribute` | `88:4` | `tabindex={ !isNativeButton() && !isNativeLink() && !mergedProps.disabled ? 0 : undefined }` | `ButtonRoot` was refused with `jsx-dynamic-attribute` at `tabindex={ !isNativeButton() && !isNativeLink() && !mergedProps.disabled ? 0 : undefined }`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-dynamic-attribute` | `93:4` | `disabled={ isNativeButton() \|\| isNativeInput() ? mergedProps.disabled : undefined }` | `ButtonRoot` was refused with `jsx-dynamic-attribute` at `disabled={ isNativeButton() \|\| isNativeInput() ? mergedProps.disabled : undefined }`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-dynamic-attribute` | `96:4` | `aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? "true" : undefined }` | `ButtonRoot` was refused with `jsx-dynamic-attribute` at `aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? "true" : undefined }`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
+No refusal reasons: this function classified `provable`.
 
 ### `CheckboxRoot` — `@kobalte/core/checkbox` -> `Root`
 
@@ -374,9 +368,9 @@ Ranked by how many distinct components carry the code; occurrences break ties. S
 | 3 | `show-branch-not-static-at-capture` | 4 | 4 | 0 |
 | 4 | `signal-escapes-to-opaque-callee` | 3 | 5 | 0 |
 | 5 | `no-signal-source` | 3 | 3 | 0 |
-| 6 | `jsx-dynamic-attribute` | 2 | 16 | 1 |
-| 7 | `handler-not-inline` | 2 | 8 | 0 |
-| 8 | `jsx-dynamic-child-not-derivable` | 2 | 2 | 0 |
+| 6 | `handler-not-inline` | 2 | 8 | 0 |
+| 7 | `jsx-dynamic-child-not-derivable` | 2 | 2 | 0 |
+| 8 | `jsx-dynamic-attribute` | 1 | 11 | 0 |
 | 9 | `jsx-spread` | 1 | 2 | 0 |
 | 10 | `signal-initializer-not-literal` | 1 | 1 | 0 |
 
@@ -384,9 +378,9 @@ Ranked by how many distinct components carry the code; occurrences break ties. S
 
 Components whose entire refusal set is a single code — lift that code and they flip.
 
-| Component | File | Only blocker |
-|---|---|---|
-| `ButtonRoot` | `packages/core/src/button/button-root.tsx` | `jsx-dynamic-attribute` |
+_No function among the 12 is blocked by exactly one code._
+
+That is the load-bearing finding of this table rather than an empty result. Each of the 12 carries between 0 and 4 distinct codes, so no single change on either side of the line flips any of them: the shapes stack.
 
 ## Source vs dist: the reason-code delta
 
@@ -416,7 +410,7 @@ The two arms are the same artifact before and after rolldown, so this difference
 | Component | File | Exported | Verdict | Inlined by | Codes |
 |---|---|---|---|---|---|
 | `SeparatorRoot` | `packages/core/src/separator/separator-root.tsx` | yes | provable | — | — |
-| `ButtonRoot` | `packages/core/src/button/button-root.tsx` | yes | fallback | — | `jsx-dynamic-attribute` |
+| `ButtonRoot` | `packages/core/src/button/button-root.tsx` | yes | provable | — | — |
 | `CheckboxRoot` | `packages/core/src/checkbox/checkbox-root.tsx` | yes | fallback | — | `jsx-component-element`<br>`jsx-dynamic-child-not-derivable`<br>`signal-escapes-to-opaque-callee`<br>`signal-escapes-unanalyzable-use` |
 | `CheckboxControl` | `packages/core/src/checkbox/checkbox-control.tsx` | yes | fallback | — | `handler-not-inline`<br>`jsx-spread`<br>`no-signal-source` |
 | `CheckboxIndicator` | `packages/core/src/checkbox/checkbox-indicator.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |

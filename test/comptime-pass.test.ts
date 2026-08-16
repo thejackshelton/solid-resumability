@@ -424,3 +424,57 @@ describe("derived-cell admission", () => {
     expect(() => emit(forged, scratch())).toThrow(/derived cell d0/);
   });
 });
+
+describe("element-projection cell admission", () => {
+  it("classifies the host as provable with a projection on d0", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/ElementProjectionHost.tsx", {
+      write: false,
+      component: "ElementProjectionHost",
+    });
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.cells.map((cell) => cell.id)).toEqual(["c0", "d0"]);
+    expect(analysis.cells[1]).toMatchObject({
+      id: "d0",
+      initial: "div",
+      getter: "tagName",
+      projection: {
+        host: "c0",
+        steps: [
+          { kind: "property", name: "tagName" },
+          { kind: "call", name: "toLowerCase" },
+        ],
+      },
+    });
+  });
+
+  it("refuses a projection of a non-host element by name", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/ElementProjectionCounter.tsx", {
+      write: false,
+      component: "ElementProjectionOther",
+    });
+    expect(analysis.status).toBe("fallback");
+    if (analysis.status !== "fallback") return;
+    expect(analysis.reasons.map((reason) => reason.code)).toContain("element-projection-not-own-host");
+  });
+
+  it("refuses getAttribute with a non-literal argument by name", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/ElementProjectionCounter.tsx", {
+      write: false,
+      component: "ElementProjectionNonLiteral",
+    });
+    expect(analysis.status).toBe("fallback");
+    if (analysis.status !== "fallback") return;
+    expect(analysis.reasons.map((reason) => reason.code)).toContain("element-projection-not-pure");
+  });
+
+  it("refuses a handler that captures the projection cell", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/ElementProjectionCounter.tsx", {
+      write: false,
+      component: "ElementProjectionHandler",
+    });
+    expect(analysis.status).toBe("fallback");
+    if (analysis.status !== "fallback") return;
+    expect(analysis.reasons.map((reason) => reason.code)).toContain("handler-captures-unprovable-binding");
+  });
+});

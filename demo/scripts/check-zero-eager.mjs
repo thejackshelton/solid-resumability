@@ -132,15 +132,13 @@ const RULE_DIST = join(DEMO_ROOT, "dist/resumable/rule");
 /**
  * The eager cap, in raw bytes on the wire for the one entry chunk.
  *
- * Set just above the honest post-T044 minimum of 15,244 B — the shrink that
- * attributed every leftover byte. WP1 identity/ref/spread/restore machinery
- * is part of the honest eager payload; it cannot leave the resumer without a
- * loading-behavior change. The 256 B of headroom is for build jitter only,
- * not for a dependency. The smallest framework leak (`solid-js/dist` alone,
- * ~9,500 B minified) still cannot fit, so a build that fused the group back
- * in lands near 24,700 B and fails loudly.
+ * Set just above the honest post-T054 CDP wire observation of 15,696 B
+ * (on-disk file 15,488 B). WP-B element-projection restore grew the
+ * resumer; that growth is part of the honest eager payload. Headroom is
+ * for jitter only. The smallest framework leak (`solid-js/dist` alone,
+ * ~9,500 B minified) still cannot fit.
  */
-export const EAGER_JS_CAP_BYTES = 15500;
+export const EAGER_JS_CAP_BYTES = 16000;
 
 /**
  * The rule page's own eager cap. Ceiling is parity with fixtures (20,000 B);

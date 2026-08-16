@@ -340,6 +340,23 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
       }
     }
   }
+  // Own-host projections on the already-held root, same batch as ref writes.
+  for (const spec of bundle.cells) {
+    const proj = spec.projection;
+    const cell = proj && cells.get(spec.id);
+    if (!proj || !cell) continue;
+    let value: unknown = root;
+    for (const step of proj.steps) {
+      if (value == null) break;
+      value =
+        step.kind === "property"
+          ? (value as Record<string, unknown>)[step.name]
+          : step.kind === "getAttribute"
+            ? (value as Element).getAttribute(step.name)
+            : (value as Record<string, () => unknown>)[step.name]();
+    }
+    cellWrite(cell.set, value == null ? spec.initial : value);
+  }
   flush();
 
   // Measured identity rest-spread, then property initials + measured restore.

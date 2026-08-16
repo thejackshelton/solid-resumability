@@ -19,11 +19,22 @@ export interface TemplateArtifact {
   root: string;
 }
 
+export interface ElementProjectionStepSpec {
+  kind: "property" | "call" | "getAttribute";
+  name: string;
+}
+
+export interface ElementProjectionSpec {
+  host: string;
+  steps: ElementProjectionStepSpec[];
+}
+
 export interface CellSpec {
   id: string;
   initial: unknown;
   getter: string;
   setter?: string;
+  projection?: ElementProjectionSpec;
 }
 
 /** A slot filled from one of the component's own cells. */

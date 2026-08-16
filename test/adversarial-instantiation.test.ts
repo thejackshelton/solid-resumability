@@ -18,6 +18,8 @@ import { FoldedMeasuredSeenLive, FoldedMeasuredUnseenLive } from "./fixtures/sha
 import { DerivedCellUnseen } from "./fixtures/shapes/DerivedCellHost.tsx";
 import { GuardedReturnUnseen } from "./fixtures/shapes/GuardedReturnHost.tsx";
 import { ElementProjectionUnseen } from "./fixtures/shapes/ElementProjectionHost.tsx";
+import { MemberNamespaceUnseen } from "./fixtures/shapes/MemberNamespaceHost.tsx";
+import { GuardThrowContextUnseen } from "./fixtures/shapes/GuardThrowContextHost.tsx";
 
 /**
  * THE ADVERSARIAL INSTANTIATION GATE.
@@ -1350,5 +1352,162 @@ describe("adversarial instantiation gate — element-projection-own-host", () =>
     expect(counter.status).toBe("fallback");
     expect(codes(counter).has("handler-captures-unprovable-binding")).toBe(true);
     expect(elementProjectionRule().admits(counter)).toBe(false);
+  });
+});
+
+const MEMBER_HOSTS = `${SHAPES}/MemberNamespaceHost.tsx`;
+const MEMBER_COUNTER = `${SHAPES}/MemberNamespaceCounter.tsx`;
+
+/** Clauses of JSXMemberExpression resolution — first-party, no library name. */
+const MEMBER_NAMESPACE_CLAUSES: ShapeClause[] = [
+  {
+    id: "member-resolves-in-analyzed-set",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-component-element"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function memberNamespaceRule(): ShapeRuleRegistration {
+  return {
+    id: "member-namespace-resolution",
+    clauses: MEMBER_NAMESPACE_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: MEMBER_COUNTER, component: "MemberUnresolvable" },
+    secondInstantiation: {
+      path: MEMBER_HOSTS,
+      component: "MemberNamespaceUnseen",
+      render: MemberNamespaceUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — member-namespace-resolution", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([memberNamespaceRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the unresolvable member", () => {
+    const lying: ShapeRuleRegistration = { ...memberNamespaceRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("member-namespace-resolution");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(MEMBER_HOSTS, "MemberNamespaceHost");
+    const lying: ShapeRuleRegistration = {
+      ...memberNamespaceRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="host"><span class="seen">ok</span><button class="bump">0</button></p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("member-namespace-resolution");
+  });
+
+  it("the unresolvable-member counter fails exactly the member-resolves clause", () => {
+    const counter = classify(MEMBER_COUNTER, "MemberUnresolvable");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-component-element")).toBe(true);
+    expect(
+      MEMBER_NAMESPACE_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["member-resolves-in-analyzed-set"]);
+  });
+
+  it("the local-object member counter fails exactly the member-resolves clause", () => {
+    const counter = classify(MEMBER_HOSTS, "MemberLocalObjectHost");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-component-element")).toBe(true);
+    expect(
+      MEMBER_NAMESPACE_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["member-resolves-in-analyzed-set"]);
+  });
+});
+
+const GUARD_THROW_HOSTS = `${SHAPES}/GuardThrowContextHost.tsx`;
+const GUARD_THROW_COUNTER = `${SHAPES}/GuardThrowContextCounter.tsx`;
+
+/** Clauses of the guard-throw context-helper grammar — first-party, no library name. */
+const GUARD_THROW_CLAUSES: ShapeClause[] = [
+  {
+    id: "guard-throw-context-body",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("no-signal-source"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function guardThrowContextRule(): ShapeRuleRegistration {
+  return {
+    id: "guard-throw-context-helper",
+    clauses: GUARD_THROW_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: GUARD_THROW_COUNTER, component: "GuardThrowExtraStatement" },
+    secondInstantiation: {
+      path: GUARD_THROW_HOSTS,
+      component: "GuardThrowContextUnseen",
+      render: GuardThrowContextUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — guard-throw-context-helper", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([guardThrowContextRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the extra-statement helper", () => {
+    const lying: ShapeRuleRegistration = { ...guardThrowContextRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("guard-throw-context-helper");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(GUARD_THROW_HOSTS, "GuardThrowContextHost");
+    const lying: ShapeRuleRegistration = {
+      ...guardThrowContextRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="seen">ok</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("guard-throw-context-helper");
+  });
+
+  it("the extra-statement counter fails exactly the guard-throw-context-body clause", () => {
+    const counter = classify(GUARD_THROW_COUNTER, "GuardThrowExtraStatement");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("no-signal-source")).toBe(true);
+    expect(
+      GUARD_THROW_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guard-throw-context-body"]);
+  });
+
+  it("the different-binding counter fails exactly the guard-throw-context-body clause", () => {
+    const counter = classify(GUARD_THROW_COUNTER, "GuardThrowDifferentBinding");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("no-signal-source")).toBe(true);
+    expect(
+      GUARD_THROW_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guard-throw-context-body"]);
+  });
+
+  it("the non-throw guard counter fails exactly the guard-throw-context-body clause", () => {
+    const counter = classify(GUARD_THROW_COUNTER, "GuardThrowNoThrow");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("no-signal-source")).toBe(true);
+    expect(
+      GUARD_THROW_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guard-throw-context-body"]);
   });
 });

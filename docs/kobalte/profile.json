@@ -65,7 +65,7 @@
       "code": "jsx-component-element",
       "components": 8,
       "occurrences": 14,
-      "onlyBlockerFor": 0
+      "onlyBlockerFor": 1
     },
     {
       "code": "signal-escapes-unanalyzable-use",
@@ -83,12 +83,6 @@
       "code": "signal-escapes-to-opaque-callee",
       "components": 3,
       "occurrences": 5,
-      "onlyBlockerFor": 0
-    },
-    {
-      "code": "no-signal-source",
-      "components": 3,
-      "occurrences": 3,
       "onlyBlockerFor": 0
     },
     {
@@ -122,7 +116,13 @@
       "onlyBlockerFor": 0
     }
   ],
-  "onlyBlockers": [],
+  "onlyBlockers": [
+    {
+      "function": "DialogTrigger",
+      "authoredSource": "packages/core/src/dialog/dialog-trigger.tsx",
+      "code": "jsx-component-element"
+    }
+  ],
   "errata": [
     {
       "id": "E1",
@@ -473,8 +473,7 @@
             "handler-not-inline",
             "handler-not-inline",
             "jsx-spread",
-            "jsx-spread",
-            "no-signal-source"
+            "jsx-spread"
           ]
         },
         "dist": {
@@ -485,8 +484,7 @@
             "handler-not-inline",
             "handler-not-inline",
             "jsx-spread",
-            "jsx-spread",
-            "no-signal-source"
+            "jsx-spread"
           ]
         }
       },
@@ -497,23 +495,6 @@
         "counts": []
       },
       "reasons": [
-        {
-          "code": "no-signal-source",
-          "loc": "packages/core/src/checkbox/checkbox-control.tsx:41:8",
-          "line": 41,
-          "column": 8,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "function CheckboxControl<T extends ValidComponent = \"div\">( props: PolymorphicProps<T, CheckboxControlProps<T>>, ) { const formControlContext = useFormControlContext(); const context = useCheckboxContext(); const mergedP …",
-          "expressionBytes": 1005,
-          "message": "The component declares no source cell to resume.",
-          "detail": null,
-          "shape": "`CheckboxControl` declares no `createSignal` of its own: it is a leaf that reads `useFormControlContext` and `useCheckboxContext` and renders from what it finds there, so there is no source cell for a resumed page to restore.",
-          "wouldChange": {
-            "kobalte": "Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none."
-          }
-        },
         {
           "code": "handler-not-inline",
           "loc": "packages/core/src/checkbox/checkbox-control.tsx:75:4",
@@ -1043,8 +1024,7 @@
           "module": "packages/core/src/dialog/dialog-trigger.tsx",
           "linkedModules": 40,
           "codes": [
-            "jsx-component-element",
-            "no-signal-source"
+            "jsx-component-element"
           ]
         },
         "dist": {
@@ -1052,8 +1032,7 @@
           "module": "dist/dialog/C9YDO9vc.jsx",
           "linkedModules": 10,
           "codes": [
-            "jsx-component-element",
-            "no-signal-source"
+            "jsx-component-element"
           ]
         }
       },
@@ -1064,23 +1043,6 @@
         "counts": []
       },
       "reasons": [
-        {
-          "code": "no-signal-source",
-          "loc": "packages/core/src/dialog/dialog-trigger.tsx:41:8",
-          "line": 41,
-          "column": 8,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "function DialogTrigger<T extends ValidComponent = \"button\">( props: PolymorphicProps<T, DialogTriggerProps<T>>, ) { const context = useDialogContext(); const p = props as DialogTriggerProps; const others = omit(p, \"ref\", …",
-          "expressionBytes": 829,
-          "message": "The component declares no source cell to resume.",
-          "detail": null,
-          "shape": "`DialogTrigger` declares no `createSignal` of its own: it is a leaf that reads `useDialogContext` and renders from what it finds there, so there is no source cell for a resumed page to restore.",
-          "wouldChange": {
-            "kobalte": "Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none."
-          }
-        },
         {
           "code": "jsx-component-element",
           "loc": "packages/core/src/dialog/dialog-trigger.tsx:55:3",
@@ -1232,7 +1194,6 @@
           "linkedModules": 40,
           "codes": [
             "jsx-component-element",
-            "no-signal-source",
             "show-branch-not-static-at-capture"
           ]
         },
@@ -1242,7 +1203,6 @@
           "linkedModules": 10,
           "codes": [
             "jsx-component-element",
-            "no-signal-source",
             "show-branch-not-static-at-capture"
           ]
         }
@@ -1254,23 +1214,6 @@
         "counts": []
       },
       "reasons": [
-        {
-          "code": "no-signal-source",
-          "loc": "packages/core/src/dialog/dialog-portal.tsx:11:8",
-          "line": 11,
-          "column": 8,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "function DialogPortal(props: DialogPortalProps) { const context = useDialogContext(); return ( <Show when={context.contentPresent() || context.overlayPresent()}> <Portal {...props} /> </Show> ); }",
-          "expressionBytes": 207,
-          "message": "The component declares no source cell to resume.",
-          "detail": null,
-          "shape": "`DialogPortal` declares no `createSignal` of its own: it is a leaf that reads `useDialogContext` and renders from what it finds there, so there is no source cell for a resumed page to restore.",
-          "wouldChange": {
-            "kobalte": "Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none."
-          }
-        },
         {
           "code": "show-branch-not-static-at-capture",
           "loc": "packages/core/src/dialog/dialog-portal.tsx:15:9",

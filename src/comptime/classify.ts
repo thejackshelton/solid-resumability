@@ -175,7 +175,7 @@ import {
   type GuardedReturnMatch,
   type LiteralDecisionTree,
 } from "./summaries.ts";
-import { classifyStoreBinding, useContextCalls } from "./stores.ts";
+import { classifyStoreBinding, guardThrowContextCalls, useContextCalls } from "./stores.ts";
 import { AMBIENT_MEMBER_CALLS, EVENT_TIME_SYNTAX, HANDLER_SYNTAX } from "./syntax.ts";
 import {
   artifactKey,
@@ -614,24 +614,152 @@ const ADDRESSING_STACK: string[] = [];
  * which is what leaves `<Show>` and `<For>` outside inlining and addressing
  * alike, and `componentSiteOf` insists on something `findComponents` counted —
  * so a composed child is always a component the coverage report already knows.
+ *
+ * A JSXIdentifier in a JSXMemberExpression object is not a recorded
+ * reference — `referenceOf` is null there — so that arm uses `resolve()`.
  */
 function resolveChildComponent(
   mod: Module,
   element: Node,
 ): { module: Module; site: ComponentSite } | null {
   const name = element.openingElement.name;
-  if (name.type !== "JSXIdentifier") return null;
+  if (name.type === "JSXIdentifier") {
+    const symbol = mod.referenceOf(name)?.symbol ?? null;
+    if (symbol === null) return null;
+    return siteFromSymbol(symbol);
+  }
+  if (name.type === "JSXMemberExpression") return resolveMemberComponent(mod, element, name);
+  return null;
+}
 
-  const symbol = mod.referenceOf(name)?.symbol ?? null;
-  if (symbol === null) return null;
-
+function siteFromSymbol(symbol: YukuSymbol): { module: Module; site: ComponentSite } | null {
   const definition = symbol.definition();
   if (definition == null || definition.symbol == null) return null;
-
   const site = componentSiteOf(definition.module, definition.symbol);
   if (site === null) return null;
-
   return { module: definition.module, site };
+}
+
+function isImportBinding(mod: Module, symbol: YukuSymbol): boolean {
+  return mod.imports.some((record) => record.local?.id === symbol.id);
+}
+
+function exportDefinition(
+  mod: Module,
+  name: string,
+  seen: Set<string> = new Set(),
+): { module: Module; symbol: YukuSymbol } | null {
+  if (seen.has(mod.path)) return null;
+  seen.add(mod.path);
+
+  for (const record of mod.exports) {
+    if (record.name !== name) continue;
+    if (record.local != null) {
+      const definition = record.local.definition();
+      if (definition == null || definition.symbol == null) return null;
+      return { module: definition.module, symbol: definition.symbol };
+    }
+    if (record.resolvedModule != null && record.fromName != null) {
+      return exportDefinition(record.resolvedModule, record.fromName, seen);
+    }
+  }
+
+  for (const record of mod.exports) {
+    if (!record.isStar || record.resolvedModule == null) continue;
+    const inner = exportDefinition(record.resolvedModule, name, seen);
+    if (inner !== null) return inner;
+  }
+  return null;
+}
+
+function identifierDefinition(mod: Module, node: Node): { module: Module; symbol: YukuSymbol } | null {
+  if (node == null || node.type !== "Identifier") return null;
+  const symbol = mod.referenceOf(node)?.symbol ?? null;
+  if (symbol === null) return null;
+  const definition = symbol.definition();
+  if (definition == null || definition.symbol == null) return null;
+  return { module: definition.module, symbol: definition.symbol };
+}
+
+function thunkReturnedIdentifier(fn: Node): Node | null {
+  if ((fn.params ?? []).length !== 0) return null;
+  const body = fn.body;
+  if (body == null) return null;
+  if (body.type !== "BlockStatement") return unwrap(body);
+  const statements: Node[] = body.body ?? [];
+  if (statements.length !== 1 || statements[0].type !== "ReturnStatement") return null;
+  return statements[0].argument == null ? null : unwrap(statements[0].argument);
+}
+
+function resolvePropertyValue(mod: Module, raw: Node): { module: Module; symbol: YukuSymbol } | null {
+  const value = unwrap(raw);
+  if (value == null) return null;
+  if (value.type === "Identifier") return identifierDefinition(mod, value);
+  if (value.type !== "ArrowFunctionExpression" && value.type !== "FunctionExpression") return null;
+  return identifierDefinition(mod, thunkReturnedIdentifier(value));
+}
+
+function namespaceObjectMember(
+  mod: Module,
+  symbol: YukuSymbol,
+  name: string,
+): { module: Module; symbol: YukuSymbol } | null {
+  if (symbol.declarations.length !== 1) return null;
+  const declaration: Node = symbol.declarations[0];
+  const declarator: Node = mod.parentOf(declaration);
+  if (declarator == null || declarator.type !== "VariableDeclarator") return null;
+  if (declarator.id !== declaration) return null;
+  const init = unwrap(declarator.init);
+  if (init == null) return null;
+
+  let object: Node | null = null;
+  if (init.type === "ObjectExpression") object = init;
+  else if (init.type === "CallExpression" && (init.arguments ?? []).length === 1) {
+    const argument = unwrap(init.arguments[0]);
+    if (argument != null && argument.type === "ObjectExpression") object = argument;
+  }
+  if (object == null) return null;
+
+  for (const property of object.properties ?? []) {
+    if (property == null || property.type !== "Property") continue;
+    if (property.computed === true) continue;
+    if (property.key?.type !== "Identifier" || property.key.name !== name) continue;
+    return resolvePropertyValue(mod, property.value);
+  }
+  return null;
+}
+
+function resolveMemberComponent(
+  mod: Module,
+  element: Node,
+  name: Node,
+): { module: Module; site: ComponentSite } | null {
+  const object = name.object;
+  const property = name.property;
+  if (object == null || object.type !== "JSXIdentifier") return null;
+  if (property == null || property.type !== "JSXIdentifier") return null;
+
+  const objectSymbol = mod.resolve(object.name, mod.scopeOf(element), "value");
+  if (objectSymbol === null) return null;
+
+  const definition = objectSymbol.definition();
+  if (definition == null) return null;
+
+  if (definition.symbol == null) {
+    const exported = exportDefinition(definition.module, property.name);
+    if (exported === null) return null;
+    const site = componentSiteOf(exported.module, exported.symbol);
+    if (site === null) return null;
+    return { module: exported.module, site };
+  }
+
+  if (!isImportBinding(mod, objectSymbol)) return null;
+
+  const member = namespaceObjectMember(definition.module, definition.symbol, property.name);
+  if (member === null) return null;
+  const site = componentSiteOf(member.module, member.symbol);
+  if (site === null) return null;
+  return { module: member.module, site };
 }
 
 /**
@@ -991,6 +1119,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   const slotReads = new Set<Node>();
 
   const contextCalls = useContextCalls(moduleInfo, component.fn);
+  const helperContextCalls = guardThrowContextCalls(moduleInfo, component.fn);
 
   contextCalls.forEach((call: Node, index: number) => {
     const outcome = classifyStoreBinding(moduleInfo, call, `s${index}`, locOf);
@@ -1018,7 +1147,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   // double-report of a signal found but refused. A `useContext` counts as a
   // declared source either way — `store-binding-not-provable` already says the
   // source could not be named.
-  if (signalCalls.length === 0 && contextCalls.length === 0) {
+  if (signalCalls.length === 0 && contextCalls.length === 0 && helperContextCalls.length === 0) {
     refuse("no-signal-source", "The component declares no source cell to resume.", component.fn);
   }
 

@@ -214,6 +214,65 @@ describe("S5 — a leaf whose state arrives from a provider, and the direct cont
     expect(codes(control)).toEqual(["store-binding-not-provable"]);
     expect(codes(control)).not.toContain("no-signal-source");
   });
+
+  it("does not see through a wrapper that is not the guard-throw grammar", () => {
+    expect(codes(analysis)).toEqual(["no-signal-source"]);
+  });
+});
+
+describe("JSXMemberExpression resolution — first-party host", () => {
+  it("inlines a namespace member that resolves into the analyzed set", () => {
+    const analysis = shape("MemberNamespaceHost.tsx", "MemberNamespaceHost");
+    expect(analysis.status).toBe("provable");
+  });
+
+  it("inlines a named import of a namespace-object thunk member", () => {
+    const analysis = shape("MemberNamespaceHost.tsx", "MemberObjectHost");
+    expect(analysis.status).toBe("provable");
+  });
+
+  it("refuses a member on a local object", () => {
+    const analysis = shape("MemberNamespaceHost.tsx", "MemberLocalObjectHost");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toContain("jsx-component-element");
+  });
+
+  it("refuses an unresolvable namespace member", () => {
+    const analysis = shape("MemberNamespaceCounter.tsx", "MemberUnresolvable");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toContain("jsx-component-element");
+  });
+});
+
+describe("guard-throw context helper — first-party host", () => {
+  it("drops no-signal-source when the helper body is the admitted grammar", () => {
+    const analysis = shape("GuardThrowContextHost.tsx", "GuardThrowContextHost");
+    expect(analysis.status).toBe("provable");
+    expect(codes(analysis)).not.toContain("no-signal-source");
+  });
+
+  it("admits the void-or-null test form", () => {
+    const analysis = shape("GuardThrowContextHost.tsx", "GuardThrowContextVoidHost");
+    expect(analysis.status).toBe("provable");
+  });
+
+  it("refuses a helper with one extra statement", () => {
+    const analysis = shape("GuardThrowContextCounter.tsx", "GuardThrowExtraStatement");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toEqual(["no-signal-source"]);
+  });
+
+  it("refuses a helper that returns a different binding", () => {
+    const analysis = shape("GuardThrowContextCounter.tsx", "GuardThrowDifferentBinding");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toEqual(["no-signal-source"]);
+  });
+
+  it("refuses a helper whose guard is not a throw", () => {
+    const analysis = shape("GuardThrowContextCounter.tsx", "GuardThrowNoThrow");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toEqual(["no-signal-source"]);
+  });
 });
 
 describe("S6 — a region guard that is someone else's accessor", () => {

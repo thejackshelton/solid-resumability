@@ -38,6 +38,11 @@
  * body is const-of-projection bindings plus if-return / final-return of
  * expressions over those locals and the parameters. It is not a PureSummary.
  *
+ * A fourth matcher, {@link matchGuardThrowContext}, admits a helper whose
+ * body is exactly `const x = <call>(); if (x == <void-or-null>) throw …;
+ * return x;` — structural, never name-matched. The caller decides whether
+ * that call is a `useContext`.
+ *
  * {@link matchElementProjection} classifies a deferred-write expression as a
  * pure property / getAttribute projection of a getter parameter, or names
  * why it is not.
@@ -555,6 +560,77 @@ export function matchGuardedReturn(mod: Module, fn: Node): GuardedReturnMatch | 
     guardLiteral,
     terminal,
   };
+}
+
+/**
+ * The admitted guard-throw context-helper body, or null.
+ *
+ * Exact body:
+ *   const x = <call>();
+ *   if (x == <void-or-null test>) throw <anything>;
+ *   return x;
+ *
+ * The call is not inspected here. A near-miss (extra statement, different
+ * returned binding, guard that does not throw) is null, not a named code.
+ */
+export interface GuardThrowContextMatch {
+  local: Node;
+  call: Node;
+}
+
+function isVoidOrNullTest(mod: Module, test: Node, local: Node): boolean {
+  const expression = unwrap(test);
+  if (expression == null || expression.type !== "BinaryExpression") return false;
+  if (expression.operator !== "==" && expression.operator !== "===") return false;
+  const left = unwrap(expression.left);
+  const right = unwrap(expression.right);
+  if (left == null || right == null) return false;
+  if (left.type === "Identifier" && sameLocal(mod, local, left)) return isVoidOrNull(right);
+  if (right.type === "Identifier" && sameLocal(mod, local, right)) return isVoidOrNull(left);
+  return false;
+}
+
+function isVoidOrNull(node: Node): boolean {
+  if (node == null) return false;
+  if (node.type === "Literal" && node.value === null) return true;
+  if (node.type === "UnaryExpression" && node.operator === "void") return true;
+  return node.type === "Identifier" && node.name === "undefined";
+}
+
+function thrownOf(consequent: Node): Node | null {
+  const node = unwrap(consequent);
+  if (node == null) return null;
+  if (node.type === "ThrowStatement") return node.argument == null ? null : unwrap(node.argument);
+  if (node.type !== "BlockStatement") return null;
+  const statements: Node[] = node.body ?? [];
+  if (statements.length !== 1 || statements[0].type !== "ThrowStatement") return null;
+  return statements[0].argument == null ? null : unwrap(statements[0].argument);
+}
+
+/** Matches a function body against the guard-throw context-helper grammar. */
+export function matchGuardThrowContext(mod: Module, fn: Node): GuardThrowContextMatch | null {
+  if (fn == null || fn.body == null || fn.body.type !== "BlockStatement") return null;
+  const statements: Node[] = fn.body.body ?? [];
+  if (statements.length !== 3) return null;
+
+  const binding = localCallBinding(statements[0]);
+  if (binding === null) return null;
+
+  const ifStatement = statements[1];
+  if (ifStatement == null || ifStatement.type !== "IfStatement") return null;
+  if (ifStatement.alternate != null) return null;
+  if (!isVoidOrNullTest(mod, ifStatement.test, binding.local)) return null;
+  if (thrownOf(ifStatement.consequent) == null) return null;
+
+  const returnStatement = statements[2];
+  if (returnStatement == null || returnStatement.type !== "ReturnStatement" || returnStatement.argument == null) {
+    return null;
+  }
+  const returned = unwrap(returnStatement.argument);
+  if (returned == null || returned.type !== "Identifier") return null;
+  if (!sameLocal(mod, binding.local, returned)) return null;
+
+  return { local: binding.local, call: binding.call };
 }
 
 /** A deferred-write expression that is a pure projection of a getter

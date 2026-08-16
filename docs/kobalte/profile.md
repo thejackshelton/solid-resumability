@@ -160,11 +160,10 @@ No refusal reasons: this function classified `provable`.
 | Exported from its module | yes |
 | Verdict, source arm | **fallback** |
 | Verdict, dist arm | **fallback** |
-| Reason set | 5 occurrence(s) across 3 code(s) |
+| Reason set | 4 occurrence(s) across 2 code(s) |
 
 | Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
 |---|---|---|---|---|---|---|
-| `no-signal-source` | `41:8` | `function CheckboxControl<T extends ValidComponent = "div">( props: PolymorphicProps<T, CheckboxControlProps<T>>, ) { const formControlContext = useFormControlContext(); const context = useCheckboxContext(); const mergedP …` | `CheckboxControl` declares no `createSignal` of its own: it is a leaf that reads `useFormControlContext` and `useCheckboxContext` and renders from what it finds there, so there is no source cell for a resumed page to restore. | Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately. | NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none. | same in both arms |
 | `handler-not-inline` | `75:4` | `onClick={onClick}` | `CheckboxControl` was refused with `handler-not-inline` at `onClick={onClick}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `handler-not-inline` | `76:4` | `onKeyDown={onKeyDown}` | `CheckboxControl` was refused with `handler-not-inline` at `onKeyDown={onKeyDown}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `jsx-spread` | `77:4` | `{...formControlContext.dataset()}` | `CheckboxControl` was refused with `jsx-spread` at `{...formControlContext.dataset()}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
@@ -230,11 +229,10 @@ No refusal reasons: this function classified `provable`.
 | Exported from its module | yes |
 | Verdict, source arm | **fallback** |
 | Verdict, dist arm | **fallback** |
-| Reason set | 2 occurrence(s) across 2 code(s) |
+| Reason set | 1 occurrence(s) across 1 code(s) |
 
 | Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
 |---|---|---|---|---|---|---|
-| `no-signal-source` | `41:8` | `function DialogTrigger<T extends ValidComponent = "button">( props: PolymorphicProps<T, DialogTriggerProps<T>>, ) { const context = useDialogContext(); const p = props as DialogTriggerProps; const others = omit(p, "ref", …` | `DialogTrigger` declares no `createSignal` of its own: it is a leaf that reads `useDialogContext` and renders from what it finds there, so there is no source cell for a resumed page to restore. | Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately. | NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none. | same in both arms |
 | `jsx-component-element` | `55:3` | `<Button.Root< Component< Omit<DialogTriggerRenderProps, keyof Button.ButtonRootRenderProps> > > ref={[context.setTriggerRef, p.ref]} aria-haspopup="dialog" aria-expanded={context.isOpen() ? "true" : "false"} aria-control …` | `DialogTrigger`'s markup routes through `<Button.Root>`, a Kobalte compound part reached through a `JSXMemberExpression` — the module it comes from IS in the analyzed set here, so the member-expression form alone is what the splice cannot address; only intrinsic elements template statically, so the pass stops at this element. | Import the part as a plain binding rather than reaching it through a namespace object (`Button.Root` -> `Root`). That alone does not make it templatable — it is still a component element — but it is the change that takes the member-expression form out of the way. | NOT AUTHORIZED under zero-Solid-API-changes — admit a `JSXMemberExpression` in `tryInlineComponent`, which today requires a `JSXIdentifier` whose `definition()` lies inside the analyzed set. | same in both arms |
 
 ### `DialogContent` — `@kobalte/core/dialog` -> `Content`
@@ -268,11 +266,10 @@ No refusal reasons: this function classified `provable`.
 | Exported from its module | yes |
 | Verdict, source arm | **fallback** |
 | Verdict, dist arm | **fallback** |
-| Reason set | 3 occurrence(s) across 3 code(s) |
+| Reason set | 2 occurrence(s) across 2 code(s) |
 
 | Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
 |---|---|---|---|---|---|---|
-| `no-signal-source` | `11:8` | `function DialogPortal(props: DialogPortalProps) { const context = useDialogContext(); return ( <Show when={context.contentPresent() \|\| context.overlayPresent()}> <Portal {...props} /> </Show> ); }` | `DialogPortal` declares no `createSignal` of its own: it is a leaf that reads `useDialogContext` and renders from what it finds there, so there is no source cell for a resumed page to restore. | Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately. | NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none. | same in both arms |
 | `show-branch-not-static-at-capture` | `15:9` | `when={context.contentPresent() \|\| context.overlayPresent()}` | The `<Show>` guard is `when={context.contentPresent() \|\| context.overlayPresent()}` — a presence accessor Kobalte derives from its disclosure state and reads back off context. The build can neither fold it nor measure it, so which branch the served markup carries is not settled before the page runs. | Make the guard something the build can settle — a literal, or a value captured in the served first paint. A presence accessor driven by open/close state is neither, and it is the behaviour this part exists to provide. | NOT AUTHORIZED under zero-Solid-API-changes — measure a two-state region whose guard reads a third-party context accessor. | same in both arms |
 | `jsx-component-element` | `16:4` | `<Portal {...props} />` | `DialogPortal`'s markup routes through `<Portal>`, `<Portal>` from `@solidjs/web`, which relocates the subtree out of this component's own markup; only intrinsic elements template statically, so the pass stops at this element. | Render the content in place instead of through `<Portal>` — which removes the out-of-tree layering this part exists to provide. | NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<Portal>`'s body is absorbed into this template, or admit component elements into static templating outright. | same in both arms |
 
@@ -363,24 +360,23 @@ Ranked by how many distinct components carry the code; occurrences break ties. S
 
 | Rank | Code | Components | Occurrences | Only-blocker for |
 |---|---|---|---|---|
-| 1 | `jsx-component-element` | 8 | 14 | 0 |
+| 1 | `jsx-component-element` | 8 | 14 | 1 |
 | 2 | `signal-escapes-unanalyzable-use` | 7 | 24 | 0 |
 | 3 | `show-branch-not-static-at-capture` | 4 | 4 | 0 |
 | 4 | `signal-escapes-to-opaque-callee` | 3 | 5 | 0 |
-| 5 | `no-signal-source` | 3 | 3 | 0 |
-| 6 | `handler-not-inline` | 2 | 8 | 0 |
-| 7 | `jsx-dynamic-child-not-derivable` | 2 | 2 | 0 |
-| 8 | `jsx-dynamic-attribute` | 1 | 11 | 0 |
-| 9 | `jsx-spread` | 1 | 2 | 0 |
-| 10 | `signal-initializer-not-literal` | 1 | 1 | 0 |
+| 5 | `handler-not-inline` | 2 | 8 | 0 |
+| 6 | `jsx-dynamic-child-not-derivable` | 2 | 2 | 0 |
+| 7 | `jsx-dynamic-attribute` | 1 | 11 | 0 |
+| 8 | `jsx-spread` | 1 | 2 | 0 |
+| 9 | `signal-initializer-not-literal` | 1 | 1 | 0 |
 
 ## Only-blockers
 
 Components whose entire refusal set is a single code — lift that code and they flip.
 
-_No function among the 12 is blocked by exactly one code._
-
-That is the load-bearing finding of this table rather than an empty result. Each of the 12 carries between 0 and 4 distinct codes, so no single change on either side of the line flips any of them: the shapes stack.
+| Component | File | Only blocker |
+|---|---|---|
+| `DialogTrigger` | `packages/core/src/dialog/dialog-trigger.tsx` | `jsx-component-element` |
 
 ## Source vs dist: the reason-code delta
 
@@ -412,12 +408,12 @@ The two arms are the same artifact before and after rolldown, so this difference
 | `SeparatorRoot` | `packages/core/src/separator/separator-root.tsx` | yes | provable | — | — |
 | `ButtonRoot` | `packages/core/src/button/button-root.tsx` | yes | provable | — | — |
 | `CheckboxRoot` | `packages/core/src/checkbox/checkbox-root.tsx` | yes | fallback | — | `jsx-component-element`<br>`jsx-dynamic-child-not-derivable`<br>`signal-escapes-to-opaque-callee`<br>`signal-escapes-unanalyzable-use` |
-| `CheckboxControl` | `packages/core/src/checkbox/checkbox-control.tsx` | yes | fallback | — | `handler-not-inline`<br>`jsx-spread`<br>`no-signal-source` |
+| `CheckboxControl` | `packages/core/src/checkbox/checkbox-control.tsx` | yes | fallback | — | `handler-not-inline`<br>`jsx-spread` |
 | `CheckboxIndicator` | `packages/core/src/checkbox/checkbox-indicator.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |
 | `DialogRoot` | `packages/core/src/dialog/dialog-root.tsx` | yes | fallback | — | `jsx-component-element`<br>`jsx-dynamic-child-not-derivable`<br>`signal-escapes-to-opaque-callee`<br>`signal-escapes-unanalyzable-use` |
-| `DialogTrigger` | `packages/core/src/dialog/dialog-trigger.tsx` | yes | fallback | — | `jsx-component-element`<br>`no-signal-source` |
+| `DialogTrigger` | `packages/core/src/dialog/dialog-trigger.tsx` | yes | fallback | — | `jsx-component-element` |
 | `DialogContent` | `packages/core/src/dialog/dialog-content.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |
-| `DialogPortal` | `packages/core/src/dialog/dialog-portal.tsx` | yes | fallback | — | `jsx-component-element`<br>`no-signal-source`<br>`show-branch-not-static-at-capture` |
+| `DialogPortal` | `packages/core/src/dialog/dialog-portal.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture` |
 | `TabsRoot` | `packages/core/src/tabs/tabs-root.tsx` | yes | fallback | — | `jsx-component-element`<br>`signal-escapes-unanalyzable-use`<br>`signal-initializer-not-literal` |
 | `TabsTrigger` | `packages/core/src/tabs/tabs-trigger.tsx` | yes | fallback | — | `handler-not-inline`<br>`jsx-dynamic-attribute`<br>`signal-escapes-to-opaque-callee`<br>`signal-escapes-unanalyzable-use` |
 | `PopoverContent` | `packages/core/src/popover/popover-content.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |

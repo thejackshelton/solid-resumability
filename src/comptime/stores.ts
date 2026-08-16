@@ -53,6 +53,7 @@
 import type { Module, Symbol as YukuSymbol } from "yuku-analyzer";
 
 import { contains, makeLocator, unwrap, type Node } from "./ast.ts";
+import { matchGuardThrowContext } from "./summaries.ts";
 import type { ActionInfo, SourceLoc, StoreInfo, StoreReadInfo } from "./types.ts";
 
 /** Modules whose `createContext` / `useContext` exports count as Solid's. */
@@ -139,6 +140,85 @@ export function useContextCalls(m: Module, fn: Node): Node[] {
   return m
     .findAll("CallExpression")
     .filter((call: Node) => contains(fn, call) && isUseContextCall(m, call, ids));
+}
+
+function functionFromSymbol(mod: Module, symbol: YukuSymbol): Node | null {
+  if (symbol.declarations.length !== 1) return null;
+  const declaration: Node = symbol.declarations[0];
+  if (declaration == null) return null;
+  if (
+    declaration.type === "FunctionDeclaration" ||
+    declaration.type === "FunctionExpression" ||
+    declaration.type === "ArrowFunctionExpression"
+  ) {
+    return declaration;
+  }
+  const parent: Node = mod.parentOf(declaration);
+  if (parent == null) return null;
+  if (
+    (parent.type === "FunctionDeclaration" ||
+      parent.type === "FunctionExpression" ||
+      parent.type === "ArrowFunctionExpression") &&
+    parent.id === declaration
+  ) {
+    return parent;
+  }
+  if (parent.type === "VariableDeclarator" && parent.id === declaration && parent.init != null) {
+    const init = unwrap(parent.init);
+    if (
+      init != null &&
+      (init.type === "FunctionDeclaration" ||
+        init.type === "FunctionExpression" ||
+        init.type === "ArrowFunctionExpression")
+    ) {
+      return init;
+    }
+  }
+  return null;
+}
+
+function calleeFunction(moduleInfo: Module, rawCallee: Node): { module: Module; fn: Node } | null {
+  const callee = unwrap(rawCallee);
+  if (callee == null || callee.type !== "Identifier") return null;
+  const symbol = moduleInfo.referenceOf(callee)?.symbol ?? null;
+  if (symbol === null) return null;
+  const definition = symbol.definition();
+  if (definition == null || definition.symbol == null) return null;
+  const fn = functionFromSymbol(definition.module, definition.symbol);
+  if (fn === null || fn.body == null) return null;
+  return { module: definition.module, fn };
+}
+
+function contextArgumentResolves(mod: Module, argument: Node): boolean {
+  const identifier = unwrap(argument);
+  if (identifier == null || identifier.type !== "Identifier") return false;
+  const symbol = mod.referenceOf(identifier)?.symbol ?? null;
+  if (symbol === null) return false;
+  return symbol.definition() != null;
+}
+
+/**
+ * Helper calls inside `fn` whose callee body is the guard-throw context
+ * grammar and whose bound call is a Solid `useContext` of a resolvable
+ * context. Presence only — the inner `useContext` is not a store binding
+ * of this component.
+ */
+export function guardThrowContextCalls(m: Module, fn: Node): Node[] {
+  const found: Node[] = [];
+  for (const call of m.findAll("CallExpression")) {
+    if (!contains(fn, call)) continue;
+    const resolved = calleeFunction(m, call.callee);
+    if (resolved === null) continue;
+    const match = matchGuardThrowContext(resolved.module, resolved.fn);
+    if (match === null) continue;
+    const ids = solidImportIds(resolved.module, "useContext");
+    if (ids.size === 0) continue;
+    if (!isUseContextCall(resolved.module, match.call, ids)) continue;
+    if (match.call.arguments?.length !== 1) continue;
+    if (!contextArgumentResolves(resolved.module, match.call.arguments[0])) continue;
+    found.push(call);
+  }
+  return found;
 }
 
 /** The `createContext()` definition a context argument names, or null. */

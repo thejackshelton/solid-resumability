@@ -175,7 +175,14 @@ import {
   type GuardedReturnMatch,
   type LiteralDecisionTree,
 } from "./summaries.ts";
-import { classifyStoreBinding, guardThrowContextCalls, useContextCalls } from "./stores.ts";
+import {
+  classifyStoreBinding,
+  guardThrowContextCalls,
+  isWholeBindAdmittedUse,
+  isWholeBindInit,
+  isWholeBindReadThroughCall,
+  useContextCalls,
+} from "./stores.ts";
 import { AMBIENT_MEMBER_CALLS, EVENT_TIME_SYNTAX, HANDLER_SYNTAX } from "./syntax.ts";
 import {
   artifactKey,
@@ -183,6 +190,7 @@ import {
   isCandidateRecordable,
   isCellSlot,
   isIdentitySlot,
+  isObjectStore,
   isRegionItemSlot,
   isStoreReadSlot,
 } from "./types.ts";
@@ -1121,8 +1129,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   const contextCalls = useContextCalls(moduleInfo, component.fn);
   const helperContextCalls = guardThrowContextCalls(moduleInfo, component.fn);
 
-  contextCalls.forEach((call: Node, index: number) => {
-    const outcome = classifyStoreBinding(moduleInfo, call, `s${index}`, locOf);
+  const admitStoreOutcome = (outcome: ReturnType<typeof classifyStoreBinding>): void => {
     if (outcome.kind === "refused") {
       // One code for the store's identity, one for the read slot in particular:
       // a binding refused for its read path is a different fix than a binding
@@ -1140,7 +1147,18 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       readSlots.set(site.symbol.id, site.read);
       readSites.push(site);
     }
+  };
+
+  contextCalls.forEach((call: Node, index: number) => {
+    admitStoreOutcome(classifyStoreBinding(moduleInfo, call, `s${index}`, locOf));
   });
+
+  let helperStoreIndex = contextCalls.length;
+  for (const call of helperContextCalls) {
+    if (!isWholeBindInit(moduleInfo, call)) continue;
+    admitStoreOutcome(classifyStoreBinding(moduleInfo, call, `s${helperStoreIndex}`, locOf));
+    helperStoreIndex++;
+  }
 
   // "Has a source cell at all" is about the PRESENCE of a factory call, so this
   // keys on `signalCalls` rather than `reasons.length === 0`: unmaskable, and no
@@ -2074,6 +2092,27 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         }
       }
 
+      if (
+        element.type === "MemberExpression" &&
+        element.computed !== true &&
+        element.property?.type === "Identifier"
+      ) {
+        const object = unwrap(element.object);
+        if (object != null && object.type === "Identifier") {
+          const symbol = frame.mod.referenceOf(object)?.symbol ?? null;
+          const read = symbol === null ? undefined : readSlots.get(symbol.id);
+          if (read !== undefined && read.path.length === 0) {
+            frame.refuse(
+              "jsx-dynamic-attribute",
+              "A ref array element names a store member, and a store capture is not emittable in a ref binding.",
+              element,
+              { reason: "ref-store-slot-not-emittable", store: read.store, path: [element.property.name] },
+            );
+            return "";
+          }
+        }
+      }
+
       const source = sourceBindingOf(element);
       if (source === null || source.path.length === 0) return null;
       const member = String(source.path[source.path.length - 1]);
@@ -2494,6 +2533,16 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           "page writes. A region is a guard rather than a toggle: an absent one has no DOM and " +
           "nothing here builds it, so a guard this page can flip for itself is refused instead " +
           "of being quietly pinned to whatever it said at build time.",
+      );
+    }
+
+    // A whole-bind read-through call is a method on the provider value, not a
+    // data-slot projection. Recording the region absent would skip the child
+    // and hide every refusal under it.
+    if (derived.slots.some((slot) => isStoreReadSlot(slot) && slot.path.length === 0)) {
+      return refuseGuard(
+        "A `<Show>` guard that is a read-through call of a whole-bound context has no build-time " +
+          "branch, and recording the region absent would skip markup this pass still has to see.",
       );
     }
 
@@ -3251,6 +3300,31 @@ export function classifySite(module: Module, component: ComponentSite, options?:
 
       // `props.count()` inside an inlined child: a read of the *parent's* cell.
       if (callee != null && (callee.type === "MemberExpression" || callee.type === "OptionalMemberExpression")) {
+        if (
+          env === null &&
+          frame.props === null &&
+          mod === moduleInfo &&
+          callee.computed !== true &&
+          callee.property?.type === "Identifier"
+        ) {
+          const object = unwrap(callee.object);
+          if (object != null && object.type === "Identifier") {
+            const symbol = mod.referenceOf(object)?.symbol ?? null;
+            const read = symbol === null ? undefined : readSlots.get(symbol.id);
+            if (read !== undefined && read.path.length === 0) {
+              derivedReads.add(object);
+              const rewrites = [{ node: object, name: read.name }];
+              return {
+                value: "",
+                slots: [{ name: read.name, kind: "store-read", store: read.store, path: read.path }],
+                source: printWithSlotRewrites(expression, rewrites),
+                inlined: false,
+                measured: true,
+                rewrites,
+              };
+            }
+          }
+        }
         if (env !== null) return null;
         const bound = propBindingOf(frame, callee);
         if (bound === null || bound.kind !== "accessor") return null;
@@ -4110,19 +4184,40 @@ export function classifySite(module: Module, component: ComponentSite, options?:
    */
   function actionHandler(raw: Node): { name: string; slot: CaptureSlot; loc: SourceLoc } | null {
     const inner = unwrap(raw);
-    if (inner == null || inner.type !== "Identifier") return null;
+    if (inner == null) return null;
 
-    const symbol = moduleInfo.referenceOf(inner)?.symbol ?? null;
-    if (symbol === null) return null;
+    if (inner.type === "Identifier") {
+      const symbol = moduleInfo.referenceOf(inner)?.symbol ?? null;
+      if (symbol === null) return null;
 
-    const action = actionSlots.get(symbol.id);
-    if (action === undefined) return null;
+      const action = actionSlots.get(symbol.id);
+      if (action === undefined) return null;
 
-    return {
-      name: symbol.name,
-      slot: { name: symbol.name, kind: "action", store: action.store, path: action.path },
-      loc: locOf(inner),
-    };
+      return {
+        name: symbol.name,
+        slot: { name: symbol.name, kind: "action", store: action.store, path: action.path },
+        loc: locOf(inner),
+      };
+    }
+
+    if (inner.type === "MemberExpression" && inner.computed !== true && inner.property?.type === "Identifier") {
+      const object = unwrap(inner.object);
+      if (object == null || object.type !== "Identifier") return null;
+      const symbol = moduleInfo.referenceOf(object)?.symbol ?? null;
+      if (symbol === null) return null;
+      const read = readSlots.get(symbol.id);
+      if (read === undefined || read.path.length !== 0) return null;
+      const key: string = inner.property.name;
+      const store = stores.find((candidate) => candidate.id === read.store);
+      if (store === undefined || !isObjectStore(store) || !store.keys.includes(key)) return null;
+      return {
+        name: key,
+        slot: { name: key, kind: "action", store: read.store, path: [key] },
+        loc: locOf(inner),
+      };
+    }
+
+    return null;
   }
 
   /** An identity-class event prop: `onClick={props.onClick}`. The listener
@@ -4390,6 +4485,13 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       // decide what a read binding may be used for.
       const read = readSlots.get(capture.symbol.id);
       if (read !== undefined) {
+        if (read.path.length === 0) {
+          if (capture.references.every((reference) => isWholeBindReadThroughCall(moduleInfo, reference.node))) {
+            slots.push({ name: capture.symbol.name, kind: "store-read", store: read.store, path: read.path });
+            for (const reference of capture.references) slotReads.add(reference.node);
+          }
+          continue;
+        }
         if (capture.references.every(isSlotMemberRead)) {
           slots.push({ name: capture.symbol.name, kind: "store-read", store: read.store, path: read.path });
           for (const reference of capture.references) slotReads.add(reference.node);
@@ -4653,6 +4755,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     for (const reference of site.symbol.references) {
       if (reference.inTypePosition || reference.node === site.node) continue;
       if (derivedReads.has(reference.node) || slotReads.has(reference.node)) continue;
+      if (site.read.path.length === 0 && isWholeBindAdmittedUse(moduleInfo, reference.node)) continue;
       if (!mutatesThroughRead(reference.node) && !reachesEmittedOutput(reference.node)) continue;
       refuse(
         "store-read-escapes",

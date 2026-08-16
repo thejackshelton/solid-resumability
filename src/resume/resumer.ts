@@ -37,6 +37,7 @@ import {
   isCellSlot,
   isIdentitySlot,
   isRegionItemSlot,
+  isStoreReadSlot,
   type Bundle,
   type CaptureSlotSpec,
   type IdentityCaptureSlotSpec,
@@ -421,7 +422,9 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
     // registry itself; a region dispatch may need stores the handler does not name.
     let provision: Promise<unknown> | null = null;
     if (stores) {
-      const named = new Set(record.spec.captures.filter(isActionSlot).map((slot) => slot.store));
+      const named = new Set(
+        record.spec.captures.filter((slot) => isActionSlot(slot) || isStoreReadSlot(slot)).map((slot) => slot.store),
+      );
       if (record.item && regions) for (const id of regions.stores(record)) named.add(id);
       const missing = [...named].filter((id) => !stores.has(id));
       if (missing.length) {

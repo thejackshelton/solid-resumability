@@ -711,3 +711,87 @@ describe("the corpus as a whole", () => {
     expect("emitted" in analysis).toBe(false);
   });
 });
+
+function storeReasons(analysis: Analysis): string[] {
+  return analysis.reasons
+    .filter((reason) => reason.code === "store-binding-not-provable")
+    .map((reason) => String(reason.detail?.reason));
+}
+
+describe("whole-bind object-shaped context — first-party host", () => {
+  it("admits a never-reassigned Identifier bound to useContext against an object provider", () => {
+    const analysis = shape("ObjectStoreHost.tsx", "ObjectStoreHost");
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.stores).toHaveLength(1);
+    expect(analysis.stores[0]).toMatchObject({
+      id: "s0",
+      context: "ShelfContext",
+      keys: ["isOpen", "toggle", "setAnchor"],
+    });
+    expect(analysis.stores[0]).not.toHaveProperty("actionsSlot");
+    expect(analysis.reads).toEqual([expect.objectContaining({ store: "s0", path: [] })]);
+    expect(analysis.actions).toEqual([expect.objectContaining({ name: "toggle", path: ["toggle"] })]);
+  });
+
+  it("admits the same shape through a guard-throw helper", () => {
+    const analysis = shape("ObjectStoreHost.tsx", "ObjectStoreHelperHost");
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.stores[0]).toMatchObject({ keys: ["isOpen", "toggle", "setAnchor"] });
+  });
+
+  it("records a read-through call as a store-read with path []", () => {
+    const analysis = shape("ObjectStoreHost.tsx", "ObjectStoreReadHost");
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.reads[0].path).toEqual([]);
+    expect(analysis.bindings[0].captures).toEqual([
+      expect.objectContaining({ kind: "store-read", store: "s0", path: [] }),
+    ]);
+  });
+
+  it("refuses a reassigned whole-bind", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreReassigned");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["whole-bind-reassigned"]);
+  });
+
+  it("refuses a computed member", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreComputed");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["whole-bind-computed-member"]);
+  });
+
+  it("refuses a bare escape", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreBareEscape");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["whole-bind-escapes"]);
+  });
+
+  it("refuses a spread provider", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreSpreadProvider");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["provider-value-not-readable"]);
+  });
+
+  it("refuses two providers", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreTwoProviders");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["provider-not-visible"]);
+  });
+
+  it("refuses a page-built provider value", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStorePageBuilt");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["provider-value-not-readable"]);
+  });
+
+  it("refuses emission of a ref binding that would carry a store capture", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreRefCapture");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toEqual(["jsx-dynamic-attribute"]);
+    expect(analysis.reasons[0]?.detail?.reason).toBe("ref-store-slot-not-emittable");
+    expect(codes(analysis)).not.toContain("store-binding-not-provable");
+  });
+});

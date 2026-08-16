@@ -20,6 +20,7 @@ import { GuardedReturnUnseen } from "./fixtures/shapes/GuardedReturnHost.tsx";
 import { ElementProjectionUnseen } from "./fixtures/shapes/ElementProjectionHost.tsx";
 import { MemberNamespaceUnseen } from "./fixtures/shapes/MemberNamespaceHost.tsx";
 import { GuardThrowContextUnseen } from "./fixtures/shapes/GuardThrowContextHost.tsx";
+import { ObjectStoreUnseen } from "./fixtures/shapes/ObjectStoreHost.tsx";
 
 /**
  * THE ADVERSARIAL INSTANTIATION GATE.
@@ -1509,5 +1510,69 @@ describe("adversarial instantiation gate — guard-throw-context-helper", () => 
     expect(
       GUARD_THROW_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
     ).toEqual(["guard-throw-context-body"]);
+  });
+});
+
+const OBJECT_STORE_HOSTS = `${SHAPES}/ObjectStoreHost.tsx`;
+const OBJECT_STORE_COUNTER = `${SHAPES}/ObjectStoreCounter.tsx`;
+
+const OBJECT_STORE_CLAUSES: ShapeClause[] = [
+  {
+    id: "object-store-admitted",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("store-binding-not-provable"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function objectStoreRule(): ShapeRuleRegistration {
+  return {
+    id: "object-shaped-context-store",
+    clauses: OBJECT_STORE_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: OBJECT_STORE_COUNTER, component: "ObjectStoreBareEscape" },
+    secondInstantiation: {
+      path: OBJECT_STORE_HOSTS,
+      component: "ObjectStoreUnseen",
+      render: ObjectStoreUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — object-shaped-context-store", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([objectStoreRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the bare escape", () => {
+    const lying: ShapeRuleRegistration = { ...objectStoreRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("object-shaped-context-store");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(OBJECT_STORE_HOSTS, "ObjectStoreHost");
+    const lying: ShapeRuleRegistration = {
+      ...objectStoreRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<button class="seen">ok</button>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("object-shaped-context-store");
+  });
+
+  it("the bare-escape counter fails exactly the object-store-admitted clause", () => {
+    const counter = classify(OBJECT_STORE_COUNTER, "ObjectStoreBareEscape");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("store-binding-not-provable")).toBe(true);
+    expect(
+      OBJECT_STORE_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["object-store-admitted"]);
   });
 });

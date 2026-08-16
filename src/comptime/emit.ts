@@ -23,6 +23,7 @@ import {
   isIdentitySlot,
   isRegionItemSlot,
   isStoreReadSlot,
+  isTupleStore,
   type BindingInfo,
   type CaptureSlot,
   type CodeOrigin,
@@ -30,6 +31,7 @@ import {
   type HandlerOrigin,
   type InitialFrom,
   type ProvableAnalysis,
+  type StoreInfo,
 } from "./types.ts";
 
 /** Language bindings that are not capture slots and not free component names. */
@@ -457,12 +459,9 @@ ${regions}
  * snapshot would be a claim the analysis cannot make. Identity is written
  * instead, so a resume can look the live store up and dispatch to it.
  */
-function emitStores(analysis: ProvableAnalysis): string {
-  if (analysis.stores.length === 0) return "";
-
-  const stores = analysis.stores
-    .map(
-      (store) => `  {
+function emitStoreRecord(store: StoreInfo): string {
+  if (isTupleStore(store)) {
+    return `  {
     id: ${js(store.id)},
     context: ${js(store.context)},
     contextModule: ${js(store.contextModule)},
@@ -470,9 +469,21 @@ function emitStores(analysis: ProvableAnalysis): string {
     readSlot: ${js(store.readSlot)},
     provider: ${js(store.provider.module)},
     value: { module: ${js(store.value.module)}, factory: ${js(store.value.factory)} },
-  },`,
-    )
-    .join("\n");
+  },`;
+  }
+  return `  {
+    id: ${js(store.id)},
+    context: ${js(store.context)},
+    contextModule: ${js(store.contextModule)},
+    provider: ${js(store.provider.module)},
+    keys: ${js(store.keys)},
+  },`;
+}
+
+function emitStores(analysis: ProvableAnalysis): string {
+  if (analysis.stores.length === 0) return "";
+
+  const stores = analysis.stores.map((store) => emitStoreRecord(store)).join("\n");
 
   const actions = analysis.actions
     .map(
@@ -624,15 +635,25 @@ function emitManifest(analysis: ProvableAnalysis, files: string[]): string {
         ...(analysis.stores.length === 0
           ? {}
           : {
-              stores: analysis.stores.map((store) => ({
-                id: store.id,
-                context: store.context,
-                contextModule: store.contextModule,
-                actionsSlot: store.actionsSlot,
-                readSlot: store.readSlot,
-                provider: store.provider.module,
-                value: store.value,
-              })),
+              stores: analysis.stores.map((store) =>
+                isTupleStore(store)
+                  ? {
+                      id: store.id,
+                      context: store.context,
+                      contextModule: store.contextModule,
+                      actionsSlot: store.actionsSlot,
+                      readSlot: store.readSlot,
+                      provider: store.provider.module,
+                      value: store.value,
+                    }
+                  : {
+                      id: store.id,
+                      context: store.context,
+                      contextModule: store.contextModule,
+                      provider: store.provider.module,
+                      keys: store.keys,
+                    },
+              ),
               actions: analysis.actions.map((action) => ({
                 id: action.id,
                 store: action.store,

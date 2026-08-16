@@ -98,9 +98,15 @@
       "onlyBlockerFor": 0
     },
     {
+      "code": "store-binding-not-provable",
+      "components": 2,
+      "occurrences": 2,
+      "onlyBlockerFor": 0
+    },
+    {
       "code": "jsx-dynamic-attribute",
       "components": 1,
-      "occurrences": 11,
+      "occurrences": 10,
       "onlyBlockerFor": 0
     },
     {
@@ -1080,7 +1086,8 @@
             "jsx-component-element",
             "show-branch-not-static-at-capture",
             "signal-escapes-unanalyzable-use",
-            "signal-escapes-unanalyzable-use"
+            "signal-escapes-unanalyzable-use",
+            "store-binding-not-provable"
           ]
         },
         "dist": {
@@ -1091,7 +1098,8 @@
             "jsx-component-element",
             "show-branch-not-static-at-capture",
             "signal-escapes-unanalyzable-use",
-            "signal-escapes-unanalyzable-use"
+            "signal-escapes-unanalyzable-use",
+            "store-binding-not-provable"
           ]
         }
       },
@@ -1102,6 +1110,25 @@
         "counts": []
       },
       "reasons": [
+        {
+          "code": "store-binding-not-provable",
+          "loc": "packages/core/src/dialog/dialog-content.tsx:240:24",
+          "line": 240,
+          "column": 24,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "context",
+          "expressionBytes": 7,
+          "message": "`context` is used somewhere other than a read-through call, an event-prop member, or a ref-array member.",
+          "detail": {
+            "reason": "whole-bind-escapes"
+          },
+          "shape": "`DialogContent` was refused with `store-binding-not-provable` at `context`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
         {
           "code": "show-branch-not-static-at-capture",
           "loc": "packages/core/src/dialog/dialog-content.tsx:224:9",
@@ -1223,7 +1250,7 @@
           "alsoInDist": true,
           "expression": "when={context.contentPresent() || context.overlayPresent()}",
           "expressionBytes": 59,
-          "message": "A `<Show>` guard has to be a derivation this pass can fold or measure. This one is neither, so which of the two branches the served markup carries cannot be settled before the page runs — and a region whose state the build does not know is a region the resume path would have to render.",
+          "message": "A `<Show>` guard that is a read-through call of a whole-bound context has no build-time branch, and recording the region absent would skip markup this pass still has to see.",
           "detail": null,
           "shape": "The `<Show>` guard is `when={context.contentPresent() || context.overlayPresent()}` — a presence accessor Kobalte derives from its disclosure state and reads back off context. The build can neither fold it nor measure it, so which branch the served markup carries is not settled before the page runs.",
           "wouldChange": {
@@ -1501,7 +1528,6 @@
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
             "signal-escapes-to-opaque-callee",
             "signal-escapes-unanalyzable-use"
           ]
@@ -1517,7 +1543,6 @@
             "handler-not-inline",
             "handler-not-inline",
             "handler-not-inline",
-            "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
@@ -1654,23 +1679,6 @@
           "message": "Attribute `data-key` is computed, so its rendered value is not static.",
           "detail": null,
           "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-key={selectableItem.dataKey()}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/tabs/tabs-trigger.tsx:150:4",
-          "line": 150,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "data-orientation={context.orientation()}",
-          "expressionBytes": 40,
-          "message": "Attribute `data-orientation` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-orientation={context.orientation()}`.",
           "wouldChange": {
             "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
             "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
@@ -1903,7 +1911,8 @@
             "jsx-component-element",
             "show-branch-not-static-at-capture",
             "signal-escapes-unanalyzable-use",
-            "signal-escapes-unanalyzable-use"
+            "signal-escapes-unanalyzable-use",
+            "store-binding-not-provable"
           ]
         },
         "dist": {
@@ -1915,7 +1924,8 @@
             "jsx-component-element",
             "show-branch-not-static-at-capture",
             "signal-escapes-unanalyzable-use",
-            "signal-escapes-unanalyzable-use"
+            "signal-escapes-unanalyzable-use",
+            "store-binding-not-provable"
           ]
         }
       },
@@ -1926,6 +1936,25 @@
         "counts": []
       },
       "reasons": [
+        {
+          "code": "store-binding-not-provable",
+          "loc": "packages/core/src/popover/popover-content.tsx:243:25",
+          "line": 243,
+          "column": 25,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "context",
+          "expressionBytes": 7,
+          "message": "`context` is used somewhere other than a read-through call, an event-prop member, or a ref-array member.",
+          "detail": {
+            "reason": "whole-bind-escapes"
+          },
+          "shape": "`PopoverContent` was refused with `store-binding-not-provable` at `context`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
         {
           "code": "show-branch-not-static-at-capture",
           "loc": "packages/core/src/popover/popover-content.tsx:226:9",

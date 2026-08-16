@@ -246,10 +246,11 @@ No refusal reasons: this function classified `provable`.
 | Exported from its module | yes |
 | Verdict, source arm | **fallback** |
 | Verdict, dist arm | **fallback** |
-| Reason set | 4 occurrence(s) across 3 code(s) |
+| Reason set | 5 occurrence(s) across 4 code(s) |
 
 | Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
 |---|---|---|---|---|---|---|
+| `store-binding-not-provable` | `240:24` | `context` | `DialogContent` was refused with `store-binding-not-provable` at `context`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `show-branch-not-static-at-capture` | `224:9` | `when={context.contentPresent()}` | The `<Show>` guard is `when={context.contentPresent()}` — a presence accessor Kobalte derives from its disclosure state and reads back off context. The build can neither fold it nor measure it, so which branch the served markup carries is not settled before the page runs. | Make the guard something the build can settle — a literal, or a value captured in the served first paint. A presence accessor driven by open/close state is neither, and it is the behaviour this part exists to provide. | NOT AUTHORIZED under zero-Solid-API-changes — measure a two-state region whose guard reads a third-party context accessor. | same in both arms |
 | `jsx-component-element` | `225:4` | `<DismissableLayer< Component< Omit<DialogContentRenderProps, keyof DismissableLayerRenderProps> > > ref={[ (el: HTMLElement) => { context.setContentRef(el); setRef(el); }, mergedProps.ref, ]} role="dialog" tabindex={-1}  …` | `DialogContent`'s markup routes through `<DismissableLayer>`, Kobalte's dismissable-layer wrapper, which carries the outside-press and escape handling this part exists to provide; only intrinsic elements template statically, so the pass stops at this element. | Render the content element directly and attach the dismiss behaviour as a primitive on a ref, rather than wrapping the markup in a behaviour component. | NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<DismissableLayer>`'s body is absorbed into this template, or admit component elements into static templating outright. | same in both arms |
 | `signal-escapes-unanalyzable-use` | `207:12` | `ref` | `ref` is packed into the options object literal Kobalte hands to `createPreventScroll(…)`, so the cell leaves `DialogContent` as a field of an argument the pass cannot follow. | Pass `createPreventScroll` a value it can read rather than the cell itself, so what crosses the call boundary is data instead of a live signal. | NOT AUTHORIZED under zero-Solid-API-changes — follow a signal through an options-object field into `createPreventScroll` and summarize what it does there. | same in both arms |
@@ -309,7 +310,7 @@ No refusal reasons: this function classified `provable`.
 | Exported from its module | yes |
 | Verdict, source arm | **fallback** |
 | Verdict, dist arm | **fallback** |
-| Reason set | 19 occurrence(s) across 4 code(s) |
+| Reason set | 18 occurrence(s) across 4 code(s) |
 
 | Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
 |---|---|---|---|---|---|---|
@@ -320,7 +321,6 @@ No refusal reasons: this function classified `provable`.
 | `jsx-dynamic-attribute` | `147:4` | `aria-disabled={isDisabled() ? "true" : undefined}` | `TabsTrigger` was refused with `jsx-dynamic-attribute` at `aria-disabled={isDisabled() ? "true" : undefined}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `jsx-dynamic-attribute` | `148:4` | `aria-controls={selectableItem.isSelected() ? contentId() : undefined}` | `TabsTrigger` was refused with `jsx-dynamic-attribute` at `aria-controls={selectableItem.isSelected() ? contentId() : undefined}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `jsx-dynamic-attribute` | `149:4` | `data-key={selectableItem.dataKey()}` | `TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-key={selectableItem.dataKey()}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
-| `jsx-dynamic-attribute` | `150:4` | `data-orientation={context.orientation()}` | `TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-orientation={context.orientation()}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `jsx-dynamic-attribute` | `151:4` | `data-selected={selectableItem.isSelected() ? "" : undefined}` | `TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-selected={selectableItem.isSelected() ? "" : undefined}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `jsx-dynamic-attribute` | `152:4` | `data-highlighted={isHighlighted() ? "" : undefined}` | `TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-highlighted={isHighlighted() ? "" : undefined}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `jsx-dynamic-attribute` | `153:4` | `data-disabled={isDisabled() ? "" : undefined}` | `TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-disabled={isDisabled() ? "" : undefined}`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
@@ -344,10 +344,11 @@ No refusal reasons: this function classified `provable`.
 | Exported from its module | yes |
 | Verdict, source arm | **fallback** |
 | Verdict, dist arm | **fallback** |
-| Reason set | 5 occurrence(s) across 3 code(s) |
+| Reason set | 6 occurrence(s) across 4 code(s) |
 
 | Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
 |---|---|---|---|---|---|---|
+| `store-binding-not-provable` | `243:25` | `context` | `PopoverContent` was refused with `store-binding-not-provable` at `context`. | Not characterised: this code was not observed across the twelve when the profile's prose was written. | NOT AUTHORIZED under zero-Solid-API-changes. | same in both arms |
 | `show-branch-not-static-at-capture` | `226:9` | `when={context.contentPresent()}` | The `<Show>` guard is `when={context.contentPresent()}` — a presence accessor Kobalte derives from its disclosure state and reads back off context. The build can neither fold it nor measure it, so which branch the served markup carries is not settled before the page runs. | Make the guard something the build can settle — a literal, or a value captured in the served first paint. A presence accessor driven by open/close state is neither, and it is the behaviour this part exists to provide. | NOT AUTHORIZED under zero-Solid-API-changes — measure a two-state region whose guard reads a third-party context accessor. | same in both arms |
 | `jsx-component-element` | `227:4` | `<Popper.Positioner> <DismissableLayer< Component< Omit<PopoverContentRenderProps, keyof DismissableLayerRenderProps> > > ref={[ (el: HTMLElement) => { context.setContentRef(el); setRef(el); }, mergedProps.ref, ]} role="d …` | `PopoverContent`'s markup routes through `<Popper.Positioner>`, a Kobalte compound part reached through a `JSXMemberExpression` — the module it comes from IS in the analyzed set here, so the member-expression form alone is what the splice cannot address; only intrinsic elements template statically, so the pass stops at this element. | Import the part as a plain binding rather than reaching it through a namespace object (`Popper.Positioner` -> `Positioner`). That alone does not make it templatable — it is still a component element — but it is the change that takes the member-expression form out of the way. | NOT AUTHORIZED under zero-Solid-API-changes — admit a `JSXMemberExpression` in `tryInlineComponent`, which today requires a `JSXIdentifier` whose `definition()` lies inside the analyzed set. | same in both arms |
 | `jsx-component-element` | `228:5` | `<DismissableLayer< Component< Omit<PopoverContentRenderProps, keyof DismissableLayerRenderProps> > > ref={[ (el: HTMLElement) => { context.setContentRef(el); setRef(el); }, mergedProps.ref, ]} role="dialog" tabindex={-1} …` | `PopoverContent`'s markup routes through `<DismissableLayer>`, Kobalte's dismissable-layer wrapper, which carries the outside-press and escape handling this part exists to provide; only intrinsic elements template statically, so the pass stops at this element. | Render the content element directly and attach the dismiss behaviour as a primitive on a ref, rather than wrapping the markup in a behaviour component. | NOT AUTHORIZED under zero-Solid-API-changes — widen the depth-1 component splice so `<DismissableLayer>`'s body is absorbed into this template, or admit component elements into static templating outright. | same in both arms |
@@ -366,9 +367,10 @@ Ranked by how many distinct components carry the code; occurrences break ties. S
 | 4 | `signal-escapes-to-opaque-callee` | 3 | 5 | 0 |
 | 5 | `handler-not-inline` | 2 | 8 | 0 |
 | 6 | `jsx-dynamic-child-not-derivable` | 2 | 2 | 0 |
-| 7 | `jsx-dynamic-attribute` | 1 | 11 | 0 |
-| 8 | `jsx-spread` | 1 | 2 | 0 |
-| 9 | `signal-initializer-not-literal` | 1 | 1 | 0 |
+| 7 | `store-binding-not-provable` | 2 | 2 | 0 |
+| 8 | `jsx-dynamic-attribute` | 1 | 10 | 0 |
+| 9 | `jsx-spread` | 1 | 2 | 0 |
+| 10 | `signal-initializer-not-literal` | 1 | 1 | 0 |
 
 ## Only-blockers
 
@@ -412,11 +414,11 @@ The two arms are the same artifact before and after rolldown, so this difference
 | `CheckboxIndicator` | `packages/core/src/checkbox/checkbox-indicator.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |
 | `DialogRoot` | `packages/core/src/dialog/dialog-root.tsx` | yes | fallback | — | `jsx-component-element`<br>`jsx-dynamic-child-not-derivable`<br>`signal-escapes-to-opaque-callee`<br>`signal-escapes-unanalyzable-use` |
 | `DialogTrigger` | `packages/core/src/dialog/dialog-trigger.tsx` | yes | fallback | — | `jsx-component-element` |
-| `DialogContent` | `packages/core/src/dialog/dialog-content.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |
+| `DialogContent` | `packages/core/src/dialog/dialog-content.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use`<br>`store-binding-not-provable` |
 | `DialogPortal` | `packages/core/src/dialog/dialog-portal.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture` |
 | `TabsRoot` | `packages/core/src/tabs/tabs-root.tsx` | yes | fallback | — | `jsx-component-element`<br>`signal-escapes-unanalyzable-use`<br>`signal-initializer-not-literal` |
 | `TabsTrigger` | `packages/core/src/tabs/tabs-trigger.tsx` | yes | fallback | — | `handler-not-inline`<br>`jsx-dynamic-attribute`<br>`signal-escapes-to-opaque-callee`<br>`signal-escapes-unanalyzable-use` |
-| `PopoverContent` | `packages/core/src/popover/popover-content.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |
+| `PopoverContent` | `packages/core/src/popover/popover-content.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use`<br>`store-binding-not-provable` |
 
 ## Determinism
 

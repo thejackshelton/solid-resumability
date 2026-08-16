@@ -135,8 +135,11 @@ export function isCellSlot(slot: CaptureSlotSpec): slot is CellCaptureSlotSpec {
 /**
  * A context-provided store, by identity. Emitted into `structure.js` so a page
  * can register the live value for each id the artifacts name.
+ *
+ * Tuple and object variants are marked by their own keys: the tuple keeps
+ * `actionsSlot` / `readSlot` / `value`; the object carries `keys`.
  */
-export interface StoreSpec {
+export interface TupleStoreSpec {
   id: string;
   context: string;
   contextModule: string;
@@ -147,6 +150,28 @@ export interface StoreSpec {
   readSlot: number | null;
   provider: string;
   value: { module: string; factory: string };
+  keys?: undefined;
+}
+
+export interface ObjectStoreSpec {
+  id: string;
+  context: string;
+  contextModule: string;
+  provider: string;
+  keys: string[];
+  actionsSlot?: undefined;
+  readSlot?: undefined;
+  value?: undefined;
+}
+
+export type StoreSpec = TupleStoreSpec | ObjectStoreSpec;
+
+export function isTupleStoreSpec(store: StoreSpec): store is TupleStoreSpec {
+  return (store as TupleStoreSpec).actionsSlot !== undefined;
+}
+
+export function isObjectStoreSpec(store: StoreSpec): store is ObjectStoreSpec {
+  return (store as ObjectStoreSpec).keys !== undefined;
 }
 
 /** One action of one store, by identity. */

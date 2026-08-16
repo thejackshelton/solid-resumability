@@ -22,9 +22,15 @@
  *      is imported from a Solid module.
  *   2. FIXED-SLOT DESTRUCTURING. The result is destructured immediately into an
  *      array pattern whose action slot is an object pattern of plain,
- *      non-computed, non-defaulted identifiers. `const ctx = useContext(X)`,
- *      `const [, actions] = …`, `const [, { a = f }] = …` and a rest element
- *      all fail: none names a FIXED slot.
+ *      non-computed, non-defaulted identifiers. `const ctx = useContext(X)`
+ *      against a tuple factory, `const [, actions] = …`, `const [, { a = f }]
+ *      = …` and a rest element all fail: none names a FIXED slot.
+ *   2b. WHOLE-BIND. A sibling of clause 2: the declarator id is a plain
+ *      never-reassigned Identifier whose init is a direct `useContext(C)` or a
+ *      guard-throw helper call. The provider's value is an object literal with
+ *      static keys, or an Identifier initialized to one. Uses of the binding
+ *      are only a read-through call `x.K()`, an event-prop identity `x.K`, or
+ *      a ref-array-element identity `x.K`.
  *   3. FIXED-SLOT READ. The read slot may be a hole, or a plain identifier at a
  *      fixed numeric index. Binding it admits an IDENTITY — this local name is
  *      slot `r` of that same provider's value — and nothing else: the value is
@@ -95,7 +101,12 @@ export type StoreRefusal =
   | "provider-not-visible"
   | "provider-value-not-readable"
   | "action-slot-missing"
-  | "action-escapes";
+  | "action-escapes"
+  | "whole-bind-reassigned"
+  | "whole-bind-computed-member"
+  | "whole-bind-assignment"
+  | "whole-bind-spread"
+  | "whole-bind-escapes";
 
 export interface StoreBinding {
   store: StoreInfo;
@@ -348,6 +359,130 @@ function staticKeys(object: Node): Set<string> | null {
   return keys;
 }
 
+/** The VariableDeclarator whose init is `call`, walking through parens/TS. */
+function declaratorOf(m: Module, call: Node): { declarator: Node; init: Node } | null {
+  let node: Node = call;
+  let parent: Node = m.parentOf(node);
+  while (parent != null && parent.type !== "VariableDeclarator") {
+    if (parent.type !== "ParenthesizedExpression" && !parent.type.startsWith("TS")) break;
+    node = parent;
+    parent = m.parentOf(node);
+  }
+  if (parent == null || parent.type !== "VariableDeclarator" || parent.init !== node) return null;
+  return { declarator: parent, init: node };
+}
+
+/** True when `call` is the init of a plain Identifier declarator. */
+export function isWholeBindInit(m: Module, call: Node): boolean {
+  const bound = declaratorOf(m, call);
+  return bound != null && bound.declarator.id?.type === "Identifier";
+}
+
+/** Non-computed `x.K` whose object is this binding occurrence, or null. */
+function memberOfBinding(m: Module, node: Node): Node | null {
+  const parent: Node = m.parentOf(node);
+  if (parent == null || parent.type !== "MemberExpression" || parent.object !== node) return null;
+  if (parent.computed === true || parent.property?.type !== "Identifier") return null;
+  return parent;
+}
+
+/** `x.K()` — the binding is the object of a non-computed member used as callee. */
+export function isWholeBindReadThroughCall(m: Module, node: Node): boolean {
+  const member = memberOfBinding(m, node);
+  if (member === null) return false;
+  const parent: Node = m.parentOf(member);
+  return parent != null && parent.type === "CallExpression" && parent.callee === member;
+}
+
+/** `onX={x.K}` — the member, not the binding, is the event-prop value. */
+export function isWholeBindEventPropMember(m: Module, node: Node): boolean {
+  const member = memberOfBinding(m, node);
+  return member !== null && isEventPropValue(m, member);
+}
+
+/** `ref={[x.K, …]}` — the member is an element of a ref array. */
+export function isWholeBindRefArrayMember(m: Module, node: Node): boolean {
+  const member = memberOfBinding(m, node);
+  if (member === null) return false;
+  const array: Node = m.parentOf(member);
+  if (array == null || array.type !== "ArrayExpression") return false;
+  const container: Node = m.parentOf(array);
+  if (container == null || container.type !== "JSXExpressionContainer") return false;
+  const attribute: Node = m.parentOf(container);
+  return (
+    attribute != null &&
+    attribute.type === "JSXAttribute" &&
+    attribute.value === container &&
+    attribute.name?.type === "JSXIdentifier" &&
+    attribute.name.name === "ref"
+  );
+}
+
+export function isWholeBindAdmittedUse(m: Module, node: Node): boolean {
+  return (
+    isWholeBindReadThroughCall(m, node) || isWholeBindEventPropMember(m, node) || isWholeBindRefArrayMember(m, node)
+  );
+}
+
+function wholeBindUseReason(m: Module, node: Node): StoreRefusal {
+  const parent: Node = m.parentOf(node);
+  if (parent != null && parent.type === "MemberExpression" && parent.object === node) {
+    if (parent.computed === true) return "whole-bind-computed-member";
+    const grand: Node = m.parentOf(parent);
+    if (grand != null && grand.type === "AssignmentExpression" && grand.left === parent) {
+      return "whole-bind-assignment";
+    }
+    if (grand != null && grand.type === "UpdateExpression") return "whole-bind-assignment";
+  }
+  if (parent != null && parent.type === "SpreadElement") return "whole-bind-spread";
+  if (parent != null && parent.type === "AssignmentExpression" && parent.left === node) {
+    return "whole-bind-assignment";
+  }
+  return "whole-bind-escapes";
+}
+
+/**
+ * Object-shaped provider value: an ObjectExpression with static keys, or a
+ * never-reassigned Identifier initialized to one. Shape only — no values.
+ */
+function objectShapeOf(mod: Module, value: Node): { keys: string[] } | null {
+  let object: Node = value;
+  if (value.type === "Identifier") {
+    const bound = mod.referenceOf(value)?.symbol ?? null;
+    if (bound === null || bound.declarations.length !== 1) return null;
+    if (bound.references.some((reference) => reference.isWrite)) return null;
+    const declaration: Node = bound.declarations[0];
+    const declarator: Node = mod.parentOf(declaration);
+    if (declarator == null || declarator.type !== "VariableDeclarator") return null;
+    if (declarator.id !== declaration || declarator.init == null) return null;
+    object = unwrap(declarator.init);
+  }
+  if (object == null || object.type !== "ObjectExpression") return null;
+  const names = staticKeys(object);
+  return names === null ? null : { keys: [...names] };
+}
+
+/** Context identity from a direct `useContext(C)` or a guard-throw helper. */
+function contextFromCall(
+  m: Module,
+  call: Node,
+): { module: Module; symbol: YukuSymbol; call: Node } | null {
+  const ids = solidImportIds(m, "useContext");
+  if (ids.size > 0 && isUseContextCall(m, call, ids)) {
+    if (call.arguments?.length !== 1) return null;
+    return contextDefinitionOf(m, call.arguments[0]);
+  }
+  const resolved = calleeFunction(m, call.callee);
+  if (resolved === null) return null;
+  const match = matchGuardThrowContext(resolved.module, resolved.fn);
+  if (match === null) return null;
+  const helperIds = solidImportIds(resolved.module, "useContext");
+  if (helperIds.size === 0) return null;
+  if (!isUseContextCall(resolved.module, match.call, helperIds)) return null;
+  if (match.call.arguments?.length !== 1) return null;
+  return contextDefinitionOf(resolved.module, match.call.arguments[0]);
+}
+
 /**
  * The fixed slot names the provider's value exposes at `slot`. Only the SHAPE of
  * the returned tuple is read — which slot holds which named properties. Nothing
@@ -422,6 +557,134 @@ function destructuredActions(
   return out;
 }
 
+function classifyWholeBind(
+  m: Module,
+  call: Node,
+  storeId: string,
+  locOf: (node: Node) => SourceLoc,
+  refuse: (reason: StoreRefusal, message: string, node: Node) => StoreOutcome,
+  context: { module: Module; symbol: YukuSymbol; call: Node },
+  pattern: Node,
+): StoreOutcome {
+  const symbol = m.symbolOf(pattern);
+  if (symbol === null) {
+    return refuse(
+      "result-not-destructured",
+      "The context result is bound to a name with no resolved binding, so nothing can be said about what reads it.",
+      pattern,
+    );
+  }
+
+  if (symbol.references.some((reference) => reference.isWrite && reference.node !== pattern)) {
+    return refuse(
+      "whole-bind-reassigned",
+      `\`${symbol.name}\` is reassigned, so the binding has no single identity to name.`,
+      pattern,
+    );
+  }
+
+  const providers = providersOf(context.module, context.symbol);
+  if (providers.length !== 1) {
+    return refuse(
+      "provider-not-visible",
+      providers.length === 0
+        ? `No provider for \`${context.symbol.name}\` is visible in the analyzed file set, so the value behind this context is unknown.`
+        : `\`${context.symbol.name}\` has ${providers.length} providers in the analyzed file set; which value this binding reads is not decidable.`,
+      call,
+    );
+  }
+
+  const [provider] = providers;
+  const shape = objectShapeOf(provider.module, provider.value);
+  if (shape === null) {
+    if (slotShapeOf(provider.module, provider.value, 1) !== null) {
+      return refuse(
+        "result-not-destructured",
+        "The context result must be destructured into a fixed two-slot array pattern.",
+        pattern,
+      );
+    }
+    return refuse(
+      "provider-value-not-readable",
+      "The provider's value is not an object literal with static keys, or a never-reassigned identifier initialized to one.",
+      call,
+    );
+  }
+
+  const actions: ActionInfo[] = [];
+  const seenKeys = new Set<string>();
+  let actionIndex = 0;
+
+  for (const reference of symbol.references) {
+    if (reference.inTypePosition || reference.node === pattern) continue;
+    if (isWholeBindAdmittedUse(m, reference.node)) {
+      if (isWholeBindEventPropMember(m, reference.node)) {
+        const member = memberOfBinding(m, reference.node);
+        const key: string = member!.property.name;
+        if (!shape.keys.includes(key)) {
+          return refuse(
+            "action-slot-missing",
+            `The provider's value has no action slot named \`${key}\`.`,
+            reference.node,
+          );
+        }
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          actions.push({
+            id: `${storeId}a${actionIndex}`,
+            store: storeId,
+            name: key,
+            path: [key],
+            loc: locOf(member!),
+          });
+          actionIndex++;
+        }
+      }
+      continue;
+    }
+    const reason = wholeBindUseReason(m, reference.node);
+    const messages: Record<
+      "whole-bind-computed-member" | "whole-bind-assignment" | "whole-bind-spread" | "whole-bind-escapes",
+      string
+    > = {
+      "whole-bind-computed-member": `\`${symbol.name}\` is read through a computed member, so which key reaches that position is not decidable.`,
+      "whole-bind-assignment": `\`${symbol.name}\` is assigned through, so the binding is not a read of the provider's value.`,
+      "whole-bind-spread": `\`${symbol.name}\` is spread, so its identity is not what reaches that position.`,
+      "whole-bind-escapes": `\`${symbol.name}\` is used somewhere other than a read-through call, an event-prop member, or a ref-array member.`,
+    };
+    return refuse(reason, messages[reason as keyof typeof messages] ?? messages["whole-bind-escapes"], reference.node);
+  }
+
+  const providerLoc = makeLocator(provider.module.source)(provider.element);
+  const store: StoreInfo = {
+    id: storeId,
+    context: context.symbol.name,
+    contextModule: context.module.path,
+    provider: { module: provider.module.path, loc: providerLoc },
+    keys: shape.keys,
+    loc: locOf(call),
+  };
+
+  const read: StoreReadInfo = {
+    id: `${storeId}r`,
+    store: storeId,
+    name: symbol.name,
+    path: [],
+    loc: locOf(pattern),
+  };
+
+  return {
+    kind: "admitted",
+    binding: {
+      store,
+      actions,
+      reads: [read],
+      actionSymbols: new Map(),
+      readSites: [{ symbol, node: pattern, read }],
+    },
+  };
+}
+
 /**
  * Classifies the one store binding a component declares. `storeId` is the id to
  * mint; `locOf` reports locations in the COMPONENT's module. A refusal comes
@@ -441,33 +704,18 @@ export function classifyStoreBinding(
     node,
   });
 
-  if (call.arguments.length !== 1) {
-    return refuse(
-      "context-not-createContext",
-      `useContext takes exactly one context argument in a provable component; got ${call.arguments.length}.`,
-      call,
-    );
-  }
-
-  const context = contextDefinitionOf(m, call.arguments[0]);
+  const context = contextFromCall(m, call);
   if (context === null) {
     return refuse(
       "context-not-createContext",
       "The context argument does not resolve to a `createContext` binding inside the analyzed file set.",
-      call.arguments[0],
+      call.arguments?.[0] ?? call,
     );
   }
 
-  // --- the binding site: `const [, { … }] = useContext(X)`.
-  let node: Node = call;
-  let parent: Node = m.parentOf(node);
-  while (parent != null && parent.type !== "VariableDeclarator") {
-    if (parent.type !== "ParenthesizedExpression" && !parent.type.startsWith("TS")) break;
-    node = parent;
-    parent = m.parentOf(node);
-  }
-
-  if (parent == null || parent.type !== "VariableDeclarator" || parent.init !== node) {
+  // --- the binding site: `const [, { … }] = useContext(X)` or `const x = …`.
+  const bound = declaratorOf(m, call);
+  if (bound === null) {
     return refuse(
       "result-not-destructured",
       "The context result is not bound by a destructuring declaration, so no fixed slot can be named.",
@@ -475,7 +723,12 @@ export function classifyStoreBinding(
     );
   }
 
+  const parent = bound.declarator;
   const pattern = parent.id;
+  if (pattern != null && pattern.type === "Identifier") {
+    return classifyWholeBind(m, call, storeId, locOf, refuse, context, pattern);
+  }
+
   if (pattern == null || pattern.type !== "ArrayPattern" || pattern.elements.length !== 2) {
     return refuse(
       "result-not-destructured",

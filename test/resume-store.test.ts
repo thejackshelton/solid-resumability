@@ -147,6 +147,136 @@ describe("the action registry resolves identity, and only identity", () => {
   });
 });
 
+const OBJECT_TEMPLATE = '<button class="go">ok</button>';
+
+function liveObjectStore() {
+  const seen: unknown[] = [];
+  const value = {
+    isOpen: () => seen.length > 0,
+    toggle() {
+      seen.push("toggle");
+    },
+    setAnchor(_el: unknown) {},
+  };
+  return { value, seen };
+}
+
+function objectActionHandler(): HandlerModule {
+  return {
+    id: "s0",
+    event: "click",
+    locator: "/",
+    captures: [{ name: "toggle", kind: "action", store: "s0", path: ["toggle"] }],
+    create({ toggle }: Record<string, unknown>) {
+      return () => {
+        (toggle as () => void)();
+      };
+    },
+  };
+}
+
+function objectReadHandler(): HandlerModule {
+  return {
+    id: "s0",
+    event: "click",
+    locator: "/",
+    captures: [{ name: "ctx", kind: "store-read", store: "s0", path: [] }],
+    create({ ctx }: Record<string, unknown>) {
+      return () => {
+        (ctx as { toggle: () => void }).toggle();
+      };
+    },
+  };
+}
+
+function objectBundle(overrides: Partial<Bundle> = {}): Bundle {
+  return {
+    component: "ObjectStoreHost",
+    template: { html: OBJECT_TEMPLATE, root: "/" },
+    cells: [],
+    regions: [],
+    keyedRegions: [],
+    stores: [
+      {
+        id: "s0",
+        context: "ShelfContext",
+        contextModule: "test/fixtures/shapes/object-store-context.tsx",
+        provider: "test/fixtures/shapes/object-store-context.tsx",
+        keys: ["isOpen", "toggle", "setAnchor"],
+      },
+    ],
+    actions: [{ id: "s0a0", store: "s0", name: "toggle", path: ["toggle"] }],
+    reads: [{ id: "s0r", store: "s0", name: "ctx", path: [] }],
+    bindings: [],
+    wiring: [
+      {
+        locator: "/",
+        event: "click",
+        module: "./handlers/s0.js",
+        handler: "s0",
+        captures: [{ name: "toggle", kind: "action", store: "s0", path: ["toggle"] }],
+      },
+    ],
+    loadHandler: async () => objectActionHandler(),
+    ...overrides,
+  };
+}
+
+function objectMount(): HTMLElement {
+  const host = document.createElement("div");
+  host.innerHTML = OBJECT_TEMPLATE;
+  document.body.appendChild(host);
+  return host;
+}
+
+describe("an object-shaped store joins by identity", () => {
+  it("dispatches a member action after provide-before-resume", async () => {
+    const store = liveObjectStore();
+    const registry = createStoreRegistry();
+    registry.provide("s0", store.value);
+
+    const host = objectMount();
+    const app = resumeBundle(host, objectBundle(), { stores: registry });
+    host.querySelector("button")!.click();
+    await app.settled();
+
+    expect(store.seen).toEqual(["toggle"]);
+    app.dispose();
+  });
+
+  it("waits on a store-read handler slot when provide is deferred", async () => {
+    const store = liveObjectStore();
+    const registry = createStoreRegistry();
+    registry.onMissing((id) => {
+      registry.provide(id, store.value);
+    });
+
+    const host = objectMount();
+    const app = resumeBundle(
+      host,
+      objectBundle({
+        wiring: [
+          {
+            locator: "/",
+            event: "click",
+            module: "./handlers/s0.js",
+            handler: "s0",
+            captures: [{ name: "ctx", kind: "store-read", store: "s0", path: [] }],
+          },
+        ],
+        loadHandler: async () => objectReadHandler(),
+      }),
+      { stores: registry },
+    );
+
+    host.querySelector("button")!.click();
+    await app.settled();
+
+    expect(store.seen).toEqual(["toggle"]);
+    app.dispose();
+  });
+});
+
 describe("a resumed handler dispatches to the live store", () => {
   it("calls the real action, with the argument the handler built", async () => {
     const store = liveStore();

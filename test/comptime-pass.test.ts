@@ -478,3 +478,29 @@ describe("element-projection cell admission", () => {
     expect(analysis.reasons.map((reason) => reason.code)).toContain("handler-captures-unprovable-binding");
   });
 });
+
+describe("whole-bind object-shaped context — emit and DialogTrigger", () => {
+  it("emits object stores by their own keys, not tuple fields", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/ObjectStoreHost.tsx", {
+      write: false,
+      component: "ObjectStoreHost",
+    });
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    const dir = scratch();
+    const result = emit(analysis, dir);
+    const structure = readFileSync(join(result.dir, "structure.js"), "utf8");
+    expect(structure).toContain("keys:");
+    expect(structure).not.toContain("actionsSlot");
+    expect(structure).toContain('path: ["toggle"]');
+  });
+
+  it("keeps DialogTrigger on jsx-component-element after the store admits", () => {
+    const analysis = analyzeFixture("demo/node_modules/@kobalte/core/dist/dialog/C9YDO9vc.jsx", {
+      write: false,
+      component: "DialogTrigger",
+    });
+    expect(analysis.status).toBe("fallback");
+    expect(analysis.reasons.map((reason) => reason.code)).toEqual(["jsx-component-element"]);
+  });
+});

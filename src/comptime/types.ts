@@ -147,12 +147,13 @@ export interface CellInfo {
  * A context-provided store the component takes actions from (S3). Nothing here
  * describes the store's VALUE: it is identified by the `createContext` symbol
  * naming it and the provider proven to supply it, and its contents stay
- * runtime-opaque. `readSlot` is the tuple slot the component bound the store's
- * data from, when it bound one at a fixed numeric index — an identity, exactly
- * like `actionsSlot`, and never a value. `null` means the component destructured
- * a hole there and takes actions only.
+ * runtime-opaque.
+ *
+ * Two variants, discriminated by their own keys. The tuple variant keeps
+ * `actionsSlot` / `readSlot` / `value.factory`. The object variant carries the
+ * provider object's static `keys` and none of the tuple fields.
  */
-export interface StoreInfo {
+export interface TupleStoreInfo {
   id: string;
   /** Local name of the `createContext` binding the component consumed. */
   context: string;
@@ -167,6 +168,31 @@ export interface StoreInfo {
   /** The factory whose returned tuple the slot path indexes into. */
   value: { module: string; factory: string };
   loc: SourceLoc;
+  keys?: undefined;
+}
+
+/** Whole-bound object-shaped context: the binding IS the provider's value. */
+export interface ObjectStoreInfo {
+  id: string;
+  context: string;
+  contextModule: string;
+  provider: { module: string; loc: SourceLoc };
+  /** Static keys of the provider object. Identity only — no values. */
+  keys: string[];
+  loc: SourceLoc;
+  actionsSlot?: undefined;
+  readSlot?: undefined;
+  value?: undefined;
+}
+
+export type StoreInfo = TupleStoreInfo | ObjectStoreInfo;
+
+export function isTupleStore(store: StoreInfo): store is TupleStoreInfo {
+  return (store as TupleStoreInfo).actionsSlot !== undefined;
+}
+
+export function isObjectStore(store: StoreInfo): store is ObjectStoreInfo {
+  return (store as ObjectStoreInfo).keys !== undefined;
 }
 
 /** One action destructured out of a store, recorded BY IDENTITY: its store and

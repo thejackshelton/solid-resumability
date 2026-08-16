@@ -31,7 +31,7 @@
  * module graph they still see.
  */
 
-import { ARTIFACT_ROOT, CLICK, DEMO_ROOT, FIXTURES, REPO_ROOT, RESUMED, RULE } from "./fixtures.mjs";
+import { ARTIFACT_ROOT, CLICK, DEMO_ROOT, DIALOG, FIXTURES, REPO_ROOT, RESUMED, RULE } from "./fixtures.mjs";
 
 /** The corpus module the todos page resumes a component out of. */
 const APP_MOUNT = RESUMED[0];
@@ -78,6 +78,7 @@ const ENTRIES = {
   todos: { from: "/src/pages/todos.ts", to: "/src/pages/todos-resumable.ts" },
   rule: { from: "/src/pages/rule-classic.ts", to: "/src/pages/rule-resumable.ts" },
   click: { from: "/src/pages/click-classic.ts", to: "/src/pages/click-resumable.ts" },
+  dialog: { from: "/src/pages/dialog-classic.ts", to: "/src/pages/dialog-resumable.ts" },
 };
 
 /**
@@ -94,7 +95,7 @@ const ENTRIES = {
  * @param {{ capture?: string[] }} [options]
  * @returns {import("unplugin-solid-resumability/types").ResumabilityOptions}
  */
-export function demoResumability({ capture = ["fixtures", "todos", "rule", "click"] } = {}) {
+export function demoResumability({ capture = ["fixtures", "todos", "rule", "click", "dialog"] } = {}) {
   const captures = new Set(capture);
 
   return {
@@ -146,6 +147,12 @@ export function demoResumability({ capture = ["fixtures", "todos", "rule", "clic
         page: fixture.page,
       })),
       ...CLICK.map((fixture) => ({
+        component: fixture.component,
+        source: fixture.source,
+        artifact: fixture.artifact,
+        page: fixture.page,
+      })),
+      ...DIALOG.map((fixture) => ({
         component: fixture.component,
         source: fixture.source,
         artifact: fixture.artifact,
@@ -243,6 +250,13 @@ export function demoResumability({ capture = ["fixtures", "todos", "rule", "clic
         id: "click",
         html: "click.html",
         entry: ENTRIES.click,
+        inlineTemplates: true,
+        prerender: false,
+      },
+      {
+        id: "dialog",
+        html: "dialog.html",
+        entry: ENTRIES.dialog,
         inlineTemplates: true,
         prerender: false,
       },

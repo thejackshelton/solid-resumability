@@ -504,7 +504,10 @@ describe("whole-bind object-shaped context — emit and DialogTrigger", () => {
     if (analysis.status !== "provable") return;
     expect(analysis.claimedChildren).toHaveLength(1);
     expect(analysis.claimedChildren[0].component).toBe("ButtonRoot");
+    expect(analysis.claimedChildren[0].artifact).not.toBe("DvspU6cJ.ButtonRoot");
+    expect(analysis.claimedChildren[0].artifact).toMatch(/^DvspU6cJ\.ButtonRoot~/);
     expect(analysis.html).toMatch(/data-component="ButtonRoot"/);
+    expect(analysis.html).toContain(`data-resume="${analysis.claimedChildren[0].artifact}"`);
     expect(analysis.html).not.toContain("aria-expanded");
   });
 });

@@ -3,8 +3,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { analyzeFixture, analyzeWithRecordedProps, runComptime } from "../src/comptime/index.ts";
-import type { ProvableAnalysis } from "../src/comptime/types.ts";
+import { analyzeFixture, analyzeWithRecordedProps, emit, runComptime } from "../src/comptime/index.ts";
+import { claimedArtifactKey, type ProvableAnalysis } from "../src/comptime/types.ts";
 import { locate } from "../src/resume/locate.ts";
 import { createRegistry, type Bundle, type HandlerModule } from "../src/resume/registry.ts";
 import { resumeBundle } from "../src/resume/resumer.ts";
@@ -31,8 +31,8 @@ import { resumeBundle } from "../src/resume/resumer.ts";
 
 const FIXTURE = "app/src/fixtures/ComposedCounter.tsx";
 const PARENT_ARTIFACT = "ComposedCounter.ComposedOuter";
-const CHILD_ARTIFACT = "ComposedCounter.ComposedInner";
 const SEED_RECORD = [{ name: "kind", value: "seed" }] as const;
+const CHILD_ARTIFACT = claimedArtifactKey(FIXTURE, "ComposedInner", SEED_RECORD);
 
 const scratchDirs: string[] = [];
 
@@ -101,11 +101,17 @@ describe("the claimed child stands on its own", () => {
     component: "ComposedInner",
     write: false,
   });
-  const { analysis, emitted } = runComptime(FIXTURE, {
+  const classified = runComptime(FIXTURE, {
     component: "ComposedInner",
     outRoot,
     recordedProps: SEED_RECORD,
+    write: false,
   });
+  if (classified.analysis.status !== "provable") {
+    throw new Error("expected the child to classify provable with the record");
+  }
+  const analysis = classified.analysis;
+  const emitted = emit(analysis, join(outRoot, CHILD_ARTIFACT));
 
   it("refuses standalone classification — a recorded prop is not a default", () => {
     expect(standalone.status).toBe("fallback");
@@ -251,12 +257,16 @@ describe("a claimed child rides the manifest, never the eager module", () => {
     // `demo/artifacts/` came out of this change byte for byte what they were:
     // an artifact that addresses nothing says nothing, in either file.
     const outRoot = scratch();
-    const { emitted } = runComptime(FIXTURE, {
+    const classified = runComptime(FIXTURE, {
       component: "ComposedInner",
       outRoot,
       recordedProps: SEED_RECORD,
+      write: false,
     });
-    if (emitted === null) throw new Error("expected ComposedInner to emit");
+    if (classified.analysis.status !== "provable") {
+      throw new Error("expected ComposedInner to classify provable");
+    }
+    const emitted = emit(classified.analysis, join(outRoot, CHILD_ARTIFACT));
 
     expect(readFileSync(join(emitted.dir, "structure.js"), "utf8")).not.toContain("claimedChildren");
     expect(readFileSync(join(emitted.dir, "manifest.json"), "utf8")).not.toContain("claimedChildren");
@@ -269,11 +279,16 @@ describe("the child resumes inside the parent's hole", () => {
   it("moves the child's cell, leaves the parent's alone, and dispatches once", async () => {
     const outRoot = scratch();
     runComptime(FIXTURE, { component: "ComposedOuter", outRoot });
-    runComptime(FIXTURE, {
+    const classified = runComptime(FIXTURE, {
       component: "ComposedInner",
       outRoot,
       recordedProps: SEED_RECORD,
+      write: false,
     });
+    if (classified.analysis.status !== "provable") {
+      throw new Error("expected ComposedInner to classify provable");
+    }
+    emit(classified.analysis, join(outRoot, CHILD_ARTIFACT));
 
     const parentBundle = await bundleOf(outRoot, PARENT_ARTIFACT);
     const childBundle = await bundleOf(outRoot, CHILD_ARTIFACT);

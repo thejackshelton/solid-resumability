@@ -155,7 +155,7 @@ export const FIXTURES = [
      */
     addressed: {
       component: "ComposedInner",
-      artifact: "ComposedCounter.ComposedInner",
+      artifact: "ComposedCounter.ComposedInner~65b38574",
     },
   },
   {
@@ -316,6 +316,24 @@ export const CLICK = [
     artifact: artifactName(CLICK_SOURCE, "ButtonRoot"),
     page: "click",
     blurb: "One folded button, page-owned click, identity rest-spread.",
+    componentChildren: 0,
+  },
+];
+
+/**
+ * The one mount the dialog page resumes — the installed package's own
+ * DialogTrigger. The claimed ButtonRoot is derived, not declared; its
+ * directory is the record-qualified id, distinct from CLICK's artifact.
+ */
+const DIALOG_SOURCE = installedDefiningSource("dialog");
+
+export const DIALOG = [
+  {
+    component: "DialogTrigger",
+    source: DIALOG_SOURCE,
+    artifact: artifactName(DIALOG_SOURCE, "DialogTrigger"),
+    page: "dialog",
+    blurb: "Live DialogRoot, resumed trigger, identity-routed context.",
     componentChildren: 0,
   },
 ];

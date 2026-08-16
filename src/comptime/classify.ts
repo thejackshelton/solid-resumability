@@ -187,7 +187,8 @@ import {
 } from "./stores.ts";
 import { AMBIENT_MEMBER_CALLS, EVENT_TIME_SYNTAX, HANDLER_SYNTAX, isTypeSyntax } from "./syntax.ts";
 import {
-  artifactKey,
+  claimedArtifactKey,
+  identityRecordKey,
   isActionSlot,
   isBindingIdentity,
   isCandidateRecordable,
@@ -852,16 +853,7 @@ function recordsMatch(
 }
 
 function identityKey(prop: IdentityProp): string {
-  if (isBindingIdentity(prop)) {
-    return JSON.stringify([prop.name, prop.role, prop.bindingClass, prop.source.name, prop.source.path]);
-  }
-  if (isSlotValuedIdentity(prop)) {
-    return JSON.stringify([prop.name, prop.role, prop.expression, prop.captures]);
-  }
-  if (isProvenHandlerIdentity(prop)) {
-    return JSON.stringify([prop.name, prop.role, prop.handler, prop.source, prop.captures]);
-  }
-  return JSON.stringify([prop.name, prop.role, prop.elements]);
+  return identityRecordKey(prop);
 }
 
 /** Cross-artifact store id: the createContext binding's module and name.
@@ -4162,10 +4154,36 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       name: attribute.name.name,
       role: "proven-handler",
       handler: `s${handlers.length}`,
-      source: printExpression(fn),
+      source: provenHandlerSource(fn, captures),
       captures,
       stores: inheritedStores,
     };
+  }
+
+  /** Rewrites identity member reads (`p.onClick`) to the capture slot name so
+   * the emitted handler closes over `create`'s parameters, not the parent's
+   * locals. Bare imported callees are already the slot name. */
+  function provenHandlerSource(fn: Node, slots: CaptureSlot[]): string {
+    const wanted = new Map<string, string>();
+    for (const slot of slots) {
+      if (!isIdentitySlot(slot) || slot.source.path.length === 0) continue;
+      wanted.set(`${slot.source.name}:${JSON.stringify(slot.source.path)}`, slot.name);
+    }
+    if (wanted.size === 0) return printExpression(fn);
+    const rewrites: SlotRewrite[] = [];
+    moduleInfo.walk(
+      {
+        MemberExpression: (node: Node) => {
+          const source = sourceBindingOf(node);
+          if (source === null || source.path.length === 0) return;
+          const name = wanted.get(`${source.name}:${JSON.stringify(source.path)}`);
+          if (name === undefined) return;
+          rewrites.push({ node, name });
+        },
+      },
+      fn,
+    );
+    return printWithSlotRewrites(fn, rewrites);
   }
 
   function refArrayAttribute(attribute: Node): RefArrayIdentityProp | null {
@@ -4322,12 +4340,15 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     }
     if (childAnalysis.status !== "provable" || childAnalysis.html === "") return null;
 
-    const artifact = artifactKey(childModule.path, child.name);
+    const artifact = claimedArtifactKey(childModule.path, child.name, recorded, identities);
 
     // Artifact identity: one artifact per recorded valuation AND per identity
     // record. A second address of the same child with a different record is
-    // declined.
-    const prior = claimedChildren.find((entry) => entry.artifact === artifact);
+    // declined — compared by (module, component), not by the qualified id,
+    // so two records cannot share a directory and cannot both be claimed.
+    const prior = claimedChildren.find(
+      (entry) => entry.module === childModule.path && entry.component === child.name,
+    );
     if (
       prior !== undefined &&
       (!recordsMatch(prior.recordedProps, recorded) || !identityRecordsMatch(prior.identityProps, identities))
@@ -4876,6 +4897,17 @@ export function classifySite(module: Module, component: ComponentSite, options?:
             return parent != null && parent.type === "CallExpression" && parent.callee === reference.node;
           })
         ) {
+          // A same-module helper stays a free callee in the printed body (the
+          // first-party `relay` shape). An imported callee is not in the
+          // handler module, so it is published as an identity the page provides.
+          if (isImportedSymbol(capture.symbol)) {
+            slots.push({
+              name: capture.symbol.name,
+              kind: "identity",
+              bindingClass: "own-props-parameter",
+              source: { name: capture.symbol.name, path: [] },
+            });
+          }
           continue;
         }
       }

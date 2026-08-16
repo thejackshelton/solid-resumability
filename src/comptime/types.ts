@@ -695,10 +695,67 @@ export function isRefArrayIdentity(prop: IdentityProp): prop is RefArrayIdentity
   return prop.role === "ref-array";
 }
 
+/**
+ * Record-qualified artifact id (T067 store-id precedent: identity from the
+ * distinguishing parts, never a source-file content hash).
+ *
+ * A claimed child with a nonempty record (`recordedProps` or `identityProps`)
+ * emits under `${artifactKey}~${fnv1a32(canonicalRecord)}`. Two distinct
+ * records never share a directory. An empty record keeps the unqualified key,
+ * so a record-free declaration (the click page's ButtonRoot) is untouched.
+ *
+ * The `~` suffix is the glob fence: `*.ButtonRoot` does not match
+ * `*.ButtonRoot~*`, and `app.*` does not match a hashed-stem qualifier.
+ */
+export function claimedArtifactKey(
+  modulePath: string,
+  component: string,
+  recorded?: ReadonlyArray<RecordedProp>,
+  identities?: ReadonlyArray<IdentityProp>,
+): string {
+  const base = artifactKey(modulePath, component);
+  if ((recorded?.length ?? 0) === 0 && (identities?.length ?? 0) === 0) return base;
+  return `${base}~${recordFingerprint(recorded, identities)}`;
+}
+
+/** Stable key for one identity record entry. Order-insensitive matching uses a set of these. */
+export function identityRecordKey(prop: IdentityProp): string {
+  if (isBindingIdentity(prop)) {
+    return JSON.stringify([prop.name, prop.role, prop.bindingClass, prop.source.name, prop.source.path]);
+  }
+  if (isSlotValuedIdentity(prop)) {
+    return JSON.stringify([prop.name, prop.role, prop.expression, prop.captures]);
+  }
+  if (isProvenHandlerIdentity(prop)) {
+    return JSON.stringify([prop.name, prop.role, prop.handler, prop.source, prop.captures]);
+  }
+  return JSON.stringify([prop.name, prop.role, prop.elements]);
+}
+
+function recordFingerprint(
+  recorded: ReadonlyArray<RecordedProp> | undefined,
+  identities: ReadonlyArray<IdentityProp> | undefined,
+): string {
+  const rec = [...(recorded ?? [])]
+    .map((prop) => [prop.name, prop.value] as const)
+    .sort((left, right) => (left[0] < right[0] ? -1 : left[0] > right[0] ? 1 : 0));
+  const identity = [...(identities ?? [])].map(identityRecordKey).sort();
+  return fnv1a32(JSON.stringify({ recorded: rec, identity }));
+}
+
+function fnv1a32(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 export interface ClaimedChild {
   /** The hole in the PARENT's template: the mount container's own address. */
   locator: string;
-  /** The child's artifact directory, `artifactKey(module, component)`. */
+  /** The child's artifact directory, `claimedArtifactKey(module, component, record)`. */
   artifact: string;
   /** The name the ordinary Solid path knows the child by. */
   component: string;

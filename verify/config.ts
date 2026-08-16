@@ -27,6 +27,7 @@ export const PAGES = {
 	todos: '/todos/todos.html',
 	rule: '/rule/rule.html',
 	click: '/click/click.html',
+	dialog: '/dialog/dialog.html',
 } as const;
 
 export function pageUrl(variant: Variant, page: keyof typeof PAGES): string {
@@ -262,9 +263,9 @@ export const COMPOSED_OUTER: Composed = {
 
 export const COMPOSED_INNER: Composed = {
 	component: 'ComposedInner',
-	artifactId: 'ComposedCounter.ComposedInner',
+	artifactId: 'ComposedCounter.ComposedInner~65b38574',
 	handlerId: 's0',
-	mount: '[data-resume="ComposedCounter.ComposedInner"]',
+	mount: '[data-resume="ComposedCounter.ComposedInner~65b38574"]',
 	button: '[data-testid="composed-inner-inc"]',
 	readout: '[data-testid="composed-inner-label"]',
 };
@@ -286,7 +287,7 @@ export const COMPOSED_RECORDED = {
  * before inline-template fill writes the child's painted markup inside.
  */
 export const COMPOSED_HOLE_BEFORE_FILL =
-	'<div data-resume="ComposedCounter.ComposedInner" data-component="ComposedInner"></div>';
+	'<div data-resume="ComposedCounter.ComposedInner~65b38574" data-component="ComposedInner"></div>';
 
 /**
  * Eager-JS ceiling for the resumable todos page, in bytes on the wire.
@@ -408,3 +409,35 @@ export const CLICK_REST_PROVIDE = { id: 'click-root' } as const;
 export const CLICK_SENTINEL = '[data-click-sentinel]';
 export const CLICK_SENTINEL_ATTR = 'data-clicked';
 export const CLICK_SENTINEL_AFTER = '1';
+
+/**
+ * Eager-JS ceiling for the resumable dialog page, in bytes on the wire.
+ *
+ * Own page, own cap: a live DialogRoot at load puts the renderer and the
+ * dialog chunk on the eager entry by design. Other pages' caps do not move.
+ */
+export const DIALOG_EAGER_JS_CAP_BYTES = 90_000;
+
+/** First recorded dialog-page eager file bytes (T069). Reported, not asserted. */
+export const DIALOG_EAGER_JS_BASELINE_BYTES = 80_548;
+
+/**
+ * The dialog page's trigger mount: the installed package's own DialogTrigger,
+ * addressed by the artifact directory the build stamped into the markup.
+ */
+export const DIALOG_ARTIFACT = 'C9YDO9vc.DialogTrigger';
+export const DIALOG_COMPONENT = 'DialogTrigger';
+export const DIALOG_MOUNT = `[data-resume="${DIALOG_ARTIFACT}"]`;
+export const DIALOG_LIVE = '[data-dialog-live]';
+export const DIALOG_CHILD_COMPONENT = 'ButtonRoot';
+
+/**
+ * Store-derived attributes the claimed child must not carry in served bytes.
+ * After resume each must equal the artifact's own compute over the live
+ * provider. `aria-haspopup` is a v1 bake, not in this list.
+ */
+export const DIALOG_STORE_ATTRS = ['aria-expanded', 'aria-controls', 'data-expanded', 'data-closed'] as const;
+
+export const DIALOG_MERGED_PROPS = { type: 'button' } as const;
+export const DIALOG_REST_PROVIDE = { id: 'dialog-trigger' } as const;
+export const DIALOG_CONTENT = 'Dialog content';

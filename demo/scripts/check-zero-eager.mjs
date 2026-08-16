@@ -123,12 +123,13 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "pathe";
 import { gzipSync } from "node:zlib";
 
-import { CLICK, DEMO_ROOT, REPO_ROOT, RULE } from "../build/fixtures.mjs";
+import { CLICK, DEMO_ROOT, DIALOG, REPO_ROOT, RULE } from "../build/fixtures.mjs";
 
 const DIST = join(DEMO_ROOT, "dist/resumable/todos");
 const FIXTURES_DIST = join(DEMO_ROOT, "dist/resumable/fixtures");
 const RULE_DIST = join(DEMO_ROOT, "dist/resumable/rule");
 const CLICK_DIST = join(DEMO_ROOT, "dist/resumable/click");
+const DIALOG_DIST = join(DEMO_ROOT, "dist/resumable/dialog");
 
 /**
  * The eager cap, in raw bytes on the wire for the one entry chunk.
@@ -154,6 +155,14 @@ export const RULE_EAGER_JS_CAP_BYTES = 20000;
  * in the WP-C receipt rather than written back here.
  */
 export const CLICK_EAGER_JS_CAP_BYTES = 20000;
+
+/**
+ * The dialog page's own eager cap. A live DialogRoot at load puts the
+ * renderer and the library's dialog chunk on the eager entry by design
+ * (T061 Ruling 5). First honest measurement plus jitter headroom; not a
+ * leak, and no other page's cap moves to fit.
+ */
+export const DIALOG_EAGER_JS_CAP_BYTES = 90000;
 
 /**
  * The group's own caps, raw and gzipped (G3'). Kept in step with
@@ -684,6 +693,35 @@ check(
   "the click document carries the page-owned sentinel outside the mount",
   /data-click-sentinel/.test(clickHtml),
 );
+
+/* ── 7e. the dialog page's own eager cap ───────────────────────────────── */
+
+if (!existsSync(DIALOG_DIST)) {
+  process.stderr.write(`check-zero-eager: ${relative(REPO_ROOT, DIALOG_DIST)} does not exist. Run \`pnpm build\` first.\n`);
+  process.exit(1);
+}
+
+const dialogHtml = readFileSync(join(DIALOG_DIST, "dialog.html"), "utf8");
+const dialogManifest = JSON.parse(readFileSync(join(DIALOG_DIST, ".vite/manifest.json"), "utf8"));
+const dialogEntry = dialogManifest["dialog.html"];
+if (!dialogEntry) {
+  process.stderr.write("check-zero-eager: the dialog build manifest has no entry for dialog.html\n");
+  process.exit(1);
+}
+
+const dialogBytes = statSync(join(DIALOG_DIST, dialogEntry.file)).size;
+check(
+  `the dialog eager chunk is at most ${DIALOG_EAGER_JS_CAP_BYTES} raw bytes`,
+  dialogBytes <= DIALOG_EAGER_JS_CAP_BYTES,
+  `${dialogEntry.file} is ${dialogBytes} B (${DIALOG_EAGER_JS_CAP_BYTES - dialogBytes} B of headroom)`,
+);
+check(
+  "the dialog document carries the resume mount",
+  dialogHtml.includes(`data-resume="${DIALOG[0].artifact}"`),
+  DIALOG[0].artifact,
+);
+check("the dialog document carries the claimed child button", /<button\b/.test(dialogHtml));
+check("the dialog document carries the page-owned live region", /data-dialog-live/.test(dialogHtml));
 
 /* ── 8. the frozen corpus ──────────────────────────────────────────────── */
 

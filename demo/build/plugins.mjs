@@ -14,7 +14,7 @@ import { join } from "pathe";
 
 import resumability from "unplugin-solid-resumability/vite";
 
-import { CLICK, REPO_ROOT, RULE } from "./fixtures.mjs";
+import { CLICK, DIALOG, REPO_ROOT, RULE } from "./fixtures.mjs";
 import { demoResumability } from "./resumability.mjs";
 
 const APP_API = join(REPO_ROOT, "app/src/api.ts");
@@ -81,7 +81,7 @@ export function variantLabel(variant) {
  */
 /** @returns {import("vite").Plugin} */
 export function installedMountIds() {
-  const ids = new Map([...RULE, ...CLICK].map((mount) => [mount.component, mount.artifact]));
+  const ids = new Map([...RULE, ...CLICK, ...DIALOG].map((mount) => [mount.component, mount.artifact]));
 
   return {
     name: "demo-installed-mount-ids",

@@ -34,7 +34,7 @@ import { apiMock, moduleSizes, variantLabel } from "./plugins.mjs";
 import { demoResumability } from "./resumability.mjs";
 
 export const VARIANTS = ["classic", "resumable"];
-export const PAGES = ["fixtures", "todos", "rule"];
+export const PAGES = ["fixtures", "todos", "rule", "click"];
 
 const PORTS = { classic: 3010, resumable: 3011 };
 

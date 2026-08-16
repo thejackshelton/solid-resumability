@@ -302,6 +302,24 @@ export const RULE = [
   },
 ];
 
+/**
+ * The one mount the click page resumes — the installed package's own
+ * ButtonRoot, not a first-party wrapper. Kept off `FIXTURES` and `RULE`
+ * so each page's tests and eager glob stay a claim about that page alone.
+ */
+const CLICK_SOURCE = installedDefiningSource("button");
+
+export const CLICK = [
+  {
+    component: "ButtonRoot",
+    source: CLICK_SOURCE,
+    artifact: artifactName(CLICK_SOURCE, "ButtonRoot"),
+    page: "click",
+    blurb: "One folded button, page-owned click, identity rest-spread.",
+    componentChildren: 0,
+  },
+];
+
 export const RESUMED = [
   {
     component: "Header",

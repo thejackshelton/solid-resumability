@@ -140,16 +140,20 @@ const EXPECTED_FILES = [
 
 /**
  * Files the reference tree carries that the seven mounts never emit. Read off
- * the tree and WRITTEN DOWN — T041 added `QhqEt4aD.SeparatorRoot/` to
- * `demo/artifacts/`, and this test's mounts do not produce it. Used only by
- * the reference-side equality; the emitted-side list and the byte-parity
- * loop stay the forty-three files above.
+ * the tree and WRITTEN DOWN — T041 added `QhqEt4aD.SeparatorRoot/` and T055
+ * added `DvspU6cJ.ButtonRoot/` to `demo/artifacts/`, and this test's mounts do
+ * not produce them. Used only by the reference-side equality; the emitted-side
+ * list and the byte-parity loop stay the forty-three files above.
  */
 const REFERENCE_ONLY_FILES = [
   'QhqEt4aD.SeparatorRoot/manifest.json',
   'QhqEt4aD.SeparatorRoot/structure.js',
   'QhqEt4aD.SeparatorRoot/template.js',
   'QhqEt4aD.SeparatorRoot/wiring.js',
+  'DvspU6cJ.ButtonRoot/manifest.json',
+  'DvspU6cJ.ButtonRoot/structure.js',
+  'DvspU6cJ.ButtonRoot/template.js',
+  'DvspU6cJ.ButtonRoot/wiring.js',
 ];
 
 /**

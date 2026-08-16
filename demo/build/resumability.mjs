@@ -31,7 +31,7 @@
  * module graph they still see.
  */
 
-import { ARTIFACT_ROOT, DEMO_ROOT, FIXTURES, REPO_ROOT, RESUMED, RULE } from "./fixtures.mjs";
+import { ARTIFACT_ROOT, CLICK, DEMO_ROOT, FIXTURES, REPO_ROOT, RESUMED, RULE } from "./fixtures.mjs";
 
 /** The corpus module the todos page resumes a component out of. */
 const APP_MOUNT = RESUMED[0];
@@ -77,6 +77,7 @@ const ENTRIES = {
   fixtures: { from: "/src/pages/fixtures-classic.ts", to: "/src/pages/fixtures-resumable.ts" },
   todos: { from: "/src/pages/todos.ts", to: "/src/pages/todos-resumable.ts" },
   rule: { from: "/src/pages/rule-classic.ts", to: "/src/pages/rule-resumable.ts" },
+  click: { from: "/src/pages/click-classic.ts", to: "/src/pages/click-resumable.ts" },
 };
 
 /**
@@ -93,7 +94,7 @@ const ENTRIES = {
  * @param {{ capture?: string[] }} [options]
  * @returns {import("unplugin-solid-resumability/types").ResumabilityOptions}
  */
-export function demoResumability({ capture = ["fixtures", "todos", "rule"] } = {}) {
+export function demoResumability({ capture = ["fixtures", "todos", "rule", "click"] } = {}) {
   const captures = new Set(capture);
 
   return {
@@ -139,6 +140,12 @@ export function demoResumability({ capture = ["fixtures", "todos", "rule"] } = {
         page: fixture.page,
       })),
       ...RULE.map((fixture) => ({
+        component: fixture.component,
+        source: fixture.source,
+        artifact: fixture.artifact,
+        page: fixture.page,
+      })),
+      ...CLICK.map((fixture) => ({
         component: fixture.component,
         source: fixture.source,
         artifact: fixture.artifact,
@@ -229,6 +236,13 @@ export function demoResumability({ capture = ["fixtures", "todos", "rule"] } = {
         id: "rule",
         html: "rule.html",
         entry: ENTRIES.rule,
+        inlineTemplates: true,
+        prerender: false,
+      },
+      {
+        id: "click",
+        html: "click.html",
+        entry: ENTRIES.click,
         inlineTemplates: true,
         prerender: false,
       },

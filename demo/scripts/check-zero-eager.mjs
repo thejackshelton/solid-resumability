@@ -123,11 +123,12 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "pathe";
 import { gzipSync } from "node:zlib";
 
-import { DEMO_ROOT, REPO_ROOT, RULE } from "../build/fixtures.mjs";
+import { CLICK, DEMO_ROOT, REPO_ROOT, RULE } from "../build/fixtures.mjs";
 
 const DIST = join(DEMO_ROOT, "dist/resumable/todos");
 const FIXTURES_DIST = join(DEMO_ROOT, "dist/resumable/fixtures");
 const RULE_DIST = join(DEMO_ROOT, "dist/resumable/rule");
+const CLICK_DIST = join(DEMO_ROOT, "dist/resumable/click");
 
 /**
  * The eager cap, in raw bytes on the wire for the one entry chunk.
@@ -146,6 +147,13 @@ export const EAGER_JS_CAP_BYTES = 16000;
  * in the WP3 receipt rather than written back here.
  */
 export const RULE_EAGER_JS_CAP_BYTES = 20000;
+
+/**
+ * The click page's own eager cap. Ceiling is parity with fixtures (20,000 B);
+ * the first measured build's byte figure is the ratchet baseline, recorded
+ * in the WP-C receipt rather than written back here.
+ */
+export const CLICK_EAGER_JS_CAP_BYTES = 20000;
 
 /**
  * The group's own caps, raw and gzipped (G3'). Kept in step with
@@ -644,6 +652,38 @@ check(
   RULE[0].artifact,
 );
 check("the rule document carries the folded intrinsic", /<hr\b/.test(ruleHtml));
+
+/* ── 7d. the click page's own eager cap ────────────────────────────────── */
+
+if (!existsSync(CLICK_DIST)) {
+  process.stderr.write(`check-zero-eager: ${relative(REPO_ROOT, CLICK_DIST)} does not exist. Run \`pnpm build\` first.\n`);
+  process.exit(1);
+}
+
+const clickHtml = readFileSync(join(CLICK_DIST, "click.html"), "utf8");
+const clickManifest = JSON.parse(readFileSync(join(CLICK_DIST, ".vite/manifest.json"), "utf8"));
+const clickEntry = clickManifest["click.html"];
+if (!clickEntry) {
+  process.stderr.write("check-zero-eager: the click build manifest has no entry for click.html\n");
+  process.exit(1);
+}
+
+const clickBytes = statSync(join(CLICK_DIST, clickEntry.file)).size;
+check(
+  `the click eager chunk is at most ${CLICK_EAGER_JS_CAP_BYTES} raw bytes`,
+  clickBytes <= CLICK_EAGER_JS_CAP_BYTES,
+  `${clickEntry.file} is ${clickBytes} B (${CLICK_EAGER_JS_CAP_BYTES - clickBytes} B of headroom)`,
+);
+check(
+  "the click document carries the resume mount",
+  clickHtml.includes(`data-resume="${CLICK[0].artifact}"`),
+  CLICK[0].artifact,
+);
+check("the click document carries the folded intrinsic", /<button\b/.test(clickHtml));
+check(
+  "the click document carries the page-owned sentinel outside the mount",
+  /data-click-sentinel/.test(clickHtml),
+);
 
 /* ── 8. the frozen corpus ──────────────────────────────────────────────── */
 

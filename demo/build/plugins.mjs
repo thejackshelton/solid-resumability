@@ -14,7 +14,7 @@ import { join } from "pathe";
 
 import resumability from "unplugin-solid-resumability/vite";
 
-import { REPO_ROOT } from "./fixtures.mjs";
+import { CLICK, REPO_ROOT, RULE } from "./fixtures.mjs";
 import { demoResumability } from "./resumability.mjs";
 
 const APP_API = join(REPO_ROOT, "app/src/api.ts");
@@ -58,6 +58,47 @@ export function variantLabel(variant) {
       order: "pre",
       handler(html) {
         return html.replaceAll("__VARIANT__", variant);
+      },
+    },
+  };
+}
+
+/**
+ * Fills the installed-package mounts with the artifact id the pass emits.
+ *
+ * `RULE` and `CLICK` derive their ids from the installed `@kobalte/core`
+ * barrel, whose defining module is a content-hashed chunk — `fixtures.mjs`
+ * reads that name off the barrel precisely so the hash is never written down.
+ * A page that spelled the id out would put a second, underived copy of it in a
+ * file no derivation reaches, and the next package update would fail the build
+ * until both HTML files were hand-edited. The pages carry
+ * `__ARTIFACT_<component>__` instead.
+ *
+ * A token naming a component no installed mount declares throws rather than
+ * serving markup with a literal token in it. Runs on both variants, like the
+ * variant label: the classic build ignores `data-resume`, but a token only one
+ * side replaced would be a byte difference nobody asked for.
+ */
+/** @returns {import("vite").Plugin} */
+export function installedMountIds() {
+  const ids = new Map([...RULE, ...CLICK].map((mount) => [mount.component, mount.artifact]));
+
+  return {
+    name: "demo-installed-mount-ids",
+    // The mount-filling stage is `enforce: "pre"` and selects mounts by the
+    // very attribute this fills, so the token has to be gone before it runs.
+    // Same bucket, and earlier in the array, is what orders the two.
+    enforce: "pre",
+    transformIndexHtml: {
+      order: "pre",
+      handler(html) {
+        return html.replace(/__ARTIFACT_([A-Za-z0-9_$]+)__/g, (token, component) => {
+          const id = ids.get(component);
+          if (id == null) {
+            throw new Error(`demo: ${token} names no component any installed mount declares`);
+          }
+          return id;
+        });
       },
     },
   };

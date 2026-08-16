@@ -30,7 +30,7 @@ import solid from "@solidjs/vite-plugin";
 import resumability from "unplugin-solid-resumability/vite";
 
 import { DEMO_ROOT } from "./fixtures.mjs";
-import { apiMock, moduleSizes, variantLabel } from "./plugins.mjs";
+import { apiMock, installedMountIds, moduleSizes, variantLabel } from "./plugins.mjs";
 import { demoResumability } from "./resumability.mjs";
 
 export const VARIANTS = ["classic", "resumable"];
@@ -60,6 +60,7 @@ export function demoConfig({ variant, page }) {
     preview: { port: PORTS[variant] },
     plugins: [
       variantLabel(variant),
+      installedMountIds(),
       apiMock(join(DEMO_ROOT, "src/api-mock.ts")),
       // The entire difference between the two variants, and the demo's only
       // claim on it is the declaration in `resumability.mjs`. The pass proves

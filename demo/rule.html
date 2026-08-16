@@ -18,7 +18,13 @@
       <section class="fixture">
         <h2>Rule</h2>
         <p class="blurb">One folded intrinsic, measured attributes, identity rest-spread.</p>
-        <div class="mount" data-component="SeparatorRoot" data-resume="QhqEt4aD.SeparatorRoot"></div>
+        <!--
+          `data-resume` is filled by `demo-installed-mount-ids` from the id
+          `build/fixtures.mjs` derives off the installed @kobalte/core barrel.
+          The defining module is a content-hashed chunk, so the id is not
+          written down anywhere a package update would leave stale.
+        -->
+        <div class="mount" data-component="SeparatorRoot" data-resume="__ARTIFACT_SeparatorRoot__"></div>
       </section>
 
       <p class="nav"><a href="/fixtures.html">← fixtures</a></p>

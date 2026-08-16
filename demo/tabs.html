@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solid 2.0 — deferred tabs (__VARIANT__)</title>
+    <link rel="stylesheet" href="/src/styles/demo.css" />
+  </head>
+  <body>
+    <main class="page">
+      <h1>Deferred tabs</h1>
+      <p class="lede">
+        A first-party dispatch and a live TabsRoot: the installed package's own
+        tabs tree stays behind one provider <code>import()</code>. This build
+        is the <strong data-variant>__VARIANT__</strong> variant.
+      </p>
+
+      <section class="fixture">
+        <h2>Tabs</h2>
+        <p class="blurb">Parked store miss, one deferred provider, live selection.</p>
+        <div class="mount" data-component="TabsDispatch" data-tabs-dispatch>
+          <button type="button">Wake tabs</button>
+        </div>
+        <div class="live-region" data-tabs-live></div>
+      </section>
+
+      <p class="nav"><a href="/fixtures.html">← fixtures</a></p>
+    </main>
+    <script type="module" src="/src/pages/tabs-classic.ts"></script>
+  </body>
+</html>

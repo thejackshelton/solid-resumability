@@ -28,6 +28,7 @@ export const PAGES = {
 	rule: '/rule/rule.html',
 	click: '/click/click.html',
 	dialog: '/dialog/dialog.html',
+	tabs: '/tabs/tabs.html',
 } as const;
 
 export function pageUrl(variant: Variant, page: keyof typeof PAGES): string {
@@ -454,3 +455,39 @@ export const DIALOG_STORE_ATTRS = ['aria-expanded', 'aria-controls', 'data-expan
 export const DIALOG_MERGED_PROPS = { type: 'button' } as const;
 export const DIALOG_REST_PROVIDE = { id: 'dialog-trigger' } as const;
 export const DIALOG_CONTENT = 'Dialog content';
+
+/**
+ * Eager-JS ceiling for the resumable tabs page, in bytes on the wire.
+ *
+ * Own page, own cap. T090/T091 deferred the live TabsRoot behind
+ * `tabs-provider.ts`; the renderer and the library chunk are not on
+ * the eager entry. T091 file 4,106 B; cap 4,600 is file + CDP
+ * header gap + jitter, rounded up. Other pages' caps do not move.
+ */
+export const TABS_EAGER_JS_CAP_BYTES = 4_600;
+
+/** First recorded deferred-provider tabs eager file bytes (T091). Reported, not asserted. */
+export const TABS_EAGER_JS_BASELINE_BYTES = 4_106;
+
+/**
+ * The provider partition, by the stem the bundler gives `demo/src/tabs-provider.ts`.
+ *
+ * Matching the stem rather than a content-hashed filename keeps a rebuild
+ * that changed nothing but the hash from going red. The box uses this to
+ * tell an eager load (provider already on the wire) from a miss-triggered
+ * fetch (exactly one arrival after the click).
+ */
+export const TABS_PROVIDER_CHUNK = /\/tabs-provider-[\w-]+\.js$/;
+
+export const TABS_DISPATCH = '[data-tabs-dispatch]';
+export const TABS_LIVE = '[data-tabs-live]';
+export const TABS_LIVE_TAB = `${TABS_LIVE} [role="tab"]`;
+export const TABS_PANEL_PROFILE = 'Profile panel';
+export const TABS_PANEL_SETTINGS = 'Settings panel';
+
+/**
+ * Store-derived attributes the served page and the first-party dispatch
+ * must not carry. After the provider mounts they appear on the live
+ * triggers; a value in served bytes was painted by the page or the build.
+ */
+export const TABS_STORE_ATTRS = ['aria-selected', 'data-selected', 'aria-controls', 'data-key'] as const;

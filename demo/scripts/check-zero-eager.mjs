@@ -130,6 +130,7 @@ const FIXTURES_DIST = join(DEMO_ROOT, "dist/resumable/fixtures");
 const RULE_DIST = join(DEMO_ROOT, "dist/resumable/rule");
 const CLICK_DIST = join(DEMO_ROOT, "dist/resumable/click");
 const DIALOG_DIST = join(DEMO_ROOT, "dist/resumable/dialog");
+const TABS_DIST = join(DEMO_ROOT, "dist/resumable/tabs");
 
 /**
  * The eager cap for the one todos entry chunk. This gate measures the
@@ -171,6 +172,17 @@ export const CLICK_EAGER_JS_CAP_BYTES = 20000;
  * caps do not move to fit.
  */
 export const DIALOG_EAGER_JS_CAP_BYTES = 21100;
+
+/**
+ * The tabs page's own eager cap. Tranche 5 replays the dialog deferral
+ * kernel on tabs: the live TabsRoot sits behind a dynamic `import()` of
+ * `tabs-provider.ts`, so the renderer and `@kobalte/core/tabs` are not
+ * on the eager entry. T091 measurement: file 4,106 B (`tabs-CN_Eg3K7.js`).
+ * Cap = measured file + CDP-header gap + ≥200 B jitter, rounded up to
+ * the next 100 → 4,600. Headroom is for jitter only, not a budget.
+ * Other pages' caps do not move to fit.
+ */
+export const TABS_EAGER_JS_CAP_BYTES = 4600;
 
 /**
  * The group's own caps, raw and gzipped (G3'). Kept in step with
@@ -779,6 +791,80 @@ check(
   "no eager dialog chunk carries the provider module or @kobalte/core/dialog",
   eagerLibrary.length === 0,
   eagerLibrary.length ? eagerLibrary.sort().join(", ") : `${dialogEager.size} eager chunk(s), none names the library`,
+);
+
+/* ── 7f. the tabs page's own eager cap ─────────────────────────────────── */
+
+if (!existsSync(TABS_DIST)) {
+  process.stderr.write(`check-zero-eager: ${relative(REPO_ROOT, TABS_DIST)} does not exist. Run \`pnpm build\` first.\n`);
+  process.exit(1);
+}
+
+const tabsHtml = readFileSync(join(TABS_DIST, "tabs.html"), "utf8");
+const tabsManifest = JSON.parse(readFileSync(join(TABS_DIST, ".vite/manifest.json"), "utf8"));
+const tabsEntry = tabsManifest["tabs.html"];
+if (!tabsEntry) {
+  process.stderr.write("check-zero-eager: the tabs build manifest has no entry for tabs.html\n");
+  process.exit(1);
+}
+
+const tabsBytes = statSync(join(TABS_DIST, tabsEntry.file)).size;
+check(
+  `the tabs eager chunk is at most ${TABS_EAGER_JS_CAP_BYTES} raw bytes`,
+  tabsBytes <= TABS_EAGER_JS_CAP_BYTES,
+  `${tabsEntry.file} is ${tabsBytes} B (${TABS_EAGER_JS_CAP_BYTES - tabsBytes} B of headroom)`,
+);
+check("the tabs document carries the first-party dispatch", /data-tabs-dispatch/.test(tabsHtml));
+check("the tabs document carries the page-owned live region", /data-tabs-live/.test(tabsHtml));
+
+const tabsChunks = JSON.parse(readFileSync(join(TABS_DIST, ".vite/module-sizes.json"), "utf8"));
+
+/** Static import closure of the tabs entry — what executes on load. */
+const tabsEager = new Set([tabsEntry.file]);
+for (const file of tabsEager) {
+  for (const next of tabsChunks[file]?.imports ?? []) tabsEager.add(next);
+}
+
+const tabsProviderEntries = Object.entries(tabsManifest).filter(([id]) =>
+  /(?:^|\/)tabs-provider\.ts$/.test(id),
+);
+const tabsProviderFiles = nameSet(tabsProviderEntries.map(([, info]) => info.file));
+check(
+  "the tabs build emits a tabs-provider dynamic entry",
+  tabsProviderFiles.length === 1,
+  tabsProviderFiles.length === 1
+    ? tabsProviderFiles[0]
+    : tabsProviderFiles.join(", ") || "none",
+);
+
+const tabsProviderInEager = [...tabsEager].filter(file => tabsProviderFiles.includes(file));
+check(
+  "the tabs entry's eager import closure excludes the provider chunk",
+  tabsProviderInEager.length === 0 && tabsProviderFiles.length === 1,
+  tabsProviderInEager.length
+    ? `eager closure reached ${tabsProviderInEager.join(", ")}`
+    : `${tabsEager.size} eager chunk(s) from ${tabsEntry.file}, provider ${tabsProviderFiles[0] ?? "(missing)"} is not among them`,
+);
+
+const tabsEntryDynamic = tabsChunks[tabsEntry.file]?.dynamicImports ?? [];
+const tabsProviderNamedByEntry = tabsProviderFiles.filter(file => tabsEntryDynamic.includes(file));
+check(
+  "the tabs entry dynamically imports the provider chunk",
+  tabsProviderNamedByEntry.length === 1,
+  tabsProviderNamedByEntry.length === 1
+    ? tabsProviderNamedByEntry[0]
+    : `dynamicImports ${tabsEntryDynamic.join(", ") || "none"}; provider ${tabsProviderFiles.join(", ") || "none"}`,
+);
+
+const tabsEagerLibrary = [...tabsEager].flatMap(file =>
+  Object.keys(tabsChunks[file]?.modules ?? {})
+    .filter(id => /@kobalte\/core\/tabs|tabs-provider\.ts$/.test(id))
+    .map(id => `${moduleName(id)} in ${file}`),
+);
+check(
+  "no eager tabs chunk carries the provider module or @kobalte/core/tabs",
+  tabsEagerLibrary.length === 0,
+  tabsEagerLibrary.length ? tabsEagerLibrary.sort().join(", ") : `${tabsEager.size} eager chunk(s), none names the library`,
 );
 
 /* ── 8. the frozen corpus ──────────────────────────────────────────────── */

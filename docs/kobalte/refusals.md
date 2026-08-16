@@ -109,8 +109,77 @@ Presence stays deferred-execution-or-refuse — never reconstructed
 tranche witnesses executes the real `createPresence` body inside the
 lazily imported live provider.
 
+## Tabs — selection join, class manager, factory provider, leaf trigger
+
+Tranche 5 does not flip TabsRoot or TabsTrigger. The four walls below
+are T090 Ruling 1, cited from T089's live-matcher hop table and
+consumer join. They are measurements of installed bodies, not a
+grammar proposal. Option-1 reconstruction (factory-return /
+ComputeFunction / controlled-mode) stays REFUSED-UNSOUND and may not
+be rebuilt for tabs under any name.
+
+### 1. The selection join bottoms in the refused controlled-signal body
+
+The trio joins on `listState` — `selectedKey` / `selectionManager` /
+`collection` (T089 §(i)). The chain
+(`createSingleSelectListState` → `createListState` →
+`createMultipleSelectionState` → `createControllableSelectionSignal`)
+terminates in the SAME `createControllableSignal` body T084 priced and
+T085 Ruling 2 refused as UNSOUND (`controlled-signal/dist/index.js:15-31`).
+TabsRoot always passes `selectedKey: () => mergedProps.value`
+(`CezyXMlG.jsx:202`) — the identical "controlled vs uncontrolled is a
+page fact, not a body fact" wall. Any grammar precise enough to admit
+this chain is Option-1 reconstruction under a new name.
+
+`createSingleSelectListState` itself (`CezyXMlG.jsx:21`) does not
+summarize: 6 captures; syntaxOff includes `ObjectExpression`,
+`MemberExpression`, `ArrayPattern`, `ChainExpression`,
+`SequenceExpression` (T089 §(ii)).
+
+### 2. `SelectionManager` is a class instance
+
+`SelectionManager` (`CgkAj-2j.jsx:473`) is a class, not a getter/setter
+pair. Methods close over `collection` + `state` and allocate
+`new Selection()`. A grammar treating "the return is an object of
+closures" as reducible admits T084 counter-shape 2/3 instantiated as
+a class — unsound by the counter-shapes drawn from these very bodies
+(T089 §(iii) item 3).
+
+### 3. `createDomCollection` returns a factory-created component
+
+`createDomCollection` (`OK7882aq.jsx:93`) returns
+`{ DomCollectionProvider, items }`. `DomCollectionProvider`
+(`OK7882aq.jsx:116-123`) is a factory-created component whose item
+order is effect-driven (`IntersectionObserver` / `setTimeout`,
+`:61-89`). A PureSummary cannot name time — the presence wall class,
+T081 Ruling 3, confirmed on the body by T089 §(iii) item 4. The
+provider element is rendered at `CezyXMlG.jsx:241`.
+
+### 4. TabsTrigger's walls are downstream of the same chain
+
+`jsx-dynamic-attribute` ×10 and `handler-not-inline` ×6 at
+`CezyXMlG.jsx:279/:283` read `listState().selectionManager()` values
+and `composeEventHandlers` closures; ADDRESS BARE
+(`classify.ts:4264-4301`) refuses all sixteen, and claimed-child does
+not apply — `<Polymorphic as="button">` is a leaf, not a provable
+Kobalte callee (T089 §(iv)).
+
+The one member that DOES reduce — the owned 0-arg
+`selectedTab`/`setSelectedTab` pair (`CezyXMlG.jsx:196`, T089 §(iii)
+"yes") — does not carry selection truth for the trio: `setSelectedTab`
+is read only by TabsList (not in the twelve) and `selectedTab` only by
+TabsIndicator (not in the twelve). Flipping what reduces would not
+flip what the twelve-members consume.
+
+No stub of `listState` / `SelectionManager` / `DomCollectionProvider`
+/ any TabsContext member is authorized (T085 Ruling 2; T037/T061
+Ruling 5 seam; T089 §(iv) closing). The legal join remains the
+dialog one: a live `TabsRoot` creates the value; page-owned glue
+publishes that value by identity.
+
 ## What this receipt does not do
 
-It does not flip DialogRoot. It does not admit a factory-return grammar.
-It does not retarget among the twelve. `docs/kobalte/profile.md` and
-`profile.json` are untouched.
+It does not flip DialogRoot. It does not flip TabsRoot or TabsTrigger.
+It does not admit a factory-return grammar. It does not retarget
+among the twelve. `docs/kobalte/profile.md` and `profile.json` are
+untouched.

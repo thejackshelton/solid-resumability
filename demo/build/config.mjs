@@ -34,7 +34,28 @@ import { apiMock, installedMountIds, moduleSizes, variantLabel } from "./plugins
 import { demoResumability } from "./resumability.mjs";
 
 export const VARIANTS = ["classic", "resumable"];
-export const PAGES = ["fixtures", "todos", "rule", "click", "dialog"];
+export const PAGES = ["fixtures", "todos", "rule", "click", "dialog", "tabs"];
+
+/**
+ * The plugin's page list lives in `resumability.mjs` (outside this slice).
+ * Tabs is registered here so the classic→resumable entry swap still runs
+ * without a kernel or plugin-declaration write.
+ */
+function withTabsPage(options) {
+  return {
+    ...options,
+    pages: [
+      ...options.pages,
+      {
+        id: "tabs",
+        html: "tabs.html",
+        entry: { from: "/src/pages/tabs-classic.ts", to: "/src/pages/tabs-resumable.ts" },
+        inlineTemplates: true,
+        prerender: false,
+      },
+    ],
+  };
+}
 
 const PORTS = { classic: 3010, resumable: 3011 };
 
@@ -69,7 +90,7 @@ export function demoConfig({ variant, page }) {
       // deferral group, swaps both entry scripts, fills the fixtures page's
       // mounts with their emitted markup, and — in the build that produced the
       // group chunk — captures the todos page's first paint and inlines it.
-      ...(resumable ? [resumability(demoResumability({ capture: inputs }))] : []),
+      ...(resumable ? [resumability(withTabsPage(demoResumability({ capture: inputs })))] : []),
       // The same pipeline `app/` builds with: native JSX compiler, native
       // lazy / refresh passes.
       solid(),

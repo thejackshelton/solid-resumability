@@ -33,12 +33,21 @@
  * widening of {@link PureSummary} — matched by {@link matchGuardedReturn}:
  * exactly one const binding of a call, a `== null` guard that returns a
  * literal, and a terminal call. That matcher does not evaluate anything.
+ *
+ * A third matcher, {@link matchLiteralDecisionTree}, admits a callee whose
+ * body is const-of-projection bindings plus if-return / final-return of
+ * expressions over those locals and the parameters. It is not a PureSummary.
+ *
+ * {@link matchElementProjection} classifies a deferred-write expression as a
+ * pure property / getAttribute projection of a getter parameter, or names
+ * why it is not.
  */
 
 import type { Module, Symbol as YukuSymbol } from "yuku-analyzer";
 
 import { contains, isTransparent, unwrap, type Node } from "./ast.ts";
 import { HANDLER_SYNTAX, SUMMARY_SYNTAX, isTypeSyntax } from "./syntax.ts";
+import type { ElementProjectionStep } from "./types.ts";
 
 /** Modules whose `createSignal` export counts as a Solid source cell. */
 const SIGNAL_MODULES = new Set(["solid-js", "@solidjs/signals"]);
@@ -545,5 +554,188 @@ export function matchGuardedReturn(mod: Module, fn: Node): GuardedReturnMatch | 
     call: binding.call,
     guardLiteral,
     terminal,
+  };
+}
+
+/** A deferred-write expression that is a pure projection of a getter
+ * parameter — property chain and/or `getAttribute(<string literal>)` —
+ * optionally `||` a fallback this matcher does not inspect. */
+export type ElementProjectionMatch =
+  | { kind: "projection"; getterId: number; steps: ElementProjectionStep[]; base: Node }
+  | { kind: "not-pure" }
+  | { kind: "not-own-host" };
+
+function isCallNode(node: Node | null): boolean {
+  return node != null && (node.type === "CallExpression" || node.type === "OptionalCallExpression");
+}
+
+function isMemberNode(node: Node | null): boolean {
+  return node != null && (node.type === "MemberExpression" || node.type === "OptionalMemberExpression");
+}
+
+function memberName(node: Node): string | null {
+  if (!isMemberNode(node) || node.computed === true) return null;
+  const property = node.property;
+  return property != null && property.type === "Identifier" ? property.name : null;
+}
+
+function identifierSymbol(mod: Module, node: Node): YukuSymbol | null {
+  const ident = unwrap(node);
+  if (ident == null || ident.type !== "Identifier") return null;
+  return mod.referenceOf(ident)?.symbol ?? null;
+}
+
+function peelProjection(
+  mod: Module,
+  raw: Node,
+  getterIds: ReadonlySet<number>,
+): ElementProjectionMatch | null {
+  let current: Node | null = unwrap(raw);
+  const steps: ElementProjectionStep[] = [];
+
+  while (current != null) {
+    current = unwrap(current);
+    if (current == null) return null;
+    if (current.type === "ChainExpression") {
+      current = current.expression;
+      continue;
+    }
+
+    if (isCallNode(current)) {
+      const args: Node[] = current.arguments ?? [];
+      const callee = unwrap(current.callee);
+
+      if (callee != null && callee.type === "Identifier" && args.length === 0) {
+        const symbol = identifierSymbol(mod, callee);
+        if (symbol !== null && getterIds.has(symbol.id)) {
+          steps.reverse();
+          return { kind: "projection", getterId: symbol.id, steps, base: callee };
+        }
+        return { kind: "not-own-host" };
+      }
+
+      if (isMemberNode(callee)) {
+        const name = memberName(callee);
+        if (name === null) return { kind: "not-pure" };
+        if (name === "getAttribute") {
+          if (args.length !== 1) return { kind: "not-pure" };
+          const arg = unwrap(args[0]);
+          if (arg == null || arg.type !== "Literal" || typeof arg.value !== "string") {
+            return { kind: "not-pure" };
+          }
+          steps.push({ kind: "getAttribute", name: arg.value });
+          current = callee.object;
+          continue;
+        }
+        if (args.length !== 0) return { kind: "not-pure" };
+        steps.push({ kind: "call", name });
+        current = callee.object;
+        continue;
+      }
+
+      return { kind: "not-pure" };
+    }
+
+    if (isMemberNode(current)) {
+      const name = memberName(current);
+      if (name === null) return { kind: "not-pure" };
+      steps.push({ kind: "property", name });
+      current = current.object;
+      continue;
+    }
+
+    return null;
+  }
+
+  return null;
+}
+
+/** Classifies `node` as an own-getter element projection, or names the miss. */
+export function matchElementProjection(
+  mod: Module,
+  node: Node,
+  getterIds: ReadonlySet<number>,
+): ElementProjectionMatch | null {
+  const inner = unwrap(node);
+  if (inner == null) return null;
+  if (inner.type === "LogicalExpression" && (inner.operator === "||" || inner.operator === "??")) {
+    return peelProjection(mod, inner.left, getterIds);
+  }
+  return peelProjection(mod, inner, getterIds);
+}
+
+/** A callee body of const-of-projection bindings plus if-return / final-return. */
+export interface LiteralDecisionTree {
+  module: Module;
+  fn: Node;
+  params: Node[];
+  paramSymbols: YukuSymbol[];
+  locals: Array<{ local: Node; init: Node }>;
+  branches: Array<{ test: Node; value: Node }>;
+  otherwise: Node;
+}
+
+function isIfReturn(statement: Node): { test: Node; value: Node } | null {
+  if (statement == null || statement.type !== "IfStatement" || statement.alternate != null) return null;
+  const value = returnedArgumentOf(statement.consequent);
+  if (value == null) return null;
+  return { test: statement.test, value };
+}
+
+function constBinding(statement: Node): { local: Node; init: Node } | null {
+  if (statement == null || statement.type !== "VariableDeclaration" || statement.kind !== "const") {
+    return null;
+  }
+  const declarations: Node[] = statement.declarations ?? [];
+  if (declarations.length !== 1) return null;
+  const declarator = declarations[0];
+  if (declarator == null || declarator.id == null || declarator.id.type !== "Identifier") return null;
+  if (declarator.init == null) return null;
+  return { local: declarator.id, init: unwrap(declarator.init) };
+}
+
+/** Matches a function whose body is const bindings then if-returns then a
+ * final return — a decision tree, not a PureSummary single-return. */
+export function matchLiteralDecisionTree(
+  moduleInfo: Module,
+  rawCallee: Node,
+): LiteralDecisionTree | null {
+  const resolved = resolveCalleeFunction(moduleInfo, rawCallee);
+  if (resolved === null) return null;
+
+  const { module: mod, fn, params, paramSymbols } = resolved;
+  if (fn.body == null || fn.body.type !== "BlockStatement") return null;
+  const statements: Node[] = fn.body.body ?? [];
+  if (statements.length === 0) return null;
+
+  const locals: Array<{ local: Node; init: Node }> = [];
+  let index = 0;
+  while (index < statements.length) {
+    const binding = constBinding(statements[index]);
+    if (binding === null) break;
+    locals.push(binding);
+    index++;
+  }
+
+  const branches: Array<{ test: Node; value: Node }> = [];
+  while (index < statements.length) {
+    const branch = isIfReturn(statements[index]);
+    if (branch === null) break;
+    branches.push(branch);
+    index++;
+  }
+
+  if (index !== statements.length - 1) return null;
+  const last = statements[index];
+  if (last == null || last.type !== "ReturnStatement" || last.argument == null) return null;
+
+  return {
+    module: mod,
+    fn,
+    params,
+    paramSymbols,
+    locals,
+    branches,
+    otherwise: unwrap(last.argument),
   };
 }

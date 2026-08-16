@@ -220,7 +220,7 @@
     ]
   },
   "taxonomy": {
-    "codes": 30,
+    "codes": 32,
     "observed": 16,
     "unobserved": [
       "store-binding-not-provable",
@@ -236,6 +236,8 @@
       "jsx-unsupported-children",
       "derived-cell-initial-not-foldable",
       "derived-cell-input-not-mount-stable",
+      "element-projection-not-own-host",
+      "element-projection-not-pure",
       "callee-body-not-guarded-return"
     ],
     "observedBySegment": {

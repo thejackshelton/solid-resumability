@@ -17,6 +17,7 @@ import { MeasuredRestUnseen } from "./fixtures/shapes/MeasuredRestHost.tsx";
 import { FoldedMeasuredSeenLive, FoldedMeasuredUnseenLive } from "./fixtures/shapes/FoldedMeasuredHost.tsx";
 import { DerivedCellUnseen } from "./fixtures/shapes/DerivedCellHost.tsx";
 import { GuardedReturnUnseen } from "./fixtures/shapes/GuardedReturnHost.tsx";
+import { ElementProjectionUnseen } from "./fixtures/shapes/ElementProjectionHost.tsx";
 
 /**
  * THE ADVERSARIAL INSTANTIATION GATE.
@@ -1265,5 +1266,89 @@ describe("adversarial instantiation gate — guarded-return-callback", () => {
     expect(
       GUARDED_RETURN_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
     ).toEqual(["guarded-return-body"]);
+  });
+});
+
+const PROJECTION_HOSTS = `${SHAPES}/ElementProjectionHost.tsx`;
+const PROJECTION_COUNTER = `${SHAPES}/ElementProjectionCounter.tsx`;
+
+const ELEMENT_PROJECTION_CLAUSES: ShapeClause[] = [
+  {
+    id: "element-projection-own-host",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("element-projection-not-own-host"),
+  },
+  {
+    id: "element-projection-pure",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("element-projection-not-pure"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function elementProjectionRule(): ShapeRuleRegistration {
+  return {
+    id: "element-projection-own-host",
+    clauses: ELEMENT_PROJECTION_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: PROJECTION_COUNTER, component: "ElementProjectionOther" },
+    secondInstantiation: {
+      path: PROJECTION_HOSTS,
+      component: "ElementProjectionUnseen",
+      render: ElementProjectionUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — element-projection-own-host", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([elementProjectionRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the other-element host", () => {
+    const lying: ShapeRuleRegistration = { ...elementProjectionRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("element-projection-own-host");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(PROJECTION_HOSTS, "ElementProjectionHost");
+    const lying: ShapeRuleRegistration = {
+      ...elementProjectionRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<button class="seen">'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("element-projection-own-host");
+  });
+
+  it("the other-element counter fails exactly the own-host clause", () => {
+    const counter = classify(PROJECTION_COUNTER, "ElementProjectionOther");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("element-projection-not-own-host")).toBe(true);
+    expect(
+      ELEMENT_PROJECTION_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["element-projection-own-host"]);
+  });
+
+  it("the non-literal method-arg counter fails exactly the pure clause", () => {
+    const counter = classify(PROJECTION_COUNTER, "ElementProjectionNonLiteral");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("element-projection-not-pure")).toBe(true);
+    expect(
+      ELEMENT_PROJECTION_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["element-projection-pure"]);
+  });
+
+  it("the handler-visible counter is refused and does not admit", () => {
+    const counter = classify(PROJECTION_COUNTER, "ElementProjectionHandler");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("handler-captures-unprovable-binding")).toBe(true);
+    expect(elementProjectionRule().admits(counter)).toBe(false);
   });
 });

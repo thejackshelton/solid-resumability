@@ -408,9 +408,10 @@ describe("file-level refusals — taxonomy only, never a denominator", () => {
     // The taxonomy therefore reads 16 of 30, and this test is what stops any of
     // the fourteen absences from being discovered by accident later. T051 added
     // the two derived-cell codes to the closed set; T053 added
-    // callee-body-not-guarded-return. None has an `app/src` carrier (they fire
-    // on `test/fixtures/shapes`), so they join unobserved.
-    expect(report.taxonomy.codes).toBe(30);
+    // callee-body-not-guarded-return; T054 added the two element-projection
+    // codes. None has an `app/src` carrier (they fire on `test/fixtures/shapes`),
+    // so they join unobserved.
+    expect(report.taxonomy.codes).toBe(32);
     expect(report.taxonomy.unobserved).toEqual([
       "store-binding-not-provable",
       "store-read-not-provable",
@@ -425,6 +426,8 @@ describe("file-level refusals — taxonomy only, never a denominator", () => {
       "jsx-unsupported-children",
       "derived-cell-initial-not-foldable",
       "derived-cell-input-not-mount-stable",
+      "element-projection-not-own-host",
+      "element-projection-not-pure",
       "callee-body-not-guarded-return",
     ]);
   });

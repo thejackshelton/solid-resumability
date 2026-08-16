@@ -523,6 +523,49 @@ describe("derived-cell admission — first-party host", () => {
   });
 });
 
+describe("guarded-return object-argument decision tree — first-party host", () => {
+  const analysis = shape("GuardedObjectHost.tsx", "GuardedObjectHost");
+
+  it("classifies the host as provable", () => {
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.html).toBe('<button class="guarded-object"></button>');
+    expect(analysis.cells.some((cell) => cell.projection !== undefined)).toBe(true);
+  });
+});
+
+describe("element-projection admission — first-party host", () => {
+  const analysis = shape("ElementProjectionHost.tsx", "ElementProjectionHost");
+
+  it("classifies the host as provable with an own-host projection cell", () => {
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.cells[1]).toMatchObject({
+      id: "d0",
+      initial: "div",
+      projection: { host: "c0" },
+    });
+  });
+
+  it("refuses the other-element counter by name", () => {
+    const counter = shape("ElementProjectionCounter.tsx", "ElementProjectionOther");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("element-projection-not-own-host");
+  });
+
+  it("refuses the non-literal method-arg counter by name", () => {
+    const counter = shape("ElementProjectionCounter.tsx", "ElementProjectionNonLiteral");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("element-projection-not-pure");
+  });
+
+  it("refuses the handler-visible counter by name", () => {
+    const counter = shape("ElementProjectionCounter.tsx", "ElementProjectionHandler");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("handler-captures-unprovable-binding");
+  });
+});
+
 describe("compute closure — every emitted artifact", () => {
   it("closes every compute, when, and each over slot names only", () => {
     const files = [...structureFiles("artifacts"), ...structureFiles("demo/artifacts")];

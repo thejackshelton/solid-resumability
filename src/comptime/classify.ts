@@ -94,12 +94,19 @@
  * <pure-single-return-call>(…)` is that reconstructed derivation; a
  * near-miss of that family refuses `callee-body-not-guarded-return`. A
  * derived-accessor read in that binding stays measured: the deferred write
- * is never evaluated. (b) A member read of an
+ * is never evaluated, except an own-host element projection recorded on the
+ * cell and restored after ref replay. (b) A member read of an
  * identity-class binding (`own-props-parameter` / `derived-rest-props-result`
  * via `sourceBindingOf`) in a standalone frame is measured. (c) A
  * ConditionalExpression whose test `deriveCondition`s and whose both
  * branches `derive` is measured-propagating. `deriveCondition` walks
- * negation, strict comparison, and `&&` / `||` of those same shapes. A
+ * negation, strict comparison, `==` / `!=` against literal null, and
+ * `&&` / `||` of those same shapes. A derived cell whose deferred write is
+ * a pure projection of the mount's own host (property chain and/or
+ * `getAttribute(<string literal>)`) is recorded with that projection and
+ * restored on the already-held ref before any attribute compute reads it.
+ * A projection of any other element refuses `element-projection-not-own-host`;
+ * a non-pure projection refuses `element-projection-not-pure`. A
  * measured identity rest-spread (`{...ident}`) on an own-frame intrinsic
  * bakes nothing; capture measures the attribute set and resume replays a
  * spread assign. A call-valued or non-identity spread still refuses
@@ -155,7 +162,9 @@ import {
 } from "./ast.ts";
 import { findComponent, findComponents, type ComponentSite } from "./discover.ts";
 import {
+  matchElementProjection,
   matchGuardedReturn,
+  matchLiteralDecisionTree,
   parameterIndexOf,
   parameterIsAccessorOnly,
   parameterIsGetterOnly,
@@ -164,6 +173,7 @@ import {
   summarizeDerivedAccessor,
   type DerivedAccessorSummary,
   type GuardedReturnMatch,
+  type LiteralDecisionTree,
 } from "./summaries.ts";
 import { classifyStoreBinding, useContextCalls } from "./stores.ts";
 import { AMBIENT_MEMBER_CALLS, EVENT_TIME_SYNTAX, HANDLER_SYNTAX } from "./syntax.ts";
@@ -185,6 +195,7 @@ import type {
   BindingInfo,
   CaptureSlot,
   CellInfo,
+  ElementProjection,
   SlotRewrite,
   ClaimedChild,
   ClassConditionInfo,
@@ -317,10 +328,12 @@ interface Derived {
 }
 
 /** What a summarized helper's parameter is bound to at a call site: a cell
- * accessor (usable only as `p()` / `p(x)`), or an already-folded value. */
+ * accessor (usable only as `p()` / `p(x)`), an already-folded value, or an
+ * object-literal argument whose fields were each derived. */
 type ParameterBinding =
   | { kind: "accessor"; accessor: Accessor }
-  | { kind: "value"; derived: Derived };
+  | { kind: "value"; derived: Derived }
+  | { kind: "object"; fields: Map<string, Derived> };
 
 /** What a child's `props.X` stands for once the call site proved what was
  * passed — the whole vocabulary of the props boundary, with no "object",
@@ -2247,6 +2260,31 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       };
     }
 
+    if (
+      expression.type === "BinaryExpression" &&
+      (expression.operator === "==" || expression.operator === "!=") &&
+      nullLiteralSide(expression) !== null
+    ) {
+      const left = deriveCondition(frame, expression.left, env, mod);
+      const right = deriveCondition(frame, expression.right, env, mod);
+      if (left === null || right === null) return null;
+      const measured = left.measured || right.measured;
+      const inlined = left.inlined || right.inlined;
+      const rewrites = joinRewrites(left.rewrites, right.rewrites);
+      return {
+        value: measured ? false : compare(expression.operator, left.value, right.value),
+        measured,
+        slots: [...left.slots, ...right.slots],
+        source: derivedSource(expression, {
+          inlined,
+          source: `(${left.source} ${expression.operator} ${right.source})`,
+          rewrites,
+        }),
+        inlined,
+        rewrites,
+      };
+    }
+
     return derive(mod, expression, env, frame);
   }
 
@@ -2771,6 +2809,86 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     return found;
   }
 
+  function bindGuardedArg(
+    frame: Frame,
+    argument: Node,
+    localSymbol: YukuSymbol | null,
+    scrutinee: Derived,
+  ): ParameterBinding | null {
+    if (argument.type === "Identifier" && localSymbol !== null) {
+      const argumentSymbol = moduleInfo.referenceOf(argument)?.symbol ?? null;
+      if (argumentSymbol !== null && argumentSymbol.id === localSymbol.id) {
+        return { kind: "value", derived: scrutinee };
+      }
+    }
+
+    if (argument.type === "ObjectExpression") {
+      const fields = new Map<string, Derived>();
+      for (const property of argument.properties ?? []) {
+        if (property.type !== "Property" || property.computed === true) return null;
+        if (property.key?.type !== "Identifier") return null;
+        const fieldNode = unwrap(property.value);
+        if (fieldNode != null && fieldNode.type === "Identifier" && localSymbol !== null) {
+          const fieldSymbol = moduleInfo.referenceOf(fieldNode)?.symbol ?? null;
+          if (fieldSymbol !== null && fieldSymbol.id === localSymbol.id) {
+            fields.set(property.key.name, scrutinee);
+            continue;
+          }
+        }
+        const field = derive(moduleInfo, property.value, null, frame);
+        if (field === null) return null;
+        fields.set(property.key.name, field);
+      }
+      return { kind: "object", fields };
+    }
+
+    const accessor = accessorOf(argument);
+    if (accessor !== null) return { kind: "accessor", accessor };
+
+    const derived = derive(moduleInfo, argument, null, frame);
+    return derived === null ? null : { kind: "value", derived };
+  }
+
+  function joinTernary(test: Derived, consequent: Derived, alternate: Derived): Derived {
+    const measured = test.measured || consequent.measured || alternate.measured;
+    const inlined = test.inlined || consequent.inlined || alternate.inlined;
+    const rewrites = joinRewrites(test.rewrites, consequent.rewrites, alternate.rewrites);
+    return {
+      value: measured ? "" : test.value ? consequent.value : alternate.value,
+      measured,
+      slots: [...test.slots, ...consequent.slots, ...alternate.slots],
+      source: `(${test.source} ? ${consequent.source} : ${alternate.source})`,
+      inlined,
+      rewrites,
+    };
+  }
+
+  function deriveDecisionTree(
+    frame: Frame,
+    tree: LiteralDecisionTree,
+    env: Map<number, ParameterBinding>,
+  ): Derived | null {
+    const inner = new Map(env);
+    for (const local of tree.locals) {
+      const init = derive(tree.module, local.init, inner, frame);
+      if (init === null) return null;
+      const symbol = tree.module.symbolOf(local.local);
+      if (symbol === null) return null;
+      inner.set(symbol.id, { kind: "value", derived: init });
+    }
+
+    let current = deriveCondition(frame, tree.otherwise, inner, tree.module);
+    if (current === null) return null;
+    for (let index = tree.branches.length - 1; index >= 0; index--) {
+      const branch = tree.branches[index];
+      const test = deriveCondition(frame, branch.test, inner, tree.module);
+      const value = deriveCondition(frame, branch.value, inner, tree.module);
+      if (test === null || value === null) return null;
+      current = joinTernary(test, value, current);
+    }
+    return current;
+  }
+
   function deriveGuardedReturn(frame: Frame, match: Extract<GuardedReturnMatch, { kind: "exact" }>): Derived | null {
     const guard = literalValue(match.guardLiteral);
     if (!guard.ok) return null;
@@ -2778,39 +2896,41 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     const scrutinee = derive(moduleInfo, match.call, null, frame);
     if (scrutinee === null) return null;
 
-    const summary = summarize(moduleInfo, match.terminal.callee);
-    if (summary === null) return null;
-
     const args: Node[] = match.terminal.arguments ?? [];
-    if (args.length !== summary.params.length) return null;
-
     const localSymbol = moduleInfo.symbolOf(match.local);
-    const env = new Map<number, ParameterBinding>();
-    for (let index = 0; index < args.length; index++) {
-      const argument = unwrap(args[index]);
-      if (argument == null) return null;
 
-      if (argument.type === "Identifier" && localSymbol !== null) {
-        const argumentSymbol = moduleInfo.referenceOf(argument)?.symbol ?? null;
-        if (argumentSymbol !== null && argumentSymbol.id === localSymbol.id) {
-          env.set(summary.paramSymbols[index].id, { kind: "value", derived: scrutinee });
-          continue;
-        }
+    const bindArgs = (paramSymbols: YukuSymbol[]): Map<number, ParameterBinding> | null => {
+      if (args.length !== paramSymbols.length) return null;
+      const env = new Map<number, ParameterBinding>();
+      for (let index = 0; index < args.length; index++) {
+        const argument = unwrap(args[index]);
+        if (argument == null) return null;
+        const bound = bindGuardedArg(frame, argument, localSymbol, scrutinee);
+        if (bound === null) return null;
+        env.set(paramSymbols[index].id, bound);
       }
+      return env;
+    };
 
-      const accessor = accessorOf(argument);
-      if (accessor !== null) {
-        if (!parameterIsAccessorOnly(summary, index, accessor.access)) return null;
-        env.set(summary.paramSymbols[index].id, { kind: "accessor", accessor });
-        continue;
+    const summary = summarize(moduleInfo, match.terminal.callee);
+    let thenBranch: Derived | null = null;
+    if (summary !== null) {
+      const env = bindArgs(summary.paramSymbols);
+      if (env !== null) {
+        thenBranch = deriveCondition(frame, summary.returned, env, summary.module);
       }
-
-      const derived = derive(moduleInfo, argument, null, frame);
-      if (derived === null) return null;
-      env.set(summary.paramSymbols[index].id, { kind: "value", derived });
     }
-
-    const thenBranch = deriveCondition(frame, summary.returned, env, summary.module);
+    if (thenBranch === null) {
+      const tree = matchLiteralDecisionTree(moduleInfo, match.terminal.callee);
+      if (tree === null) {
+        return null;
+      }
+      const env = bindArgs(tree.paramSymbols);
+      if (env === null) {
+        return null;
+      }
+      thenBranch = deriveDecisionTree(frame, tree, env);
+    }
     if (thenBranch === null) return null;
 
     const measured = scrutinee.measured || thenBranch.measured;
@@ -2868,6 +2988,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   ): Derived | null {
     const expression = unwrap(node);
     if (expression == null) return null;
+    if (expression.type === "ChainExpression") return derive(mod, expression.expression, env, frame);
     /** The author's own text, used whenever nothing beneath was substituted. */
     const verbatim = (): string => printExpression(expression);
 
@@ -2876,6 +2997,10 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       return literal.ok
         ? { value: literal.value, slots: [], source: verbatim(), inlined: false, measured: false, rewrites: [] }
         : null;
+    }
+
+    if (isVoid0(expression)) {
+      return { value: null, slots: [], source: verbatim(), inlined: false, measured: false, rewrites: [] };
     }
 
     // Only reachable in a helper frame: a parameter standing for a plain value.
@@ -2892,7 +3017,19 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       return { ...bound.derived, inlined: true };
     }
 
-    if (expression.type === "MemberExpression") {
+    if (expression.type === "MemberExpression" || expression.type === "OptionalMemberExpression") {
+      if (env !== null && expression.computed !== true && expression.property?.type === "Identifier") {
+        const object = unwrap(expression.object);
+        if (object != null && object.type === "Identifier") {
+          const symbol = mod.referenceOf(object)?.symbol ?? null;
+          const bound = symbol === null ? undefined : env.get(symbol.id);
+          if (bound?.kind === "object") {
+            const field = bound.fields.get(expression.property.name);
+            return field === undefined ? null : { ...field, inlined: true };
+          }
+        }
+      }
+
       // A read of the store's data: `state.todos.length`. The BASE is what was
       // proven — slot `path` of this provider's value — and the property chain
       // above it is the author's own expression, carried as source and evaluated
@@ -2974,11 +3111,17 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       return { ...bound.derived, inlined: true };
     }
 
-    if (expression.type === "CallExpression") {
+    if (expression.type === "CallExpression" || expression.type === "OptionalCallExpression") {
       const callee = unwrap(expression.callee);
 
+      const hostRead = deriveOwnElementRead(mod, expression, env, frame);
+      if (hostRead !== null) return hostRead;
+
+      const method = derivePureMethod(mod, expression, env, frame);
+      if (method !== null) return method;
+
       // `props.count()` inside an inlined child: a read of the *parent's* cell.
-      if (callee != null && callee.type === "MemberExpression") {
+      if (callee != null && (callee.type === "MemberExpression" || callee.type === "OptionalMemberExpression")) {
         if (env !== null) return null;
         const bound = propBindingOf(frame, callee);
         if (bound === null || bound.kind !== "accessor") return null;
@@ -3252,6 +3395,103 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     const symbol = moduleInfo.referenceOf(expression)?.symbol ?? null;
     if (symbol === null) return null;
     return accessors.get(symbol.id) ?? null;
+  }
+
+  function frozenModuleStringArray(mod: Module, node: Node): string[] | null {
+    const ident = unwrap(node);
+    if (ident == null || ident.type !== "Identifier") return null;
+    const symbol = mod.referenceOf(ident)?.symbol ?? null;
+    if (symbol === null || symbol.declarations.length !== 1) return null;
+    const declaration: Node = symbol.declarations[0];
+    const parent: Node = mod.parentOf(declaration);
+    if (parent == null || parent.type !== "VariableDeclarator" || parent.id !== declaration) return null;
+    const grand: Node = mod.parentOf(parent);
+    if (grand == null || grand.type !== "VariableDeclaration" || grand.kind !== "const") return null;
+    const init = unwrap(parent.init);
+    if (init == null || init.type !== "ArrayExpression") return null;
+    const values: string[] = [];
+    for (const element of init.elements ?? []) {
+      if (element == null) return null;
+      const literal = literalValue(unwrap(element));
+      if (!literal.ok || typeof literal.value !== "string") return null;
+      values.push(literal.value);
+    }
+    return values;
+  }
+
+  function derivePureMethod(
+    mod: Module,
+    call: Node,
+    env: Map<number, ParameterBinding> | null,
+    frame: Frame,
+  ): Derived | null {
+    const callee = unwrap(call.callee);
+    if (callee == null || (callee.type !== "MemberExpression" && callee.type !== "OptionalMemberExpression")) {
+      return null;
+    }
+    if (callee.computed === true || callee.property?.type !== "Identifier") return null;
+    const name: string = callee.property.name;
+    const args: Node[] = call.arguments ?? [];
+
+    if ((name === "toLowerCase" || name === "toUpperCase" || name === "trim") && args.length === 0) {
+      const object = derive(mod, callee.object, env, frame);
+      if (object === null) return null;
+      const text = typeof object.value === "string" ? object.value : "";
+      const next =
+        name === "toLowerCase" ? text.toLowerCase() : name === "toUpperCase" ? text.toUpperCase() : text.trim();
+      return {
+        value: object.measured ? "" : next,
+        measured: object.measured,
+        slots: object.slots,
+        source: `${object.source}.${name}()`,
+        inlined: true,
+        rewrites: object.rewrites,
+      };
+    }
+
+    if (name === "indexOf" && args.length === 1) {
+      const table = frozenModuleStringArray(mod, callee.object);
+      if (table === null) return null;
+      const needle = derive(mod, args[0], env, frame);
+      if (needle === null) return null;
+      const index = typeof needle.value === "string" ? table.indexOf(needle.value) : -1;
+      return {
+        value: needle.measured ? "" : index,
+        measured: needle.measured,
+        slots: needle.slots,
+        source: `${JSON.stringify(table)}.indexOf(${needle.source})`,
+        inlined: true,
+        rewrites: needle.rewrites,
+      };
+    }
+
+    return null;
+  }
+
+  function deriveOwnElementRead(
+    mod: Module,
+    node: Node,
+    env: Map<number, ParameterBinding> | null,
+    frame: Frame,
+  ): Derived | null {
+    if (env !== null || frame.props !== null || mod !== moduleInfo) return null;
+    const getterIds = new Set<number>();
+    for (const [id, accessor] of accessors) {
+      if (accessor.access === "read") getterIds.add(id);
+    }
+    const match = matchElementProjection(mod, node, getterIds);
+    if (match === null || match.kind !== "projection" || match.steps.length === 0) return null;
+    const accessor = accessors.get(match.getterId);
+    if (accessor === undefined || accessor.access !== "read") return null;
+    const rewrites = [{ node: match.base, name: accessor.name }];
+    return {
+      value: "",
+      slots: [{ name: accessor.name, cell: accessor.cellId, access: "read" }],
+      source: printWithSlotRewrites(node, rewrites),
+      inlined: false,
+      measured: true,
+      rewrites,
+    };
   }
 
   // ------------------------------------------------------- props see-through
@@ -4556,6 +4796,130 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     return true;
   }
 
+  function writerSetsParam(mod: Module, fn: Node, setterIds: ReadonlySet<number>, param: Node): boolean {
+    const paramSymbol = mod.symbolOf(param);
+    if (paramSymbol === null) return false;
+    let writes = 0;
+    let ok = true;
+    mod.walk(
+      {
+        CallExpression: (node: Node) => {
+          if (!ok || (node.arguments?.length ?? 0) !== 1) return;
+          const callee = unwrap(node.callee);
+          if (callee == null || callee.type !== "Identifier") return;
+          const symbol = mod.referenceOf(callee)?.symbol ?? null;
+          if (symbol === null || !setterIds.has(symbol.id)) return;
+          writes++;
+          const arg = unwrap(node.arguments[0]);
+          if (arg == null || arg.type !== "Identifier") {
+            ok = false;
+            return;
+          }
+          const argSymbol = mod.referenceOf(arg)?.symbol ?? null;
+          if (argSymbol === null || argSymbol.id !== paramSymbol.id) ok = false;
+        },
+      },
+      fn,
+    );
+    return ok && writes === 1;
+  }
+
+  function deferredWriteValue(summary: DerivedAccessorSummary): Node | null {
+    const setterIds = new Set(summary.localSetters.map((setter) => setter.id));
+
+    for (const call of summary.module.findAll("CallExpression")) {
+      if (!contains(summary.fn, call) || (call.arguments?.length ?? 0) !== 2) continue;
+      const compute = unwrap(call.arguments[0]);
+      const writer = unwrap(call.arguments[1]);
+      if (!isFunctionNode(compute) || !isFunctionNode(writer)) continue;
+      if ((compute.params?.length ?? 0) !== 0) continue;
+      if ((writer.params?.length ?? 0) !== 1) continue;
+      const param = writer.params[0];
+      if (param == null || param.type !== "Identifier") continue;
+      if (!writerSetsParam(summary.module, writer, setterIds, param)) continue;
+      const returned = topLevelReturned(compute);
+      if (returned != null) return returned;
+    }
+
+    for (const call of summary.module.findAll("CallExpression")) {
+      if (!contains(summary.fn, call) || (call.arguments?.length ?? 0) !== 1) continue;
+      const callee = unwrap(call.callee);
+      if (callee == null || callee.type !== "Identifier") continue;
+      const symbol = summary.module.referenceOf(callee)?.symbol ?? null;
+      if (symbol === null || !setterIds.has(symbol.id)) continue;
+      const arg = unwrap(call.arguments[0]);
+      if (arg == null || arg.type === "Identifier") continue;
+      return arg;
+    }
+
+    return null;
+  }
+
+  function rootRefWriteCells(): Set<string> {
+    const ids = new Set<string>();
+    for (const binding of bindings) {
+      if (binding.kind !== "attribute" || binding.attribute !== "ref") continue;
+      if (binding.locator !== "/") continue;
+      for (const slot of binding.captures) {
+        if (isCellSlot(slot) && slot.access === "write") ids.add(slot.cell);
+      }
+    }
+    return ids;
+  }
+
+  function callSiteGetterCell(arg: Node): string | null {
+    const accessor = accessorOf(unwrap(arg));
+    if (accessor === null || accessor.access !== "read" || accessor.derived === true) return null;
+    return accessor.cellId;
+  }
+
+  function elementProjectionOf(
+    pending: (typeof pendingDerived)[number],
+  ): { projection: ElementProjection } | { refuse: ReasonCode; message: string } | null {
+    const written = deferredWriteValue(pending.summary);
+    if (written == null) return null;
+
+    const getterIds = new Set<number>();
+    for (let index = 0; index < pending.summary.paramSymbols.length; index++) {
+      if (parameterIsGetterOnly(pending.summary, index)) {
+        getterIds.add(pending.summary.paramSymbols[index].id);
+      }
+    }
+    if (getterIds.size === 0) return null;
+
+    const match = matchElementProjection(pending.summary.module, written, getterIds);
+    if (match === null) return null;
+    if (match.kind === "not-pure") {
+      return {
+        refuse: "element-projection-not-pure",
+        message:
+          "The derived cell's deferred write is an element projection that is not a property chain or getAttribute of a string literal.",
+      };
+    }
+    if (match.kind === "not-own-host") {
+      return {
+        refuse: "element-projection-not-own-host",
+        message: "The derived cell's deferred write projects an element other than a getter parameter of the helper.",
+      };
+    }
+    if (match.steps.length === 0) return null;
+
+    const paramIndex = pending.summary.paramSymbols.findIndex((symbol) => symbol.id === match.getterId);
+    if (paramIndex < 0) return null;
+    const hostCell = callSiteGetterCell(pending.call.arguments[paramIndex]);
+    const ownHost = rootRefWriteCells();
+    if (hostCell === null || !ownHost.has(hostCell)) {
+      return {
+        refuse: "element-projection-not-own-host",
+        message: "The derived cell's deferred write projects an element other than the mount's own host.",
+      };
+    }
+
+    return { projection: { host: hostCell, steps: match.steps } };
+  }
+
+  const projectionCells = new Set<string>();
+
   for (const pending of pendingDerived) {
     if (!capturedReads.has(pending.cellId)) continue;
 
@@ -4578,12 +4942,33 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       continue;
     }
 
+    const projected = elementProjectionOf(pending);
+    if (projected !== null && "refuse" in projected) {
+      refuse(projected.refuse, projected.message, pending.call);
+      continue;
+    }
+
+    if (projected !== null) projectionCells.add(pending.cellId);
+
     cells.push({
       id: pending.cellId,
       getter: pending.name,
       initial: folded.value,
       loc: locOf(pending.call),
+      ...(projected === null ? {} : { projection: projected.projection }),
     });
+  }
+
+  if (projectionCells.size > 0) {
+    for (const handler of handlers) {
+      if (handler.captures.some((slot) => isCellSlot(slot) && projectionCells.has(slot.cell))) {
+        refuse(
+          "element-projection-not-pure",
+          "A handler captures an element-projection cell; projection cells are binding computes only.",
+          component.fn,
+        );
+      }
+    }
   }
 
   // ------------------------------------------------------------------ verdict
@@ -5030,12 +5415,24 @@ function fold(operator: string, left: StaticValue, right: StaticValue): StaticVa
 /** The comparison half, kept apart from `fold` because it answers a different
  * question: `fold` produces a value, this produces a verdict. Strict operators
  * only, so what is folded here is what JavaScript would decide at runtime. */
+function nullLiteralSide(expression: Node): "left" | "right" | null {
+  const left = unwrap(expression.left);
+  const right = unwrap(expression.right);
+  if (left != null && left.type === "Literal" && left.value === null) return "left";
+  if (right != null && right.type === "Literal" && right.value === null) return "right";
+  return null;
+}
+
 function compare(operator: string, left: StaticValue, right: StaticValue): boolean {
   switch (operator) {
     case "===":
       return left === right;
     case "!==":
       return left !== right;
+    case "==":
+      return left == right;
+    case "!=":
+      return left != right;
     case "<":
       return (left as never) < (right as never);
     case ">":

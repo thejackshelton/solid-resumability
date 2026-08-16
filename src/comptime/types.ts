@@ -79,6 +79,9 @@ export const REASON_CODES = [
   /* derived cells */
   "derived-cell-initial-not-foldable",
   "derived-cell-input-not-mount-stable",
+  /* element-projection cells */
+  "element-projection-not-own-host",
+  "element-projection-not-pure",
   /* callee bodies */
   "callee-body-not-guarded-return",
 ] as const;
@@ -113,15 +116,31 @@ export type HandlerOrigin = "component" | "helper" | "action";
 /** A serialized literal: the only thing a source cell may start life as. */
 export type StaticValue = string | number | boolean | null;
 
+/** One step of a mount-time own-element projection. Property and zero-arg
+ * method names are identifiers; `getAttribute` carries a string literal. */
+export type ElementProjectionStep =
+  | { kind: "property"; name: string }
+  | { kind: "call"; name: string }
+  | { kind: "getAttribute"; name: string };
+
+/** A pure projection of the mount's own host, restored after ref replay. */
+export interface ElementProjection {
+  host: string;
+  steps: ElementProjectionStep[];
+}
+
 /** One source cell (`createSignal(<literal>)`) or one admitted derived cell.
  * `initial` is the literal, read straight off the AST or folded at the call
- * site. `setter` is absent on a derived cell: the writer stays in the callee. */
+ * site. `setter` is absent on a derived cell: the writer stays in the callee.
+ * `projection` is present when the deferred write is a pure own-host
+ * element projection; resume evaluates it on the already-held ref. */
 export interface CellInfo {
   id: string;
   getter: string;
   setter?: string;
   initial: StaticValue;
   loc: SourceLoc;
+  projection?: ElementProjection;
 }
 
 /**

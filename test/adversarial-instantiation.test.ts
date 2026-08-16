@@ -16,6 +16,7 @@ import { MemoConditionalUnseen } from "./fixtures/shapes/MemoConditionalHost.tsx
 import { MeasuredRestUnseen } from "./fixtures/shapes/MeasuredRestHost.tsx";
 import { FoldedMeasuredSeenLive, FoldedMeasuredUnseenLive } from "./fixtures/shapes/FoldedMeasuredHost.tsx";
 import { DerivedCellUnseen } from "./fixtures/shapes/DerivedCellHost.tsx";
+import { GuardedReturnUnseen } from "./fixtures/shapes/GuardedReturnHost.tsx";
 
 /**
  * THE ADVERSARIAL INSTANTIATION GATE.
@@ -1179,5 +1180,90 @@ describe("adversarial instantiation gate — derived-cell-input-mount-stable", (
     expect(
       DERIVED_CELL_STABLE_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
     ).toEqual(["derived-cell-input-mount-stable"]);
+  });
+});
+
+const GUARDED_HOSTS = `${SHAPES}/GuardedReturnHost.tsx`;
+const GUARDED_COUNTER = `${SHAPES}/GuardedReturnCounter.tsx`;
+
+/** Clauses of the guarded-return callback admission — first-party, no library name. */
+const GUARDED_RETURN_CLAUSES: ShapeClause[] = [
+  {
+    id: "guarded-return-body",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("callee-body-not-guarded-return"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function guardedReturnCallbackRule(): ShapeRuleRegistration {
+  return {
+    id: "guarded-return-callback",
+    clauses: GUARDED_RETURN_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "title"),
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: GUARDED_COUNTER, component: "GuardedReturnExtraStatement" },
+    secondInstantiation: {
+      path: GUARDED_HOSTS,
+      component: "GuardedReturnUnseen",
+      render: GuardedReturnUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — guarded-return-callback", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([guardedReturnCallbackRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the extra-statement host", () => {
+    const lying: ShapeRuleRegistration = { ...guardedReturnCallbackRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("guarded-return-callback");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(GUARDED_HOSTS, "GuardedReturnHost");
+    const lying: ShapeRuleRegistration = {
+      ...guardedReturnCallbackRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="guarded" title="on">seen</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("guarded-return-callback");
+  });
+
+  it("the extra-statement counter fails exactly the guarded-return-body clause", () => {
+    const counter = classify(GUARDED_COUNTER, "GuardedReturnExtraStatement");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("callee-body-not-guarded-return")).toBe(true);
+    expect(
+      GUARDED_RETURN_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guarded-return-body"]);
+  });
+
+  it("the non-literal guard-return counter fails exactly the guarded-return-body clause", () => {
+    const counter = classify(GUARDED_COUNTER, "GuardedReturnNonLiteral");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("callee-body-not-guarded-return")).toBe(true);
+    expect(
+      GUARDED_RETURN_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guarded-return-body"]);
+  });
+
+  it("the write-in-body counter fails exactly the guarded-return-body clause", () => {
+    const counter = classify(GUARDED_COUNTER, "GuardedReturnWrite");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("callee-body-not-guarded-return")).toBe(true);
+    expect(
+      GUARDED_RETURN_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guarded-return-body"]);
   });
 });

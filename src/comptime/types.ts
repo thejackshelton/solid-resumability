@@ -79,6 +79,8 @@ export const REASON_CODES = [
   /* derived cells */
   "derived-cell-initial-not-foldable",
   "derived-cell-input-not-mount-stable",
+  /* callee bodies */
+  "callee-body-not-guarded-return",
 ] as const;
 
 export type ReasonCode = (typeof REASON_CODES)[number];

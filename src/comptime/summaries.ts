@@ -28,6 +28,11 @@
  *
  * Anything else returns null and the caller refuses as before. A summary narrows
  * the black box; it never widens the trusted subset by assumption.
+ *
+ * Memo-callback see-through has a second, narrower body shape — not a
+ * widening of {@link PureSummary} — matched by {@link matchGuardedReturn}:
+ * exactly one const binding of a call, a `== null` guard that returns a
+ * literal, and a terminal call. That matcher does not evaluate anything.
  */
 
 import type { Module, Symbol as YukuSymbol } from "yuku-analyzer";
@@ -434,4 +439,111 @@ export function parameterIsGetterOnly(summary: DerivedAccessorSummary, index: nu
     if (reference.inTypePosition) return true;
     return isZeroArgCall(summary.module.parentOf(reference.node), reference.node);
   });
+}
+
+/**
+ * The admitted memo-callback guarded-return shape, or a near-miss.
+ *
+ * Exact body:
+ *   const x = <call>();
+ *   if (x == null) return <literal>;
+ *   return <call>(...);
+ *
+ * `kind: "wider"` is a body that starts with that const-call binding and
+ * contains an `x == null` guard, but is not the exact three-statement form.
+ * `null` means the body is not in this family at all.
+ */
+export type GuardedReturnMatch =
+  | { kind: "exact"; local: Node; call: Node; guardLiteral: Node; terminal: Node }
+  | { kind: "wider" };
+
+function localCallBinding(statement: Node): { local: Node; call: Node } | null {
+  if (statement == null || statement.type !== "VariableDeclaration") return null;
+  if (statement.kind !== "const") return null;
+  const declarations: Node[] = statement.declarations ?? [];
+  if (declarations.length !== 1) return null;
+  const declarator = declarations[0];
+  if (declarator == null || declarator.id == null || declarator.id.type !== "Identifier") return null;
+  const init = unwrap(declarator.init);
+  if (init == null || init.type !== "CallExpression") return null;
+  return { local: declarator.id, call: init };
+}
+
+function sameLocal(mod: Module, declaration: Node, reference: Node): boolean {
+  const declared = mod.symbolOf(declaration);
+  const used = mod.referenceOf(reference)?.symbol ?? null;
+  return declared !== null && used !== null && declared.id === used.id;
+}
+
+function isNullGuardTest(mod: Module, test: Node, local: Node): boolean {
+  const expression = unwrap(test);
+  if (expression == null || expression.type !== "BinaryExpression" || expression.operator !== "==") {
+    return false;
+  }
+  const left = unwrap(expression.left);
+  const right = unwrap(expression.right);
+  if (left == null || right == null) return false;
+  return (
+    left.type === "Identifier" &&
+    sameLocal(mod, local, left) &&
+    right.type === "Literal" &&
+    right.value === null
+  );
+}
+
+function isStaticLiteral(node: Node): boolean {
+  if (node == null || node.type !== "Literal") return false;
+  const value = node.value;
+  return value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+}
+
+function returnedArgumentOf(consequent: Node): Node | null {
+  const node = unwrap(consequent);
+  if (node == null) return null;
+  if (node.type === "ReturnStatement") {
+    return node.argument == null ? null : unwrap(node.argument);
+  }
+  if (node.type !== "BlockStatement") return null;
+  const statements: Node[] = node.body ?? [];
+  if (statements.length !== 1 || statements[0].type !== "ReturnStatement") return null;
+  return statements[0].argument == null ? null : unwrap(statements[0].argument);
+}
+
+/** Matches a function body against the guarded-return grammar. */
+export function matchGuardedReturn(mod: Module, fn: Node): GuardedReturnMatch | null {
+  if (fn == null || fn.body == null || fn.body.type !== "BlockStatement") return null;
+  const statements: Node[] = fn.body.body ?? [];
+  if (statements.length === 0) return null;
+
+  const binding = localCallBinding(statements[0]);
+  if (binding === null) return null;
+  const hasNullGuard = statements.some(
+    (statement: Node) =>
+      statement != null &&
+      statement.type === "IfStatement" &&
+      isNullGuardTest(mod, statement.test, binding.local),
+  );
+  if (!hasNullGuard) return null;
+
+  if (statements.length !== 3) return { kind: "wider" };
+  const ifStatement = statements[1];
+  const returnStatement = statements[2];
+  if (ifStatement == null || ifStatement.type !== "IfStatement") return { kind: "wider" };
+  if (ifStatement.alternate != null) return { kind: "wider" };
+  if (!isNullGuardTest(mod, ifStatement.test, binding.local)) return { kind: "wider" };
+  const guardLiteral = returnedArgumentOf(ifStatement.consequent);
+  if (!isStaticLiteral(guardLiteral)) return { kind: "wider" };
+  if (returnStatement == null || returnStatement.type !== "ReturnStatement" || returnStatement.argument == null) {
+    return { kind: "wider" };
+  }
+  const terminal = unwrap(returnStatement.argument);
+  if (terminal == null || terminal.type !== "CallExpression") return { kind: "wider" };
+
+  return {
+    kind: "exact",
+    local: binding.local,
+    call: binding.call,
+    guardLiteral,
+    terminal,
+  };
 }

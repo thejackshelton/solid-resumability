@@ -89,7 +89,12 @@
  * C1-summarized derived accessor is measured: the getter is not a source
  * cell, so the attribute bakes zero bytes. A zero-argument call of a
  * binding initialized to a framework memo whose callback `derive`s is that
- * callback — the memo is transparent, no new cell. (b) A member read of an
+ * callback — the memo is transparent, no new cell. A memo callback that is
+ * exactly `const x = <call>(); if (x == null) return <literal>; return
+ * <pure-single-return-call>(…)` is that reconstructed derivation; a
+ * near-miss of that family refuses `callee-body-not-guarded-return`. A
+ * derived-accessor read in that binding stays measured: the deferred write
+ * is never evaluated. (b) A member read of an
  * identity-class binding (`own-props-parameter` / `derived-rest-props-result`
  * via `sourceBindingOf`) in a standalone frame is measured. (c) A
  * ConditionalExpression whose test `deriveCondition`s and whose both
@@ -150,6 +155,7 @@ import {
 } from "./ast.ts";
 import { findComponent, findComponents, type ComponentSite } from "./discover.ts";
 import {
+  matchGuardedReturn,
   parameterIndexOf,
   parameterIsAccessorOnly,
   parameterIsGetterOnly,
@@ -157,6 +163,7 @@ import {
   summarize,
   summarizeDerivedAccessor,
   type DerivedAccessorSummary,
+  type GuardedReturnMatch,
 } from "./summaries.ts";
 import { classifyStoreBinding, useContextCalls } from "./stores.ts";
 import { AMBIENT_MEMBER_CALLS, EVENT_TIME_SYNTAX, HANDLER_SYNTAX } from "./syntax.ts";
@@ -2166,12 +2173,17 @@ export function classifySite(module: Module, component: ComponentSite, options?:
    * child that compares two values is a different question, asked in a
    * different slice, and widening the walk here would answer it by accident.
    */
-  function deriveCondition(frame: Frame, node: Node): Derived | null {
+  function deriveCondition(
+    frame: Frame,
+    node: Node,
+    env: Map<number, ParameterBinding> | null = null,
+    mod: Module = frame.mod,
+  ): Derived | null {
     const expression = unwrap(node);
     if (expression == null) return null;
 
     if (expression.type === "UnaryExpression" && expression.operator === "!") {
-      const argument = deriveCondition(frame, expression.argument);
+      const argument = deriveCondition(frame, expression.argument, env, mod);
       if (argument === null) return null;
       const rewrites = argument.rewrites;
       return {
@@ -2190,8 +2202,8 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     }
 
     if (expression.type === "LogicalExpression" && LOGICAL.has(expression.operator)) {
-      const left = deriveCondition(frame, expression.left);
-      const right = deriveCondition(frame, expression.right);
+      const left = deriveCondition(frame, expression.left, env, mod);
+      const right = deriveCondition(frame, expression.right, env, mod);
       if (left === null || right === null) return null;
       const measured = left.measured || right.measured;
       const inlined = left.inlined || right.inlined;
@@ -2215,8 +2227,8 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     }
 
     if (expression.type === "BinaryExpression" && COMPARISON.has(expression.operator)) {
-      const left = deriveCondition(frame, expression.left);
-      const right = deriveCondition(frame, expression.right);
+      const left = deriveCondition(frame, expression.left, env, mod);
+      const right = deriveCondition(frame, expression.right, env, mod);
       if (left === null || right === null) return null;
       const measured = left.measured || right.measured;
       const inlined = left.inlined || right.inlined;
@@ -2235,7 +2247,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       };
     }
 
-    return deriveText(frame, expression);
+    return derive(mod, expression, env, frame);
   }
 
   // -------------------------------------------------------- two-state regions
@@ -2693,11 +2705,11 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   }
 
   /**
-   * The single returned expression of a zero-parameter framework-memo
-   * callback bound to `callee`, or null. The memo itself is not a cell:
-   * see-through substitutes this body at each zero-argument call.
+   * The zero-parameter framework-memo callback bound to `callee`, or null.
+   * The memo itself is not a cell: see-through substitutes the callback
+   * at each zero-argument call.
    */
-  function memoCallbackBody(mod: Module, callee: Node): Node | null {
+  function memoCallbackNode(mod: Module, callee: Node): Node | null {
     if (callee.type !== "Identifier") return null;
     const symbol = mod.referenceOf(callee)?.symbol ?? null;
     if (symbol === null || symbol.declarations.length !== 1) return null;
@@ -2721,6 +2733,10 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       return null;
     }
     if ((callback.params?.length ?? 0) !== 0) return null;
+    return callback.body == null ? null : callback;
+  }
+
+  function singleReturnArgument(callback: Node): Node | null {
     if (callback.body == null) return null;
     if (callback.body.type !== "BlockStatement") return unwrap(callback.body);
     const returns = (callback.body.body as Node[]).filter(
@@ -2728,6 +2744,107 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     );
     if (returns.length !== 1 || returns[0].argument == null) return null;
     return unwrap(returns[0].argument);
+  }
+
+  function callbackHasWrite(callback: Node): boolean {
+    let found = false;
+    moduleInfo.walk(
+      {
+        AssignmentExpression: () => {
+          found = true;
+        },
+        UpdateExpression: () => {
+          found = true;
+        },
+        CallExpression: (node: Node) => {
+          if (found) return;
+          const callee = unwrap(node.callee);
+          if (callee == null || callee.type !== "Identifier") return;
+          const symbol = moduleInfo.referenceOf(callee)?.symbol ?? null;
+          if (symbol === null) return;
+          const accessor = accessors.get(symbol.id);
+          if (accessor !== undefined && accessor.access === "write") found = true;
+        },
+      },
+      callback,
+    );
+    return found;
+  }
+
+  function deriveGuardedReturn(frame: Frame, match: Extract<GuardedReturnMatch, { kind: "exact" }>): Derived | null {
+    const guard = literalValue(match.guardLiteral);
+    if (!guard.ok) return null;
+
+    const scrutinee = derive(moduleInfo, match.call, null, frame);
+    if (scrutinee === null) return null;
+
+    const summary = summarize(moduleInfo, match.terminal.callee);
+    if (summary === null) return null;
+
+    const args: Node[] = match.terminal.arguments ?? [];
+    if (args.length !== summary.params.length) return null;
+
+    const localSymbol = moduleInfo.symbolOf(match.local);
+    const env = new Map<number, ParameterBinding>();
+    for (let index = 0; index < args.length; index++) {
+      const argument = unwrap(args[index]);
+      if (argument == null) return null;
+
+      if (argument.type === "Identifier" && localSymbol !== null) {
+        const argumentSymbol = moduleInfo.referenceOf(argument)?.symbol ?? null;
+        if (argumentSymbol !== null && argumentSymbol.id === localSymbol.id) {
+          env.set(summary.paramSymbols[index].id, { kind: "value", derived: scrutinee });
+          continue;
+        }
+      }
+
+      const accessor = accessorOf(argument);
+      if (accessor !== null) {
+        if (!parameterIsAccessorOnly(summary, index, accessor.access)) return null;
+        env.set(summary.paramSymbols[index].id, { kind: "accessor", accessor });
+        continue;
+      }
+
+      const derived = derive(moduleInfo, argument, null, frame);
+      if (derived === null) return null;
+      env.set(summary.paramSymbols[index].id, { kind: "value", derived });
+    }
+
+    const thenBranch = deriveCondition(frame, summary.returned, env, summary.module);
+    if (thenBranch === null) return null;
+
+    const measured = scrutinee.measured || thenBranch.measured;
+    const rewrites = joinRewrites(scrutinee.rewrites, thenBranch.rewrites);
+    return {
+      value: measured ? "" : scrutinee.value == null ? guard.value : thenBranch.value,
+      measured,
+      slots: [...scrutinee.slots, ...thenBranch.slots],
+      source: `(${scrutinee.source} == null) ? ${JSON.stringify(guard.value)} : ${thenBranch.source}`,
+      inlined: true,
+      rewrites,
+    };
+  }
+
+  function deriveMemoCallback(frame: Frame, callee: Node): Derived | null {
+    const callback = memoCallbackNode(frame.mod, callee);
+    if (callback === null) return null;
+
+    const guarded = matchGuardedReturn(frame.mod, callback);
+    if (guarded?.kind === "wider" || (guarded?.kind === "exact" && callbackHasWrite(callback))) {
+      frame.refuse(
+        "callee-body-not-guarded-return",
+        "The callback body is not the admitted guarded-return shape: one const binding of a call, a null-guard that returns a literal, and a terminal call.",
+        callback,
+      );
+      return null;
+    }
+    if (guarded?.kind === "exact") {
+      return deriveGuardedReturn(frame, guarded);
+    }
+
+    const body = singleReturnArgument(callback);
+    if (body === null) return null;
+    return deriveCondition(frame, body);
   }
 
   function deriveText(frame: Frame, node: Node): Derived | null {
@@ -2924,15 +3041,10 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       // whose callback derives is that callback. The memo is transparent:
       // resume never reconstructs it, and no new cell is allocated.
       if (env === null && frame.props === null && expression.arguments.length === 0) {
-        const callback = memoCallbackBody(mod, callee);
-        // `deriveCondition` so a comparison or connective body is walked;
-        // it falls through to `derive` for every other admitted shape.
+        const derived = deriveMemoCallback(frame, callee);
         // `inlined` forces the reconstructed source: the memo name is not a
         // resume-time slot, so the author's call must not be printed.
-        if (callback !== null) {
-          const derived = deriveCondition(frame, callback);
-          return derived === null ? null : { ...derived, inlined: true };
-        }
+        if (derived !== null) return { ...derived, inlined: true };
       }
 
       // A summarizable pure formatter, folded against this call site's
@@ -2974,7 +3086,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     }
 
     if (expression.type === "ConditionalExpression") {
-      const condition = deriveCondition(frame, expression.test);
+      const condition = deriveCondition(frame, expression.test, env, mod);
       const consequent = derive(mod, expression.consequent, env, frame);
       const alternate = derive(mod, expression.alternate, env, frame);
       if (condition === null || consequent === null || alternate === null) return null;

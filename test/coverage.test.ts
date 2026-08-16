@@ -405,11 +405,12 @@ describe("file-level refusals — taxonomy only, never a denominator", () => {
     // Restoring a corpus carrier needs a fixture under `app/src/fixtures/**`,
     // which is corpus, and therefore not this slice's to write.
     //
-    // The taxonomy therefore reads 16 of 29, and this test is what stops any of
-    // the thirteen absences from being discovered by accident later. T051 added
-    // the two derived-cell codes to the closed set; neither has an `app/src`
-    // carrier (they fire on `test/fixtures/shapes`), so both join unobserved.
-    expect(report.taxonomy.codes).toBe(29);
+    // The taxonomy therefore reads 16 of 30, and this test is what stops any of
+    // the fourteen absences from being discovered by accident later. T051 added
+    // the two derived-cell codes to the closed set; T053 added
+    // callee-body-not-guarded-return. None has an `app/src` carrier (they fire
+    // on `test/fixtures/shapes`), so they join unobserved.
+    expect(report.taxonomy.codes).toBe(30);
     expect(report.taxonomy.unobserved).toEqual([
       "store-binding-not-provable",
       "store-read-not-provable",
@@ -424,6 +425,7 @@ describe("file-level refusals — taxonomy only, never a denominator", () => {
       "jsx-unsupported-children",
       "derived-cell-initial-not-foldable",
       "derived-cell-input-not-mount-stable",
+      "callee-body-not-guarded-return",
     ]);
   });
 });

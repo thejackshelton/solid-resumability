@@ -463,6 +463,41 @@ function freeInStructure(file: string): Array<{ owner: string; name: string }> {
   return free;
 }
 
+describe("guarded-return callback — first-party host", () => {
+  const analysis = shape("GuardedReturnHost.tsx", "GuardedReturnHost");
+
+  it("classifies the host as provable with a folded title", () => {
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.html).toBe('<p class="guarded" title="on">seen</p>');
+    const title = analysis.bindings.find(
+      (binding): binding is AttributeBindingInfo =>
+        binding.kind === "attribute" && binding.attribute === "title",
+    );
+    expect(title?.origin).toBe("helper");
+    expect(title?.expression).not.toContain("flag");
+    expect(title?.expression).not.toContain("isPositive");
+  });
+
+  it("refuses the extra-statement counter by name", () => {
+    const counter = shape("GuardedReturnCounter.tsx", "GuardedReturnExtraStatement");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("callee-body-not-guarded-return");
+  });
+
+  it("refuses the non-literal guard-return counter by name", () => {
+    const counter = shape("GuardedReturnCounter.tsx", "GuardedReturnNonLiteral");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("callee-body-not-guarded-return");
+  });
+
+  it("refuses the write-in-body counter by name", () => {
+    const counter = shape("GuardedReturnCounter.tsx", "GuardedReturnWrite");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("callee-body-not-guarded-return");
+  });
+});
+
 describe("derived-cell admission — first-party host", () => {
   const analysis = shape("DerivedCellHost.tsx", "DerivedCellHost");
 

@@ -87,14 +87,18 @@
  * MEASURED ATTRIBUTE CARGO admits three derive shapes and one rest-spread,
  * all structural, no user-name match. (a) A zero-argument call of a
  * C1-summarized derived accessor is measured: the getter is not a source
- * cell, so the attribute bakes zero bytes. (b) A member read of an
+ * cell, so the attribute bakes zero bytes. A zero-argument call of a
+ * binding initialized to a framework memo whose callback `derive`s is that
+ * callback — the memo is transparent, no new cell. (b) A member read of an
  * identity-class binding (`own-props-parameter` / `derived-rest-props-result`
  * via `sourceBindingOf`) in a standalone frame is measured. (c) A
  * ConditionalExpression whose test `deriveCondition`s and whose both
- * branches `derive` is measured-propagating. A measured identity
- * rest-spread (`{...ident}`) on an own-frame intrinsic bakes nothing;
- * capture measures the attribute set and resume replays a spread assign.
- * A call-valued or non-identity spread still refuses `jsx-spread`.
+ * branches `derive` is measured-propagating. `deriveCondition` walks
+ * negation, strict comparison, and `&&` / `||` of those same shapes. A
+ * measured identity rest-spread (`{...ident}`) on an own-frame intrinsic
+ * bakes nothing; capture measures the attribute set and resume replays a
+ * spread assign. A call-valued or non-identity spread still refuses
+ * `jsx-spread`.
  *
  * Addressing is offered in the component's OWN address space only: never
  * through a props boundary (`frame.props !== null`, exactly as inlining's one
@@ -244,6 +248,10 @@ const VOID_ELEMENTS = new Set([
  * coercion rules the fold would have to reproduce, and refusing is cheaper than
  * reproducing them. */
 const COMPARISON = new Set(["===", "!==", "<", ">", "<=", ">="]);
+
+/** Boolean connectives `deriveCondition` walks. Both sides must themselves
+ * derive; a measured side keeps the operator in `source` rather than folding. */
+const LOGICAL = new Set(["&&", "||"]);
 
 /** JSX prop names that differ from the HTML attribute they produce. */
 const ATTRIBUTE_ALIASES: Record<string, string> = { className: "class", htmlFor: "for" };
@@ -801,6 +809,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   const pendingAudits: Array<{ symbol: YukuSymbol; role: "read" | "write" | "opaque" }> = [];
 
   const factories = signalFactorySymbols(moduleInfo);
+  const memoFactories = frameworkExportSymbols(moduleInfo, "createMemo");
   const signalCalls = moduleInfo
     .findAll("CallExpression")
     .filter((call: Node) => contains(component.fn, call) && isFactoryCall(moduleInfo, call, factories));
@@ -2151,11 +2160,11 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   }
 
   /**
-   * The derivation walk plus the two boolean shapes an attribute or a class
-   * condition needs: negation, and a strict comparison. Deliberately NOT part of
-   * `derive` itself — a text child that compares two values is a different
-   * question, asked in a different slice, and widening the walk here would answer
-   * it by accident.
+   * The derivation walk plus the boolean shapes an attribute or a class
+   * condition needs: negation, a strict comparison, and `&&` / `||` of
+   * those same shapes. Deliberately NOT part of `derive` itself — a text
+   * child that compares two values is a different question, asked in a
+   * different slice, and widening the walk here would answer it by accident.
    */
   function deriveCondition(frame: Frame, node: Node): Derived | null {
     const expression = unwrap(node);
@@ -2176,6 +2185,31 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           rewrites,
         }),
         inlined: argument.inlined,
+        rewrites,
+      };
+    }
+
+    if (expression.type === "LogicalExpression" && LOGICAL.has(expression.operator)) {
+      const left = deriveCondition(frame, expression.left);
+      const right = deriveCondition(frame, expression.right);
+      if (left === null || right === null) return null;
+      const measured = left.measured || right.measured;
+      const inlined = left.inlined || right.inlined;
+      const rewrites = joinRewrites(left.rewrites, right.rewrites);
+      return {
+        value: measured
+          ? false
+          : expression.operator === "&&"
+            ? left.value && right.value
+            : left.value || right.value,
+        measured,
+        slots: [...left.slots, ...right.slots],
+        source: derivedSource(expression, {
+          inlined,
+          source: `(${left.source} ${expression.operator} ${right.source})`,
+          rewrites,
+        }),
+        inlined,
         rewrites,
       };
     }
@@ -2658,6 +2692,44 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     return escapeText(initialText);
   }
 
+  /**
+   * The single returned expression of a zero-parameter framework-memo
+   * callback bound to `callee`, or null. The memo itself is not a cell:
+   * see-through substitutes this body at each zero-argument call.
+   */
+  function memoCallbackBody(mod: Module, callee: Node): Node | null {
+    if (callee.type !== "Identifier") return null;
+    const symbol = mod.referenceOf(callee)?.symbol ?? null;
+    if (symbol === null || symbol.declarations.length !== 1) return null;
+    const declaration: Node = symbol.declarations[0];
+    const parent: Node = mod.parentOf(declaration);
+    if (parent == null || parent.type !== "VariableDeclarator" || parent.id !== declaration) {
+      return null;
+    }
+    const init = unwrap(parent.init);
+    if (init == null || init.type !== "CallExpression") return null;
+    const initCallee = unwrap(init.callee);
+    if (initCallee == null || initCallee.type !== "Identifier") return null;
+    const initSymbol = mod.referenceOf(initCallee)?.symbol ?? null;
+    if (initSymbol === null || !memoFactories.has(initSymbol.id)) return null;
+    if (init.arguments.length < 1) return null;
+    const callback = unwrap(init.arguments[0]);
+    if (
+      callback == null ||
+      (callback.type !== "ArrowFunctionExpression" && callback.type !== "FunctionExpression")
+    ) {
+      return null;
+    }
+    if ((callback.params?.length ?? 0) !== 0) return null;
+    if (callback.body == null) return null;
+    if (callback.body.type !== "BlockStatement") return unwrap(callback.body);
+    const returns = (callback.body.body as Node[]).filter(
+      (statement: Node) => statement.type === "ReturnStatement",
+    );
+    if (returns.length !== 1 || returns[0].argument == null) return null;
+    return unwrap(returns[0].argument);
+  }
+
   function deriveText(frame: Frame, node: Node): Derived | null {
     return derive(frame.mod, node, null, frame);
   }
@@ -2846,6 +2918,21 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           measured: false,
           rewrites,
         };
+      }
+
+      // A zero-argument call of a binding initialized to a framework memo
+      // whose callback derives is that callback. The memo is transparent:
+      // resume never reconstructs it, and no new cell is allocated.
+      if (env === null && frame.props === null && expression.arguments.length === 0) {
+        const callback = memoCallbackBody(mod, callee);
+        // `deriveCondition` so a comparison or connective body is walked;
+        // it falls through to `derive` for every other admitted shape.
+        // `inlined` forces the reconstructed source: the memo name is not a
+        // resume-time slot, so the author's call must not be printed.
+        if (callback !== null) {
+          const derived = deriveCondition(frame, callback);
+          return derived === null ? null : { ...derived, inlined: true };
+        }
       }
 
       // A summarizable pure formatter, folded against this call site's

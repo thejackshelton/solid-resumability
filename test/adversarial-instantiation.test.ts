@@ -11,6 +11,8 @@ import { OptionsInitializerUnseen } from "./fixtures/shapes/OptionsInitializerHo
 import { ElementIndirectionUnseen } from "./fixtures/shapes/ElementIndirectionHost.tsx";
 import { RefFanoutUnseen } from "./fixtures/shapes/RefFanoutHost.tsx";
 import { DerivedConditionalUnseen } from "./fixtures/shapes/DerivedConditionalHost.tsx";
+import { DerivedLogicalUnseen } from "./fixtures/shapes/DerivedLogicalHost.tsx";
+import { MemoConditionalUnseen } from "./fixtures/shapes/MemoConditionalHost.tsx";
 import { MeasuredRestUnseen } from "./fixtures/shapes/MeasuredRestHost.tsx";
 import { FoldedMeasuredSeenLive, FoldedMeasuredUnseenLive } from "./fixtures/shapes/FoldedMeasuredHost.tsx";
 import { DerivedCellUnseen } from "./fixtures/shapes/DerivedCellHost.tsx";
@@ -766,6 +768,140 @@ describe("adversarial instantiation gate — derived-conditional-cargo", () => {
     expect(
       DERIVED_CONDITIONAL_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
     ).toEqual(["both-branches-derivable"]);
+  });
+});
+
+const LOGICAL_HOSTS = `${SHAPES}/DerivedLogicalHost.tsx`;
+const LOGICAL_COUNTER = `${SHAPES}/DerivedLogicalCounter.tsx`;
+
+/** Clauses of the derived-logical-condition admission — first-party, no library name. */
+const DERIVED_LOGICAL_CLAUSES: ShapeClause[] = [
+  {
+    id: "both-sides-derivable",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function derivedLogicalConditionRule(): ShapeRuleRegistration {
+  return {
+    id: "derived-logical-condition",
+    clauses: DERIVED_LOGICAL_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "title"),
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: LOGICAL_COUNTER, component: "DerivedLogicalCounter" },
+    secondInstantiation: {
+      path: LOGICAL_HOSTS,
+      component: "DerivedLogicalUnseen",
+      render: DerivedLogicalUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — derived-logical-condition", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([derivedLogicalConditionRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the opaque-side connective", () => {
+    const lying: ShapeRuleRegistration = { ...derivedLogicalConditionRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("derived-logical-condition");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(LOGICAL_HOSTS, "DerivedLogicalHost");
+    const lying: ShapeRuleRegistration = {
+      ...derivedLogicalConditionRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="logical" title="on">seen</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("derived-logical-condition");
+  });
+
+  it("the counter-instantiation fails exactly the both-sides-derivable clause", () => {
+    const counter = classify(LOGICAL_COUNTER, "DerivedLogicalCounter");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-dynamic-attribute")).toBe(true);
+    expect(
+      DERIVED_LOGICAL_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["both-sides-derivable"]);
+  });
+});
+
+const MEMO_HOSTS = `${SHAPES}/MemoConditionalHost.tsx`;
+const MEMO_COUNTER = `${SHAPES}/MemoConditionalCounter.tsx`;
+
+/** Clauses of the memo-callback cargo admission — first-party, no library name. */
+const MEMO_CONDITIONAL_CLAUSES: ShapeClause[] = [
+  {
+    id: "callback-derivable",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function memoConditionalCargoRule(): ShapeRuleRegistration {
+  return {
+    id: "memo-callback-cargo",
+    clauses: MEMO_CONDITIONAL_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "title"),
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: MEMO_COUNTER, component: "MemoConditionalCounter" },
+    secondInstantiation: {
+      path: MEMO_HOSTS,
+      component: "MemoConditionalUnseen",
+      render: MemoConditionalUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — memo-callback-cargo", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([memoConditionalCargoRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the opaque-callback memo", () => {
+    const lying: ShapeRuleRegistration = { ...memoConditionalCargoRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("memo-callback-cargo");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(MEMO_HOSTS, "MemoConditionalHost");
+    const lying: ShapeRuleRegistration = {
+      ...memoConditionalCargoRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="memo" title="on">seen</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("memo-callback-cargo");
+  });
+
+  it("the counter-instantiation fails exactly the callback-derivable clause", () => {
+    const counter = classify(MEMO_COUNTER, "MemoConditionalCounter");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-dynamic-attribute")).toBe(true);
+    expect(
+      MEMO_CONDITIONAL_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["callback-derivable"]);
   });
 });
 

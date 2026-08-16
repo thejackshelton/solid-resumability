@@ -596,7 +596,12 @@ export interface RecordedProp {
 }
 
 /** Call-site role of one identity-shaped prop. Names no library or idiom. */
-export type IdentityRole = "attribute" | "spread-of-identifier";
+export type IdentityRole =
+  | "attribute"
+  | "spread-of-identifier"
+  | "slot-valued"
+  | "proven-handler"
+  | "ref-array";
 
 /** Binding classes that may be recorded as identity, never as a frozen value. */
 export type IdentityBindingClass = "own-props-parameter" | "derived-rest-props-result";
@@ -613,14 +618,81 @@ export interface SourceBindingIdentity {
 }
 
 /**
- * One call-site prop recorded by identity. No `value` field: folding
+ * Binding-identity call-site prop. No `value` field: folding
  * caller-dependent cargo is the second-instantiation failure.
  */
-export interface IdentityProp {
+export interface IdentityBindingProp {
   name: string;
-  role: IdentityRole;
+  role: "attribute" | "spread-of-identifier";
   bindingClass: IdentityBindingClass;
   source: SourceBindingIdentity;
+}
+
+/**
+ * Attribute whose expression derives only over admitted store slots and
+ * v1 constants. The author's expression is printed as written; captures
+ * name store identity, never a frozen value.
+ */
+export interface SlotValuedIdentityProp {
+  name: string;
+  role: "slot-valued";
+  expression: string;
+  captures: StoreReadCaptureSlot[];
+  store: StoreInfo;
+}
+
+/**
+ * Local closure the parent's handler pipeline proved. The record names
+ * the handler; captures are slot/identity only.
+ */
+export interface ProvenHandlerIdentityProp {
+  name: string;
+  role: "proven-handler";
+  handler: string;
+  source: string;
+  captures: CaptureSlot[];
+  stores: StoreInfo[];
+}
+
+/** One element of a ref-array record: a store member or an identity path. */
+export type RefArrayRecordElement =
+  | { kind: "store"; store: string; path: (string | number)[]; storeInfo: StoreInfo }
+  | { kind: "identity"; bindingClass: IdentityBindingClass; source: SourceBindingIdentity };
+
+/**
+ * `ref={[store.K, props.ref]}`: each element is a store member or an
+ * identity-class prop path. No frozen value.
+ */
+export interface RefArrayIdentityProp {
+  name: string;
+  role: "ref-array";
+  elements: RefArrayRecordElement[];
+}
+
+/**
+ * One call-site prop recorded by identity or slot. No `value` field:
+ * folding caller-dependent cargo is the second-instantiation failure.
+ */
+export type IdentityProp =
+  | IdentityBindingProp
+  | SlotValuedIdentityProp
+  | ProvenHandlerIdentityProp
+  | RefArrayIdentityProp;
+
+export function isBindingIdentity(prop: IdentityProp): prop is IdentityBindingProp {
+  return prop.role === "attribute" || prop.role === "spread-of-identifier";
+}
+
+export function isSlotValuedIdentity(prop: IdentityProp): prop is SlotValuedIdentityProp {
+  return prop.role === "slot-valued";
+}
+
+export function isProvenHandlerIdentity(prop: IdentityProp): prop is ProvenHandlerIdentityProp {
+  return prop.role === "proven-handler";
+}
+
+export function isRefArrayIdentity(prop: IdentityProp): prop is RefArrayIdentityProp {
+  return prop.role === "ref-array";
 }
 
 export interface ClaimedChild {

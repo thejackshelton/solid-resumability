@@ -277,6 +277,89 @@ describe("an object-shaped store joins by identity", () => {
   });
 });
 
+const REF_TEMPLATE = '<div class="ref"></div>';
+
+function liveRefStore() {
+  const seen: Element[] = [];
+  const setAnchor = (el: Element) => {
+    seen.push(el);
+  };
+  const value = {
+    isOpen: () => false,
+    toggle() {},
+    setAnchor,
+  };
+  return { value, setAnchor, seen };
+}
+
+function refStoreBundle(): Bundle {
+  return {
+    component: "ObjectStoreRefCapture",
+    template: { html: REF_TEMPLATE, root: "/" },
+    cells: [],
+    regions: [],
+    keyedRegions: [],
+    stores: [
+      {
+        id: "s0",
+        context: "ShelfContext",
+        contextModule: "test/fixtures/shapes/object-store-context.tsx",
+        provider: "test/fixtures/shapes/object-store-context.tsx",
+        keys: ["isOpen", "toggle", "setAnchor"],
+      },
+    ],
+    actions: [],
+    reads: [{ id: "s0r", store: "s0", name: "ctx", path: [] }],
+    bindings: [
+      {
+        id: "b0",
+        kind: "attribute",
+        locator: "/",
+        attribute: "ref",
+        property: false,
+        captures: [{ name: "setAnchor", kind: "store-read", store: "s0", path: ["setAnchor"] }],
+        initialValue: null,
+        compute: () => null,
+      },
+    ],
+    wiring: [],
+    loadHandler: async () => {
+      throw new Error("no handler");
+    },
+  };
+}
+
+describe("ref replay resolves a store member synchronously", () => {
+  it("hands the element to the live function and Object.is holds", () => {
+    const store = liveRefStore();
+    const registry = createStoreRegistry();
+    registry.provide("s0", store.value);
+
+    const resolved = registry.read("s0", ["setAnchor"]);
+    expect(Object.is(resolved, store.setAnchor)).toBe(true);
+
+    const host = document.createElement("div");
+    host.innerHTML = REF_TEMPLATE;
+    document.body.appendChild(host);
+    const app = resumeBundle(host, refStoreBundle(), { stores: registry });
+
+    expect(store.seen).toHaveLength(1);
+    expect(store.seen[0]).toBe(host.querySelector(".ref"));
+    expect(Object.is(registry.read("s0", ["setAnchor"]), store.setAnchor)).toBe(true);
+    app.dispose();
+  });
+
+  it("throws id and path when the store was never provided", () => {
+    const registry = createStoreRegistry();
+    const host = document.createElement("div");
+    host.innerHTML = REF_TEMPLATE;
+    document.body.appendChild(host);
+    expect(() => resumeBundle(host, refStoreBundle(), { stores: registry })).toThrow(
+      /no live store is registered as "s0"[\s\S]*setAnchor/,
+    );
+  });
+});
+
 describe("a resumed handler dispatches to the live store", () => {
   it("calls the real action, with the argument the handler built", async () => {
     const store = liveStore();

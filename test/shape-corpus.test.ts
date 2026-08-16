@@ -8,7 +8,7 @@ import { Analyzer } from "yuku-analyzer";
 import { contains } from "../src/comptime/ast.ts";
 import { freeIdentifiersInCompute } from "../src/comptime/emit.ts";
 import { analyzeFixture, classify, classifyAll, loadProject, runComptime } from "../src/comptime/index.ts";
-import { REASON_CODES, type Analysis, type AttributeBindingInfo, type ReasonCode } from "../src/comptime/types.ts";
+import { REASON_CODES, isStoreReadSlot, type Analysis, type AttributeBindingInfo, type ReasonCode } from "../src/comptime/types.ts";
 
 /**
  * THE SHAPE CORPUS — the re-runnable half of `docs/kobalte/impossibility.md`.
@@ -787,11 +787,12 @@ describe("whole-bind object-shaped context — first-party host", () => {
     expect(storeReasons(analysis)).toEqual(["provider-value-not-readable"]);
   });
 
-  it("refuses emission of a ref binding that would carry a store capture", () => {
+  it("emits a store capture in a ref binding once replay can resolve it", () => {
     const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreRefCapture");
-    expect(analysis.status).toBe("fallback");
-    expect(codes(analysis)).toEqual(["jsx-dynamic-attribute"]);
-    expect(analysis.reasons[0]?.detail?.reason).toBe("ref-store-slot-not-emittable");
-    expect(codes(analysis)).not.toContain("store-binding-not-provable");
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    const ref = analysis.bindings.find((binding) => binding.kind === "attribute" && binding.attribute === "ref");
+    expect(ref).toBeDefined();
+    expect(ref?.captures.some(isStoreReadSlot)).toBe(true);
   });
 });

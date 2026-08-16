@@ -495,12 +495,16 @@ describe("whole-bind object-shaped context — emit and DialogTrigger", () => {
     expect(structure).toContain('path: ["toggle"]');
   });
 
-  it("keeps DialogTrigger on jsx-component-element after the store admits", () => {
+  it("flips DialogTrigger to provable once the claimed-child record widens", () => {
     const analysis = analyzeFixture("demo/node_modules/@kobalte/core/dist/dialog/C9YDO9vc.jsx", {
       write: false,
       component: "DialogTrigger",
     });
-    expect(analysis.status).toBe("fallback");
-    expect(analysis.reasons.map((reason) => reason.code)).toEqual(["jsx-component-element"]);
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.claimedChildren).toHaveLength(1);
+    expect(analysis.claimedChildren[0].component).toBe("ButtonRoot");
+    expect(analysis.html).toMatch(/data-component="ButtonRoot"/);
+    expect(analysis.html).not.toContain("aria-expanded");
   });
 });

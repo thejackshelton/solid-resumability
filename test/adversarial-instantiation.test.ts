@@ -21,6 +21,7 @@ import { ElementProjectionUnseen } from "./fixtures/shapes/ElementProjectionHost
 import { MemberNamespaceUnseen } from "./fixtures/shapes/MemberNamespaceHost.tsx";
 import { GuardThrowContextUnseen } from "./fixtures/shapes/GuardThrowContextHost.tsx";
 import { ObjectStoreUnseen } from "./fixtures/shapes/ObjectStoreHost.tsx";
+import { SlotValuedSeenLive, SlotValuedUnseenLive } from "./fixtures/shapes/ClaimedSlotHost.tsx";
 
 /**
  * THE ADVERSARIAL INSTANTIATION GATE.
@@ -1574,5 +1575,79 @@ describe("adversarial instantiation gate — object-shaped-context-store", () =>
     expect(
       OBJECT_STORE_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
     ).toEqual(["object-store-admitted"]);
+  });
+});
+
+const SLOT_HOSTS = `${SHAPES}/ClaimedSlotHost.tsx`;
+
+const SLOT_VALUED_CLAUSES: ShapeClause[] = [
+  {
+    id: "store-admitted",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("store-binding-not-provable"),
+  },
+  {
+    id: "slot-valued-record",
+    holds: (analysis) =>
+      analysis.status === "provable" ||
+      (analysis.status === "fallback" && !codes(analysis).has("jsx-component-element")),
+  },
+];
+
+function measureSlotPairing(renderFn: () => unknown): string {
+  return mount(renderFn).innerHTML;
+}
+
+function slotValuedRule(): ShapeRuleRegistration {
+  return {
+    id: "claimed-child-slot-valued",
+    clauses: SLOT_VALUED_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.claimedChildren.some((child) => child.identityProps?.some((prop) => prop.role === "slot-valued")),
+    publishedHtml: (analysis) => {
+      if (analysis.status !== "provable") return null;
+      return measureSlotPairing(SlotValuedUnseenLive);
+    },
+    counterInstantiation: { path: SLOT_HOSTS, component: "SlotValuedMixedFree" },
+    secondInstantiation: {
+      path: SLOT_HOSTS,
+      component: "SlotValuedHost",
+      render: SlotValuedUnseenLive,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — claimed-child-slot-valued", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([slotValuedRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the mixed-free host", () => {
+    const lying: ShapeRuleRegistration = { ...slotValuedRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("claimed-child-slot-valued");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = measureSlotPairing(SlotValuedSeenLive);
+    const lying: ShapeRuleRegistration = {
+      ...slotValuedRule(),
+      publishedHtml: () => first,
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("claimed-child-slot-valued");
+  });
+
+  it("the mixed-free counter fails exactly the slot-valued-record clause", () => {
+    const counter = classify(SLOT_HOSTS, "SlotValuedMixedFree");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-component-element")).toBe(true);
+    expect(SLOT_VALUED_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id)).toEqual([
+      "slot-valued-record",
+    ]);
   });
 });

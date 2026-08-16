@@ -46,16 +46,16 @@ Each arm is seeded from its entrypoint module — `packages/core/src/<entrypoint
 
 ## Headline
 
-**2 / 12 of the pre-registered functions classify `provable` (16.7%).**
+**3 / 12 of the pre-registered functions classify `provable` (25.0%).**
 
-2 of the 12 classify provable and 10 refuse. Both halves are reported below in the same form.
+3 of the 12 classify provable and 9 refuse. Both halves are reported below in the same form.
 
 The two arms **agree on status for all 12**, and 11 of 12 carry identical reason-code multisets. The divergences are in the delta section. **That agreement is not corroboration of one cause. Read the errata immediately below before treating it as one.**
 
 | Segment | Files | Components | Provable | Fallback | Provable fraction |
 |---|---|---|---|---|---|
-| `kobalte-source` | 12 | 12 | 2 | 10 | 16.7% |
-| `kobalte-dist` | 6 | 12 | 2 | 10 | 16.7% |
+| `kobalte-source` | 12 | 12 | 3 | 9 | 25.0% |
+| `kobalte-dist` | 6 | 12 | 3 | 9 | 25.0% |
 
 The two segments are the same twelve functions read from the same artifact before and after rolldown, so the rows are a corroboration rather than two populations. The file counts differ because rolldown merges an entrypoint's parts into one chunk.
 
@@ -227,13 +227,11 @@ No refusal reasons: this function classified `provable`.
 | Authored source (source arm) | `packages/core/src/dialog/dialog-trigger.tsx` |
 | Chunk (dist arm) | `dist/dialog/C9YDO9vc.jsx` |
 | Exported from its module | yes |
-| Verdict, source arm | **fallback** |
-| Verdict, dist arm | **fallback** |
-| Reason set | 1 occurrence(s) across 1 code(s) |
+| Verdict, source arm | **provable** |
+| Verdict, dist arm | **provable** |
+| Reason set | 0 occurrence(s) across 0 code(s) |
 
-| Code | Where (`line:column`) | Triggering expression | Causing shape | (a) Kobalte-side change | (b) Analyzer-side change — NOT AUTHORIZED | Δ source vs dist |
-|---|---|---|---|---|---|---|
-| `jsx-component-element` | `55:3` | `<Button.Root< Component< Omit<DialogTriggerRenderProps, keyof Button.ButtonRootRenderProps> > > ref={[context.setTriggerRef, p.ref]} aria-haspopup="dialog" aria-expanded={context.isOpen() ? "true" : "false"} aria-control …` | `DialogTrigger`'s markup routes through `<Button.Root>`, a Kobalte compound part reached through a `JSXMemberExpression` — the module it comes from IS in the analyzed set here, so the member-expression form alone is what the splice cannot address; only intrinsic elements template statically, so the pass stops at this element. | Import the part as a plain binding rather than reaching it through a namespace object (`Button.Root` -> `Root`). That alone does not make it templatable — it is still a component element — but it is the change that takes the member-expression form out of the way. | NOT AUTHORIZED under zero-Solid-API-changes — admit a `JSXMemberExpression` in `tryInlineComponent`, which today requires a `JSXIdentifier` whose `definition()` lies inside the analyzed set. | same in both arms |
+No refusal reasons: this function classified `provable`.
 
 ### `DialogContent` — `@kobalte/core/dialog` -> `Content`
 
@@ -361,8 +359,8 @@ Ranked by how many distinct components carry the code; occurrences break ties. S
 
 | Rank | Code | Components | Occurrences | Only-blocker for |
 |---|---|---|---|---|
-| 1 | `jsx-component-element` | 8 | 14 | 1 |
-| 2 | `signal-escapes-unanalyzable-use` | 7 | 24 | 0 |
+| 1 | `signal-escapes-unanalyzable-use` | 7 | 24 | 0 |
+| 2 | `jsx-component-element` | 7 | 13 | 0 |
 | 3 | `show-branch-not-static-at-capture` | 4 | 4 | 0 |
 | 4 | `signal-escapes-to-opaque-callee` | 3 | 5 | 0 |
 | 5 | `handler-not-inline` | 2 | 8 | 0 |
@@ -376,9 +374,9 @@ Ranked by how many distinct components carry the code; occurrences break ties. S
 
 Components whose entire refusal set is a single code — lift that code and they flip.
 
-| Component | File | Only blocker |
-|---|---|---|
-| `DialogTrigger` | `packages/core/src/dialog/dialog-trigger.tsx` | `jsx-component-element` |
+_No function among the 12 is blocked by exactly one code._
+
+That is the load-bearing finding of this table rather than an empty result. Each of the 12 carries between 0 and 4 distinct codes, so no single change on either side of the line flips any of them: the shapes stack.
 
 ## Source vs dist: the reason-code delta
 
@@ -413,7 +411,7 @@ The two arms are the same artifact before and after rolldown, so this difference
 | `CheckboxControl` | `packages/core/src/checkbox/checkbox-control.tsx` | yes | fallback | — | `handler-not-inline`<br>`jsx-spread` |
 | `CheckboxIndicator` | `packages/core/src/checkbox/checkbox-indicator.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use` |
 | `DialogRoot` | `packages/core/src/dialog/dialog-root.tsx` | yes | fallback | — | `jsx-component-element`<br>`jsx-dynamic-child-not-derivable`<br>`signal-escapes-to-opaque-callee`<br>`signal-escapes-unanalyzable-use` |
-| `DialogTrigger` | `packages/core/src/dialog/dialog-trigger.tsx` | yes | fallback | — | `jsx-component-element` |
+| `DialogTrigger` | `packages/core/src/dialog/dialog-trigger.tsx` | yes | provable | — | — |
 | `DialogContent` | `packages/core/src/dialog/dialog-content.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture`<br>`signal-escapes-unanalyzable-use`<br>`store-binding-not-provable` |
 | `DialogPortal` | `packages/core/src/dialog/dialog-portal.tsx` | yes | fallback | — | `jsx-component-element`<br>`show-branch-not-static-at-capture` |
 | `TabsRoot` | `packages/core/src/tabs/tabs-root.tsx` | yes | fallback | — | `jsx-component-element`<br>`signal-escapes-unanalyzable-use`<br>`signal-initializer-not-literal` |

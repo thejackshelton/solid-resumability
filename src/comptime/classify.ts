@@ -126,9 +126,11 @@
  *     resolves to a module-scope const literal) nor an identity-class named
  *     attribute or identifier rest-spread (`own-props-parameter` or
  *     `derived-rest-props-result` via this pass's own `referenceOf` /
- *     `definition` machinery). Children still refuse: a mount container has no
- *     slot for them. Any other attribute refuses the address the same way as
- *     before — fall through to `jsx-component-element`, no new code.
+ *     `definition` machinery), nor a slot-valued store derivation, a proven
+ *     local-closure handler, or a ref-array of store members and identity
+ *     paths. Children still refuse: a mount container has no slot for them.
+ *     Any other attribute refuses the address the same way as before — fall
+ *     through to `jsx-component-element`, no new code.
  *   `ClaimedChildNotInAnalyzedSet` — the name does not resolve through
  *     `Symbol.definition()` to a module-scope component inside the analyzed set.
  *     This is inlining's condition (1), the same resolution, shared rather than
@@ -183,15 +185,19 @@ import {
   isWholeBindReadThroughCall,
   useContextCalls,
 } from "./stores.ts";
-import { AMBIENT_MEMBER_CALLS, EVENT_TIME_SYNTAX, HANDLER_SYNTAX } from "./syntax.ts";
+import { AMBIENT_MEMBER_CALLS, EVENT_TIME_SYNTAX, HANDLER_SYNTAX, isTypeSyntax } from "./syntax.ts";
 import {
   artifactKey,
   isActionSlot,
+  isBindingIdentity,
   isCandidateRecordable,
   isCellSlot,
   isIdentitySlot,
   isObjectStore,
+  isProvenHandlerIdentity,
+  isRefArrayIdentity,
   isRegionItemSlot,
+  isSlotValuedIdentity,
   isStoreReadSlot,
 } from "./types.ts";
 import type {
@@ -212,13 +218,17 @@ import type {
   HandlerInfo,
   HandlerOrigin,
   IdentityBindingClass,
+  IdentityBindingProp,
   IdentityProp,
   InlinedChild,
   KeyedRegionInfo,
+  ProvenHandlerIdentityProp,
   Reason,
   ReasonCode,
   RecordableBindingClass,
   RecordedProp,
+  RefArrayIdentityProp,
+  RefArrayRecordElement,
   ShowRegionInfo,
   SignalCalleeIdentity,
   SignalEscapeRecord,
@@ -226,9 +236,11 @@ import type {
   SignalFamilyRecord,
   SignalInitializerRecord,
   SignalInitializerShape,
+  SlotValuedIdentityProp,
   SourceLoc,
   StaticValue,
   StoreInfo,
+  StoreReadCaptureSlot,
   StoreReadInfo,
   WiringRecord,
 } from "./types.ts";
@@ -840,7 +852,34 @@ function recordsMatch(
 }
 
 function identityKey(prop: IdentityProp): string {
-  return JSON.stringify([prop.name, prop.role, prop.bindingClass, prop.source.name, prop.source.path]);
+  if (isBindingIdentity(prop)) {
+    return JSON.stringify([prop.name, prop.role, prop.bindingClass, prop.source.name, prop.source.path]);
+  }
+  if (isSlotValuedIdentity(prop)) {
+    return JSON.stringify([prop.name, prop.role, prop.expression, prop.captures]);
+  }
+  if (isProvenHandlerIdentity(prop)) {
+    return JSON.stringify([prop.name, prop.role, prop.handler, prop.source, prop.captures]);
+  }
+  return JSON.stringify([prop.name, prop.role, prop.elements]);
+}
+
+/** Cross-artifact store id: the createContext binding's module and name.
+ * Local `sN` ids stay on the component that bound the store. Two distinct
+ * stores cannot share a (contextModule, context) pair. */
+function inheritedStoreId(store: StoreInfo): string {
+  return `${store.contextModule}#${store.context}`;
+}
+
+function retargetStore(store: StoreInfo): StoreInfo {
+  return { ...store, id: inheritedStoreId(store) };
+}
+
+function retargetCapture(slot: CaptureSlot, from: string, to: string): CaptureSlot {
+  if ((isStoreReadSlot(slot) || isActionSlot(slot)) && slot.store === from) {
+    return { ...slot, store: to };
+  }
+  return slot;
 }
 
 function identityRecordsMatch(
@@ -927,16 +966,40 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     if (list == null || list.length === 0) return null;
     return list;
   })();
-  const identityByName: Map<string, IdentityProp> | null = (() => {
+  const identityByName: Map<string, IdentityBindingProp> | null = (() => {
     if (identityRecords === null) return null;
-    const map = new Map<string, IdentityProp>();
+    const map = new Map<string, IdentityBindingProp>();
     for (const prop of identityRecords) {
       if (prop.role === "attribute") map.set(prop.name, prop);
     }
     return map.size > 0 ? map : null;
   })();
-  const identitySpread: IdentityProp | null =
-    identityRecords?.find((prop) => prop.role === "spread-of-identifier") ?? null;
+  const identitySpread: IdentityBindingProp | null =
+    identityRecords?.find((prop): prop is IdentityBindingProp => prop.role === "spread-of-identifier") ?? null;
+  const slotValuedByName: Map<string, SlotValuedIdentityProp> | null = (() => {
+    if (identityRecords === null) return null;
+    const map = new Map<string, SlotValuedIdentityProp>();
+    for (const prop of identityRecords) {
+      if (isSlotValuedIdentity(prop)) map.set(prop.name, prop);
+    }
+    return map.size > 0 ? map : null;
+  })();
+  const provenHandlerByName: Map<string, ProvenHandlerIdentityProp> | null = (() => {
+    if (identityRecords === null) return null;
+    const map = new Map<string, ProvenHandlerIdentityProp>();
+    for (const prop of identityRecords) {
+      if (isProvenHandlerIdentity(prop)) map.set(prop.name, prop);
+    }
+    return map.size > 0 ? map : null;
+  })();
+  const refArrayByName: Map<string, RefArrayIdentityProp> | null = (() => {
+    if (identityRecords === null) return null;
+    const map = new Map<string, RefArrayIdentityProp>();
+    for (const prop of identityRecords) {
+      if (isRefArrayIdentity(prop)) map.set(prop.name, prop);
+    }
+    return map.size > 0 ? map : null;
+  })();
 
   const refuse: Refuse = (code, message, node, detail) => {
     reasons.push({ code, message, loc: locOf(node), ...(detail ? { detail } : {}) });
@@ -1157,7 +1220,56 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   for (const call of helperContextCalls) {
     if (!isWholeBindInit(moduleInfo, call)) continue;
     admitStoreOutcome(classifyStoreBinding(moduleInfo, call, `s${helperStoreIndex}`, locOf));
-    helperStoreIndex++;
+    helperStoreIndex += 1;
+  }
+
+  if (identityRecords !== null) {
+    const inherited: StoreInfo[] = [];
+    const seen = new Set<string>();
+    const take = (store: StoreInfo): boolean => {
+      const id = store.id;
+      const existing = stores.find((candidate) => candidate.id === id) ?? inherited.find((candidate) => candidate.id === id);
+      if (existing !== undefined) {
+        if (existing.context !== store.context || existing.contextModule !== store.contextModule) {
+          refuse(
+            "store-binding-not-provable",
+            "A claimed-child store id already names a different store in this component.",
+            component.fn,
+            { reason: "claimed-store-id-collision", store: id },
+          );
+          return false;
+        }
+        return true;
+      }
+      if (seen.has(id)) return true;
+      seen.add(id);
+      inherited.push(store);
+      return true;
+    };
+    for (const prop of identityRecords) {
+      if (isSlotValuedIdentity(prop) && !take(prop.store)) break;
+      if (isProvenHandlerIdentity(prop)) {
+        let collided = false;
+        for (const store of prop.stores) {
+          if (!take(store)) {
+            collided = true;
+            break;
+          }
+        }
+        if (collided) break;
+      }
+      if (isRefArrayIdentity(prop)) {
+        let collided = false;
+        for (const element of prop.elements) {
+          if (element.kind === "store" && !take(element.storeInfo)) {
+            collided = true;
+            break;
+          }
+        }
+        if (collided) break;
+      }
+    }
+    stores.push(...inherited);
   }
 
   // "Has a source cell at all" is about the PRESENCE of a factory call, so this
@@ -1487,7 +1599,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
    * runtime state, never a frozen value. A spread identity covers every
    * member; a named identity covers only that name.
    */
-  function identityOf(node: Node): { prop: IdentityProp; member: string } | null {
+  function identityOf(node: Node): { prop: IdentityBindingProp; member: string } | null {
     if ((identityByName === null && identitySpread === null) || ownPropsSymbol === null) return null;
     const expression = unwrap(node);
     if (expression == null || expression.type !== "MemberExpression") return null;
@@ -1504,7 +1616,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     return null;
   }
 
-  function identitySlotOf(identity: { prop: IdentityProp; member: string }): CaptureSlot {
+  function identitySlotOf(identity: { prop: IdentityBindingProp; member: string }): CaptureSlot {
     return {
       name: identity.member,
       kind: "identity",
@@ -2102,13 +2214,12 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           const symbol = frame.mod.referenceOf(object)?.symbol ?? null;
           const read = symbol === null ? undefined : readSlots.get(symbol.id);
           if (read !== undefined && read.path.length === 0) {
-            frame.refuse(
-              "jsx-dynamic-attribute",
-              "A ref array element names a store member, and a store capture is not emittable in a ref binding.",
-              element,
-              { reason: "ref-store-slot-not-emittable", store: read.store, path: [element.property.name] },
-            );
-            return "";
+            const key: string = element.property.name;
+            const store = stores.find((candidate) => candidate.id === read.store);
+            if (store !== undefined && isObjectStore(store) && store.keys.includes(key)) {
+              slots.push({ name: key, kind: "store-read", store: read.store, path: [key] });
+              continue;
+            }
           }
         }
       }
@@ -2116,6 +2227,27 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       const source = sourceBindingOf(element);
       if (source === null || source.path.length === 0) return null;
       const member = String(source.path[source.path.length - 1]);
+      const recordedRef = refArrayByName?.get(member);
+      if (recordedRef !== undefined) {
+        for (const entry of recordedRef.elements) {
+          if (entry.kind === "store") {
+            slots.push({
+              name: String(entry.path[entry.path.length - 1] ?? entry.store),
+              kind: "store-read",
+              store: entry.store,
+              path: entry.path,
+            });
+            continue;
+          }
+          slots.push({
+            name: String(entry.source.path[entry.source.path.length - 1] ?? entry.source.name),
+            kind: "identity",
+            bindingClass: entry.bindingClass,
+            source: entry.source,
+          });
+        }
+        continue;
+      }
       slots.push({
         name: member,
         kind: "identity",
@@ -2172,6 +2304,32 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       origin: "component",
       loc: frame.locOf(attribute),
     });
+
+    if (identityRecords !== null) {
+      for (const prop of identityRecords) {
+        if (isSlotValuedIdentity(prop)) {
+          sink.bindings.push({
+            id: `${sink.prefix}b${sink.bindings.length}`,
+            kind: "attribute",
+            locator,
+            attribute: prop.name,
+            property: false,
+            captures: sortedSlots(prop.captures),
+            expression: prop.expression,
+            initialValue: null,
+            initialValueFrom: "capture",
+            origin: "component",
+            loc: frame.locOf(attribute),
+          });
+        }
+        if (isProvenHandlerIdentity(prop)) {
+          const event = EVENT_PROP.exec(prop.name);
+          if (event !== null) {
+            pushHandler(event[1].toLowerCase(), locator, prop.source, prop.captures, frame.locOf(attribute), "component");
+          }
+        }
+      }
+    }
 
     return "";
   }
@@ -3267,6 +3425,30 @@ export function classifySite(module: Module, component: ComponentSite, options?:
             rewrites,
           };
         }
+        if (
+          expression.type === "MemberExpression" &&
+          expression.computed !== true &&
+          expression.property?.type === "Identifier" &&
+          ownPropsSymbol !== null
+        ) {
+          const object = unwrap(expression.object);
+          if (object != null && object.type === "Identifier") {
+            const symbol = moduleInfo.referenceOf(object)?.symbol ?? null;
+            if (symbol !== null && symbol.id === ownPropsSymbol.id) {
+              const slotValued = slotValuedByName?.get(expression.property.name);
+              if (slotValued !== undefined) {
+                return {
+                  value: "",
+                  slots: slotValued.captures,
+                  source: slotValued.expression,
+                  inlined: false,
+                  measured: true,
+                  rewrites: [],
+                };
+              }
+            }
+          }
+        }
         const standalone = standaloneIdentityMember(expression);
         if (standalone !== null) {
           const base = memberBase(expression);
@@ -3900,6 +4082,138 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     };
   }
 
+  function slotValuedAttribute(frame: Frame, attribute: Node): SlotValuedIdentityProp | null {
+    if (attribute.type === "JSXSpreadAttribute") return null;
+    if (attribute.name?.type !== "JSXIdentifier") return null;
+    if (attribute.value?.type !== "JSXExpressionContainer") return null;
+    const expression = unwrap(attribute.value.expression);
+    if (expression == null || expression.type === "JSXEmptyExpression") return null;
+
+    const derived = derive(frame.mod, expression, null, frame);
+    if (derived === null || derived.slots.length === 0) return null;
+    if (!derived.slots.every(isStoreReadSlot)) return null;
+
+    const storeIds = new Set(derived.slots.map((slot) => slot.store));
+    if (storeIds.size !== 1) return null;
+    const storeId = derived.slots[0].store;
+    const store = stores.find((candidate) => candidate.id === storeId);
+    if (store === undefined) return null;
+
+    const inherited = retargetStore(store);
+    const captures: StoreReadCaptureSlot[] = derived.slots.map((slot) => ({
+      ...slot,
+      store: inherited.id,
+    }));
+
+    return {
+      name: attribute.name.name,
+      role: "slot-valued",
+      expression: printExpression(expression),
+      captures,
+      store: inherited,
+    };
+  }
+
+  function provenHandlerAttribute(attribute: Node): ProvenHandlerIdentityProp | null {
+    if (attribute.type === "JSXSpreadAttribute") return null;
+    if (attribute.name?.type !== "JSXIdentifier") return null;
+    if (attribute.value?.type !== "JSXExpressionContainer") return null;
+    const expression = unwrap(attribute.value.expression);
+    if (expression == null || expression.type === "JSXEmptyExpression") return null;
+
+    let fn: Node | null = null;
+    if (expression.type === "ArrowFunctionExpression" || expression.type === "FunctionExpression") {
+      fn = expression;
+    } else if (expression.type === "Identifier") {
+      const symbol = moduleInfo.referenceOf(expression)?.symbol ?? null;
+      if (symbol === null) return null;
+      fn = localValueOf(symbol);
+      if (fn == null || (fn.type !== "ArrowFunctionExpression" && fn.type !== "FunctionExpression")) return null;
+    } else {
+      return null;
+    }
+
+    let rejected = false;
+    const slots = auditHandlerBody(fn, () => {
+      rejected = true;
+    }, true);
+    if (rejected) return null;
+
+    const idMap = new Map<string, string>();
+    const inheritedStores: StoreInfo[] = [];
+    for (const slot of slots) {
+      if (!isStoreReadSlot(slot) && !isActionSlot(slot)) continue;
+      if (idMap.has(slot.store)) continue;
+      const store = stores.find((candidate) => candidate.id === slot.store);
+      if (store === undefined) return null;
+      const inherited = retargetStore(store);
+      idMap.set(slot.store, inherited.id);
+      inheritedStores.push(inherited);
+    }
+
+    const captures = slots.map((slot) => {
+      if ((isStoreReadSlot(slot) || isActionSlot(slot)) && idMap.has(slot.store)) {
+        return retargetCapture(slot, slot.store, idMap.get(slot.store)!);
+      }
+      return slot;
+    });
+
+    return {
+      name: attribute.name.name,
+      role: "proven-handler",
+      handler: `s${handlers.length}`,
+      source: printExpression(fn),
+      captures,
+      stores: inheritedStores,
+    };
+  }
+
+  function refArrayAttribute(attribute: Node): RefArrayIdentityProp | null {
+    if (attribute.type === "JSXSpreadAttribute") return null;
+    if (attribute.name?.type !== "JSXIdentifier" || attribute.name.name !== "ref") return null;
+    if (attribute.value?.type !== "JSXExpressionContainer") return null;
+    const expression = unwrap(attribute.value.expression);
+    if (expression == null || expression.type !== "ArrayExpression") return null;
+    if (expression.elements.length === 0) return null;
+
+    const elements: RefArrayRecordElement[] = [];
+    for (const raw of expression.elements as Node[]) {
+      if (raw == null || raw.type === "SpreadElement") return null;
+      const element = unwrap(raw);
+      if (element == null) return null;
+
+      if (
+        element.type === "MemberExpression" &&
+        element.computed !== true &&
+        element.property?.type === "Identifier"
+      ) {
+        const object = unwrap(element.object);
+        if (object != null && object.type === "Identifier") {
+          const symbol = moduleInfo.referenceOf(object)?.symbol ?? null;
+          const read = symbol === null ? undefined : readSlots.get(symbol.id);
+          if (read !== undefined && read.path.length === 0) {
+            const key: string = element.property.name;
+            const store = stores.find((candidate) => candidate.id === read.store);
+            if (store === undefined || !isObjectStore(store) || !store.keys.includes(key)) return null;
+            const inherited = retargetStore(store);
+            elements.push({ kind: "store", store: inherited.id, path: [key], storeInfo: inherited });
+            continue;
+          }
+        }
+      }
+
+      const source = sourceBindingOf(element);
+      if (source === null || source.path.length === 0) return null;
+      elements.push({
+        kind: "identity",
+        bindingClass: source.class,
+        source: { name: source.name, path: source.path },
+      });
+    }
+
+    return { name: "ref", role: "ref-array", elements };
+  }
+
   /**
    * ADDRESSES a child instead of absorbing it: returns the element-shaped hole
    * the parent's template carries, or null and leaves the element to
@@ -3931,9 +4245,11 @@ export function classifySite(module: Module, component: ComponentSite, options?:
 
     // (1) BARE — `ClaimedChildNotBare`. Children still refuse: a mount
     // container has nowhere to put them. Attributes no longer refuse the
-    // address when every one is a v1 build-constant or an identity-class
-    // named attribute / identifier rest-spread. Any other attribute falls
-    // through to `jsx-component-element`, same as today — no new code.
+    // address when every one is a v1 build-constant, an identity-class
+    // named attribute / identifier rest-spread, a slot-valued store
+    // derivation, a proven local-closure handler, or a ref-array of store
+    // members and identity paths. Any other attribute falls through to
+    // `jsx-component-element`, same as today — no new code.
     if (jsxChildren(element).length > 0) return null;
 
     const recorded: RecordedProp[] = [];
@@ -3947,6 +4263,21 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       const identity = identityAttribute(attribute);
       if (identity !== null) {
         identities.push(identity);
+        continue;
+      }
+      const slotValued = slotValuedAttribute(frame, attribute);
+      if (slotValued !== null) {
+        identities.push(slotValued);
+        continue;
+      }
+      const handler = provenHandlerAttribute(attribute);
+      if (handler !== null) {
+        identities.push(handler);
+        continue;
+      }
+      const refArray = refArrayAttribute(attribute);
+      if (refArray !== null) {
+        identities.push(refArray);
         continue;
       }
       return null;
@@ -4224,12 +4555,33 @@ export function classifySite(module: Module, component: ComponentSite, options?:
    * IS the identity slot; no body is extracted and no value is frozen. */
   function identityEventHandler(raw: Node): { name: string; slot: CaptureSlot; loc: SourceLoc } | null {
     const identity = identityOf(raw);
-    if (identity === null) return null;
-    return {
-      name: identity.member,
-      slot: identitySlotOf(identity),
-      loc: locOf(raw),
-    };
+    if (identity !== null) {
+      return {
+        name: identity.member,
+        slot: identitySlotOf(identity),
+        loc: locOf(raw),
+      };
+    }
+    const expression = unwrap(raw);
+    if (
+      expression != null &&
+      expression.type === "MemberExpression" &&
+      expression.computed !== true &&
+      expression.property?.type === "Identifier" &&
+      ownPropsSymbol !== null
+    ) {
+      const object = unwrap(expression.object);
+      if (object != null && object.type === "Identifier") {
+        const symbol = moduleInfo.referenceOf(object)?.symbol ?? null;
+        if (symbol !== null && symbol.id === ownPropsSymbol.id) {
+          const recorded = provenHandlerByName?.get(expression.property.name);
+          if (recorded !== undefined && recorded.captures.length === 1) {
+            return { name: recorded.name, slot: recorded.captures[0], loc: locOf(raw) };
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /**
@@ -4464,7 +4816,14 @@ export function classifySite(module: Module, component: ComponentSite, options?:
    * accessors and nothing else, no globals, a body inside the supported syntax.
    * `bindProp` passes a diverting `recordRefusal`, because a handler audited as a
    * CANDIDATE PROP VALUE must be admitted whole or leave no trace. */
-  function auditHandlerBody(fn: Node, recordRefusal: Refuse = refuse): CaptureSlot[] {
+  function isAnalyzedOrImportedCallee(symbol: YukuSymbol): boolean {
+    if (isImportedSymbol(symbol)) return true;
+    const definition = symbol.definition();
+    if (definition == null || definition.symbol == null) return false;
+    return functionOfSymbol(definition.module, definition.symbol) != null;
+  }
+
+  function auditHandlerBody(fn: Node, recordRefusal: Refuse = refuse, provenAddress = false): CaptureSlot[] {
     const slots: CaptureSlot[] = [];
 
     // `capturesOf` is the load-bearing query: shadowing- and alias-correct free
@@ -4508,6 +4867,60 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       if (item !== undefined) {
         slots.push(item);
         continue;
+      }
+
+      if (provenAddress && isAnalyzedOrImportedCallee(capture.symbol)) {
+        if (
+          capture.references.every((reference) => {
+            const parent: Node = moduleInfo.parentOf(reference.node);
+            return parent != null && parent.type === "CallExpression" && parent.callee === reference.node;
+          })
+        ) {
+          continue;
+        }
+      }
+
+      if (provenAddress) {
+        const klass = classOfResolvedSymbol(capture.symbol);
+        if (klass === "own-props-parameter" || klass === "derived-rest-props-result") {
+          if (!capture.references.every(isSlotMemberRead)) {
+            recordRefusal(
+              "handler-captures-unprovable-binding",
+              `The handler closes over \`${capture.symbol.name}\`, which is not a provable cell accessor.`,
+              capture.references[0]?.node ?? fn,
+              { binding: capture.symbol.name, declaredInScope: capture.symbol.scope.kind },
+            );
+            continue;
+          }
+          const seen = new Set<string>();
+          let uncovered = false;
+          for (const reference of capture.references) {
+            const parent: Node = moduleInfo.parentOf(reference.node);
+            const source = parent == null ? null : sourceBindingOf(parent);
+            if (source === null || source.path.length === 0) {
+              uncovered = true;
+              break;
+            }
+            const member = String(source.path[source.path.length - 1]);
+            if (seen.has(member)) continue;
+            seen.add(member);
+            slots.push({
+              name: member,
+              kind: "identity",
+              bindingClass: source.class,
+              source: { name: source.name, path: source.path },
+            });
+          }
+          if (uncovered) {
+            recordRefusal(
+              "handler-captures-unprovable-binding",
+              `The handler closes over \`${capture.symbol.name}\`, which is not a provable cell accessor.`,
+              capture.references[0]?.node ?? fn,
+              { binding: capture.symbol.name, declaredInScope: capture.symbol.scope.kind },
+            );
+          }
+          continue;
+        }
       }
 
       if (ownPropsSymbol !== null && capture.symbol.id === ownPropsSymbol.id && identityRecords !== null) {
@@ -4573,10 +4986,15 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     moduleInfo.walk(
       {
         enter: (node: Node) => {
+          if (isTypeSyntax(node.type)) return;
           if (HANDLER_SYNTAX.has(node.type)) return;
           // S3, admission 3: event-time syntax, only where the structural check
           // holds. None of it is reachable from the derivation walk.
           if (EVENT_TIME_SYNTAX.has(node.type) && isEventTimeSyntax(fn, node)) return;
+          if (provenAddress && node.type === "MemberExpression") {
+            const source = sourceBindingOf(node);
+            if (source !== null && source.path.length > 0) return;
+          }
           recordRefusal(
             "handler-unsupported-syntax",
             `The handler contains a \`${node.type}\`, which this pass does not prove.`,
@@ -4589,6 +5007,19 @@ export function classifySite(module: Module, component: ComponentSite, options?:
             // An enumerated ambient call, or a method call on a value that only
             // exists once the event fired. Neither is ever evaluated here.
             if (isEventTimeValue(fn, node)) return;
+            if (
+              provenAddress &&
+              callee.type === "MemberExpression" &&
+              callee.computed !== true &&
+              callee.property?.type === "Identifier"
+            ) {
+              const object = unwrap(callee.object);
+              if (object != null && object.type === "Identifier") {
+                const objectSymbol = moduleInfo.referenceOf(object)?.symbol ?? null;
+                const read = objectSymbol === null ? undefined : readSlots.get(objectSymbol.id);
+                if (read !== undefined && read.path.length === 0) return;
+              }
+            }
             recordRefusal("handler-calls-non-accessor", "The handler calls a computed callee.", node);
             return;
           }
@@ -4613,6 +5044,8 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           }
 
           if (contains(fn, symbol.scope.node)) return; // declared inside the handler
+
+          if (provenAddress && isAnalyzedOrImportedCallee(symbol)) return;
 
           recordRefusal(
             "handler-calls-non-accessor",

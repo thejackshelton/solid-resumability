@@ -25,10 +25,9 @@ export function ObjectStoreBareEscape() {
   return <button class="bare">ok</button>;
 }
 
-export function ObjectStoreRefCapture() {
+export function ObjectStoreRefCapture(props: { r?: (el: unknown) => void }) {
   const ctx = useContext(ShelfContext);
-  const r = (_el: unknown) => {};
-  return <div class="ref" ref={[ctx.setAnchor, r]} />;
+  return <div class="ref" ref={[ctx.setAnchor, props.r]} />;
 }
 
 const SpreadContext = createContext({ toggle: () => {} });

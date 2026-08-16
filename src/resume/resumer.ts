@@ -333,6 +333,23 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
         cellWrite(cellOf(slot.cell, slot.name).set, element);
         continue;
       }
+      if (isStoreReadSlot(slot) || isActionSlot(slot)) {
+        const path = `[${slot.path.map((step) => (typeof step === "number" ? String(step) : JSON.stringify(step))).join(", ")}]`;
+        if (!stores || !stores.has(slot.store)) {
+          throw new Error(
+            `resume: no live store is registered as ${JSON.stringify(slot.store)}, so the ref at ${path} cannot be replayed`,
+          );
+        }
+        const member = stores.read(slot.store, slot.path);
+        if (typeof member === "function") (member as (node: Element) => void)(element);
+        else if (member != null && typeof member === "object") (member as { value: unknown }).value = element;
+        else {
+          throw new Error(
+            `resume: store ${JSON.stringify(slot.store)} path ${path} is not a ref target (got ${typeof member})`,
+          );
+        }
+        continue;
+      }
       if (isIdentitySlot(slot)) {
         const target = liveIdentity(slot);
         if (target == null) continue;

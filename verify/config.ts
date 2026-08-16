@@ -26,6 +26,7 @@ export const PAGES = {
 	fixtures: '/fixtures/fixtures.html',
 	todos: '/todos/todos.html',
 	rule: '/rule/rule.html',
+	click: '/click/click.html',
 } as const;
 
 export function pageUrl(variant: Variant, page: keyof typeof PAGES): string {
@@ -362,3 +363,48 @@ export const RULE_REST_PROVIDE = { id: 'rule-root' } as const;
  * ran before the effect (or the initial cell) reads `"hr"` either way.
  */
 export const RULE_TAG_NAME_CONTRACT = 'hr';
+
+/**
+ * Eager-JS ceiling for the resumable click page, in bytes on the wire.
+ *
+ * Own page, own cap: ceiling is parity with fixtures (20,000 B) and is not
+ * to be moved to fit a build. The recorded baseline is the first measured
+ * eager file size (T055: 16,449 B), not a diff.
+ */
+export const CLICK_EAGER_JS_CAP_BYTES = 20_000;
+
+/** First recorded click-page eager file bytes (T055). Reported, not asserted. */
+export const CLICK_EAGER_JS_BASELINE_BYTES = 16_449;
+
+/**
+ * The click page's one mount: the installed package's own ButtonRoot,
+ * addressed by the artifact directory the build stamped into the markup.
+ *
+ * `artifactId` is what `data-resume` carries and what the eager entry names
+ * in its glob map. The box asserts those two strings are the same string.
+ */
+export const CLICK_ARTIFACT = 'DvspU6cJ.ButtonRoot';
+export const CLICK_COMPONENT = 'ButtonRoot';
+export const CLICK_MOUNT = `[data-resume="${CLICK_ARTIFACT}"]`;
+
+/**
+ * The five attributes ButtonRoot was refused-then-admitted for. Served
+ * markup must carry none of them; after resume each must equal the
+ * artifact's own compute over live-resolved slots.
+ */
+export const CLICK_COMPUTED_ATTRS = ['type', 'role', 'tabindex', 'disabled', 'aria-disabled'] as const;
+
+/**
+ * Identities the page publishes at the mount site (`demo/src/click-page.ts`).
+ *
+ * These are the caller's own props object and rest projection — not attribute
+ * values the page or the box paints. The box feeds them to the artifact's
+ * own compute and asserts the live DOM against that result.
+ */
+export const CLICK_MERGED_PROPS = { type: 'button' } as const;
+export const CLICK_REST_PROVIDE = { id: 'click-root' } as const;
+
+/** Page-owned sentinel outside the mount. The click handler sets `data-clicked="1"`. */
+export const CLICK_SENTINEL = '[data-click-sentinel]';
+export const CLICK_SENTINEL_ATTR = 'data-clicked';
+export const CLICK_SENTINEL_AFTER = '1';

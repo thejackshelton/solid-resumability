@@ -54,6 +54,7 @@ const STATIC_MODULES = import.meta.glob<Record<string, unknown>>(
     "../artifacts/*/wiring.js",
     "!../artifacts/app.*/**",
     "!../artifacts/*.SeparatorRoot/**",
+    "!../artifacts/*.ButtonRoot/**",
   ],
   { eager: true },
 );
@@ -63,6 +64,7 @@ const HANDLER_MODULES = import.meta.glob<HandlerModule>([
   "../artifacts/*/handlers/*.js",
   "!../artifacts/app.*/**",
   "!../artifacts/*.SeparatorRoot/**",
+  "!../artifacts/*.ButtonRoot/**",
 ]);
 
 export const registry = createRegistry(STATIC_MODULES, HANDLER_MODULES);

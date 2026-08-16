@@ -174,6 +174,8 @@ async function main() {
 			servers.push(await startStaticServer({ root, port: PORTS[variant] }));
 			log(`serving ${root} on http://127.0.0.1:${PORTS[variant]}`);
 		}
+		// PAGES includes /click/click.html (T056). The loop polls every
+		// registered page on both variants before witness launches.
 		for (const variant of VARIANTS) {
 			for (const page of Object.values(PAGES)) {
 				await pollReady(`http://127.0.0.1:${PORTS[variant]}${page}`);

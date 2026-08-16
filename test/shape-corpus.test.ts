@@ -7,8 +7,8 @@ import { Analyzer } from "yuku-analyzer";
 
 import { contains } from "../src/comptime/ast.ts";
 import { freeIdentifiersInCompute } from "../src/comptime/emit.ts";
-import { analyzeFixture, classify, loadProject, runComptime } from "../src/comptime/index.ts";
-import type { Analysis, AttributeBindingInfo, ReasonCode } from "../src/comptime/types.ts";
+import { analyzeFixture, classify, classifyAll, loadProject, runComptime } from "../src/comptime/index.ts";
+import { REASON_CODES, type Analysis, type AttributeBindingInfo, type ReasonCode } from "../src/comptime/types.ts";
 
 /**
  * THE SHAPE CORPUS — the re-runnable half of `docs/kobalte/impossibility.md`.
@@ -406,6 +406,25 @@ function slotPattern(slots: Array<{ name: string }>): string {
 
 const LANGUAGE_GLOBALS = new Set(["undefined", "NaN", "Infinity"]);
 
+function fixtureSources(root: string): string[] {
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const name of entries) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) walk(full);
+      else if (name.endsWith(".tsx")) out.push(full);
+    }
+  };
+  walk(root);
+  return out.sort();
+}
+
 function structureFiles(root: string): string[] {
   const out: string[] = [];
   const walk = (dir: string): void => {
@@ -476,6 +495,27 @@ describe("compute closure — every emitted artifact", () => {
     for (const file of files) {
       expect(freeInStructure(file), file).toEqual([]);
     }
+  });
+});
+
+describe("corpus reason-code invariant — every classified fixture", () => {
+  it("every reason.code emitted across the fixture corpus is a member of REASON_CODES", () => {
+    const members = new Set<string>(REASON_CODES);
+    const root = process.cwd();
+    const files = fixtureSources("test/fixtures");
+    expect(files.length).toBeGreaterThan(0);
+    const unknown: string[] = [];
+    for (const file of files) {
+      const project = loadProject(join(root, file), root);
+      for (const analysis of classifyAll(project.entry)) {
+        for (const reason of analysis.reasons) {
+          if (!members.has(reason.code)) {
+            unknown.push(`${file}#${analysis.component}:${reason.code}`);
+          }
+        }
+      }
+    }
+    expect(unknown).toEqual([]);
   });
 });
 

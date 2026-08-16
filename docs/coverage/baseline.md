@@ -165,9 +165,9 @@ These are in the corpus and were analyzed; they contribute no components to the 
 
 ## Taxonomy exercise
 
-The classifier defines 27 refusal codes; this corpus fires 16 of them (`app` fires 7, `fixtures` fires 15), counting file-level refusals as well as component ones.
+The classifier defines 29 refusal codes; this corpus fires 16 of them (`app` fires 7, `fixtures` fires 15), counting file-level refusals as well as component ones.
 
-Never observed: `store-binding-not-provable`, `store-read-not-provable`, `store-read-escapes`, `handler-references-free-name`, `show-branch-not-static-at-capture`, `region-each-not-store-projection`, `region-body-not-inline-arrow`, `region-item-not-single-element`, `region-key-not-derivable`, `region-nested`, `jsx-unsupported-children`.
+Never observed: `store-binding-not-provable`, `store-read-not-provable`, `store-read-escapes`, `handler-references-free-name`, `show-branch-not-static-at-capture`, `region-each-not-store-projection`, `region-body-not-inline-arrow`, `region-item-not-single-element`, `region-key-not-derivable`, `region-nested`, `jsx-unsupported-children`, `derived-cell-initial-not-foldable`, `derived-cell-input-not-mount-stable`.
 
 Observed only at file level, never on a component: `no-exported-component` — see the table above.
 

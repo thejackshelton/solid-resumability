@@ -220,7 +220,7 @@
     ]
   },
   "taxonomy": {
-    "codes": 27,
+    "codes": 29,
     "observed": 16,
     "unobserved": [
       "store-binding-not-provable",
@@ -233,7 +233,9 @@
       "region-item-not-single-element",
       "region-key-not-derivable",
       "region-nested",
-      "jsx-unsupported-children"
+      "jsx-unsupported-children",
+      "derived-cell-initial-not-foldable",
+      "derived-cell-input-not-mount-stable"
     ],
     "observedBySegment": {
       "app": 7,

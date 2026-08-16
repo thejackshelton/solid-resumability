@@ -4450,7 +4450,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     const folded = foldDerivedCellInitial(pending);
     if (!folded.ok) {
       refuse(
-        "derived-cell-initial-not-foldable" as ReasonCode,
+        "derived-cell-initial-not-foldable",
         "The derived cell's factory initializer does not fold to a literal over the call-site arguments.",
         pending.call,
       );
@@ -4459,7 +4459,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
 
     if (!derivedCellInputsMountStable(pending)) {
       refuse(
-        "derived-cell-input-not-mount-stable" as ReasonCode,
+        "derived-cell-input-not-mount-stable",
         "A call-site argument of the derived-cell helper is neither foldable to a literal nor a getter of a component cell whose setter's only admitted seats are mount-time ref replay.",
         pending.call,
       );

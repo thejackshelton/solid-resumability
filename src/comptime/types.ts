@@ -76,6 +76,9 @@ export const REASON_CODES = [
   "jsx-dynamic-attribute",
   "jsx-unsupported-children",
   "jsx-dynamic-child-not-derivable",
+  /* derived cells */
+  "derived-cell-initial-not-foldable",
+  "derived-cell-input-not-mount-stable",
 ] as const;
 
 export type ReasonCode = (typeof REASON_CODES)[number];

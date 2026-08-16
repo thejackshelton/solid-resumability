@@ -292,15 +292,16 @@ export const COMPOSED_HOLE_BEFORE_FILL =
 /**
  * Eager-JS ceiling for the resumable todos page, in bytes on the wire.
  *
- * Set just above the honest post-T054 CDP wire observation of 15,696 B
- * (file bytes 15,488; CDP transfer accounting adds ~208 B of response
- * headers). WP-B element-projection restore grew the resumer; that growth
- * is part of the honest eager payload. Headroom is for jitter only. The
- * smallest framework leak (`solid-js/dist` alone, ~9,500 B minified) still
- * cannot fit, so a build that quietly fused the group back in cannot clear
- * the cap.
+ * Post-T071 measurement of the resumable todos eager entry
+ * (`todos-Cu6ovhai.js`): 16,099 B on disk, 16,307 B CDP wire. The 208 B
+ * gap is CDP response-header accounting, unchanged from the previous
+ * derivation. Cap = measured wire + ≥200 B, rounded up to the next 100
+ * → 16,600. Headroom is for jitter only, not a budget. The smallest
+ * framework leak (`solid-js/dist` alone, ~9,500 B minified) is ≥ 29×
+ * that headroom, so a build that quietly fused the group back in cannot
+ * clear the cap.
  */
-export const TODOS_EAGER_JS_CAP_BYTES = 16_000;
+export const TODOS_EAGER_JS_CAP_BYTES = 16_600;
 
 /**
  * Ceilings for the todos page's fallback group — the one chunk the first touch

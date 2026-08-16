@@ -360,6 +360,74 @@ describe("ref replay resolves a store member synchronously", () => {
   });
 });
 
+describe("a dispatch re-applies store-read attribute bindings", () => {
+  it("writes the new store value through apply(); patches count only moved writes", async () => {
+    let open = false;
+    const value = {
+      kind: "dialog",
+      isOpen: () => open,
+      toggle() {
+        open = true;
+      },
+    };
+    const registry = createStoreRegistry();
+    registry.provide("s0", value);
+
+    const host = objectMount();
+    const app = resumeBundle(
+      host,
+      objectBundle({
+        bindings: [
+          {
+            id: "b0",
+            kind: "attribute",
+            locator: "/",
+            attribute: "aria-expanded",
+            property: false,
+            initialValue: null,
+            captures: [{ name: "ctx", kind: "store-read" as const, store: "s0", path: [] }],
+            compute(slots: Record<string, unknown>) {
+              return (slots.ctx as { isOpen: () => boolean }).isOpen() ? "true" : "false";
+            },
+          },
+          {
+            id: "b1",
+            kind: "attribute",
+            locator: "/",
+            attribute: "data-kind",
+            property: false,
+            initialValue: null,
+            captures: [{ name: "ctx", kind: "store-read" as const, store: "s0", path: [] }],
+            compute(slots: Record<string, unknown>) {
+              return (slots.ctx as { kind: string }).kind;
+            },
+          },
+        ],
+      }),
+      { stores: registry },
+    );
+
+    const button = host.querySelector("button")!;
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(button.getAttribute("data-kind")).toBe("dialog");
+    expect(app.stats.patches).toBe(0);
+
+    button.click();
+    await app.settled();
+
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(button.getAttribute("data-kind")).toBe("dialog");
+    expect(app.stats.patches).toBe(1);
+
+    button.click();
+    await app.settled();
+
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(app.stats.patches).toBe(1);
+    app.dispose();
+  });
+});
+
 describe("a resumed handler dispatches to the live store", () => {
   it("calls the real action, with the argument the handler built", async () => {
     const store = liveStore();

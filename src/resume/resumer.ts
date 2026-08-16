@@ -415,6 +415,15 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
     for (const [id, cell] of cells) {
       if (!Object.is(untrack(cell.get), before.get(id))) changed.add(id);
     }
+
+    // Store-read arm: a live-provider mutation changes no kernel cell, so the
+    // empty-diff return below must not skip these. `slotsFor` walks `stores.read`
+    // fresh; `apply` is already equality-guarded, so `stats.patches` stays honest.
+    for (const binding of bindings) {
+      if (!binding.spec.captures.some(isStoreReadSlot)) continue;
+      if (apply(binding)) stats.patches++;
+    }
+
     if (changed.size === 0) return;
 
     for (const binding of bindings) {
@@ -483,6 +492,12 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
     Object.defineProperty(event, "currentTarget", { configurable: true, get: () => record.element });
 
     handler(event);
+    // The live provider is the page's own Solid graph; `flush()` settles the
+    // kernel, not that graph. One microtask inside this FIFO is the whole
+    // wait if the write is not visible in this turn — never a timer or retry.
+    if (bindings.some((binding) => binding.spec.captures.some(isStoreReadSlot))) {
+      await Promise.resolve();
+    }
     patchChanged(before);
   };
 

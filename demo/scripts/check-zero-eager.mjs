@@ -132,15 +132,19 @@ const CLICK_DIST = join(DEMO_ROOT, "dist/resumable/click");
 const DIALOG_DIST = join(DEMO_ROOT, "dist/resumable/dialog");
 
 /**
- * The eager cap, in raw bytes on the wire for the one entry chunk.
+ * The eager cap for the one todos entry chunk. This gate measures the
+ * on-disk file; `verify/config.ts` (`TODOS_EAGER_JS_CAP_BYTES`) measures
+ * the same payload on the CDP wire. Both homes are the same number.
  *
- * Set just above the honest post-T054 CDP wire observation of 15,696 B
- * (on-disk file 15,488 B). WP-B element-projection restore grew the
- * resumer; that growth is part of the honest eager payload. Headroom is
- * for jitter only. The smallest framework leak (`solid-js/dist` alone,
- * ~9,500 B minified) still cannot fit.
+ * Post-T071 measurement: file 16,099 B (`todos-Cu6ovhai.js`), CDP wire
+ * 16,307 B. The 208 B gap is CDP response-header accounting, unchanged
+ * from the previous derivation. Cap = measured wire + ≥200 B, rounded
+ * up to the next 100 → 16,600. Headroom is for jitter only, not a
+ * budget. The smallest framework leak (`solid-js/dist` alone, ~9,500 B
+ * minified) is ≥ 29× that headroom, so a quietly fused group still
+ * fails loudly.
  */
-export const EAGER_JS_CAP_BYTES = 16000;
+export const EAGER_JS_CAP_BYTES = 16600;
 
 /**
  * The rule page's own eager cap. Ceiling is parity with fixtures (20,000 B);

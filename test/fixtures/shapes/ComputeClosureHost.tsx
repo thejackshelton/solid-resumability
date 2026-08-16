@@ -7,9 +7,8 @@ import { createSignal, merge, omit } from "solid-js";
  * member, not the object.
  */
 
-function ownCell(get: () => number) {
+function ownCell() {
   const [value, setValue] = createSignal(0);
-  get();
   return value;
 }
 
@@ -20,7 +19,7 @@ export function ComputeClosureHost(props: HostProps = {}) {
   const [n, setN] = createSignal(0);
   const merged = merge({ mode: "wide" } as const, props);
   const others = omit(merged, "mode");
-  const label = ownCell(n);
+  const label = ownCell();
   return (
     <p data-label={label() !== 0 ? "on" : undefined} data-mode={merged.mode} {...others}>
       <button class="bump" onClick={() => setN(n() + 1)}>

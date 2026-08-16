@@ -19,6 +19,7 @@ import { Analyzer } from "yuku-analyzer";
 import { contains, type Node } from "./ast.ts";
 import {
   isActionSlot,
+  isCellSlot,
   isIdentitySlot,
   isRegionItemSlot,
   isStoreReadSlot,
@@ -280,13 +281,39 @@ ${classes}
   },`;
 }
 
+function emitCell(cell: ProvableAnalysis["cells"][number]): string {
+  return cell.setter === undefined
+    ? `  { id: ${js(cell.id)}, initial: ${js(cell.initial)}, getter: ${js(cell.getter)} },`
+    : `  { id: ${js(cell.id)}, initial: ${js(cell.initial)}, getter: ${js(cell.getter)}, setter: ${js(cell.setter)} },`;
+}
+
+function derivedCellIds(analysis: ProvableAnalysis): Set<string> {
+  return new Set(analysis.cells.filter((cell) => cell.setter === undefined).map((cell) => cell.id));
+}
+
+function assertNoDerivedCellHandlerCapture(analysis: ProvableAnalysis): void {
+  const derived = derivedCellIds(analysis);
+  if (derived.size === 0) return;
+
+  const check = (owner: string, captures: CaptureSlot[]): void => {
+    for (const slot of captures) {
+      if (isCellSlot(slot) && derived.has(slot.cell)) {
+        throw new Error(
+          `emit: ${owner} names derived cell ${slot.cell}; derived cells are binding computes only`,
+        );
+      }
+    }
+  };
+
+  for (const handler of analysis.handlers) check(handler.id, handler.captures);
+  for (const record of analysis.wiring) check(`wiring ${record.event}`, record.captures);
+  for (const region of analysis.keyedRegions) {
+    for (const record of region.itemWiring) check(`${region.id} wiring`, record.captures);
+  }
+}
+
 function emitStructure(analysis: ProvableAnalysis): string {
-  const cells = analysis.cells
-    .map(
-      (cell) =>
-        `  { id: ${js(cell.id)}, initial: ${js(cell.initial)}, getter: ${js(cell.getter)}, setter: ${js(cell.setter)} },`,
-    )
-    .join("\n");
+  const cells = analysis.cells.map(emitCell).join("\n");
 
   const bindings = analysis.bindings.map(emitBinding).join("\n");
 
@@ -586,7 +613,7 @@ function emitManifest(analysis: ProvableAnalysis, files: string[]): string {
           id: cell.id,
           initial: cell.initial,
           getter: cell.getter,
-          setter: cell.setter,
+          ...(cell.setter === undefined ? {} : { setter: cell.setter }),
         })),
         // Present only for a component that has one. A key with an empty array
         // in it would rewrite every artifact emitted before this slice, and
@@ -779,6 +806,7 @@ function assertNotAnotherComponents(analysis: ProvableAnalysis, dir: string): vo
 
 export function emit(analysis: ProvableAnalysis, dir: string): EmitResult {
   assertNotAnotherComponents(analysis, dir);
+  assertNoDerivedCellHandlerCapture(analysis);
 
 
   // Rendered in memory first, then written over whatever is already there.

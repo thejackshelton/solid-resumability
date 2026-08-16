@@ -152,6 +152,7 @@ import {
   returnedClosure,
   summarize,
   summarizeDerivedAccessor,
+  type DerivedAccessorSummary,
 } from "./summaries.ts";
 import { classifyStoreBinding, useContextCalls } from "./stores.ts";
 import { AMBIENT_MEMBER_CALLS, EVENT_TIME_SYNTAX, HANDLER_SYNTAX } from "./syntax.ts";
@@ -785,6 +786,15 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   /** symbol id -> what that binding is allowed to do. */
   const accessors = new Map<number, Accessor>();
   const cells: CellInfo[] = [];
+  /** Setter symbol of each source cell, for the derived-cell mount-stable check. */
+  const setterByCell = new Map<string, YukuSymbol>();
+  /** Derived-accessor call sites, admitted into `cells` only if captured as a read. */
+  const pendingDerived: Array<{
+    cellId: string;
+    name: string;
+    call: Node;
+    summary: DerivedAccessorSummary;
+  }> = [];
 
   /** Deferred: an accessor handed to a child as a prop has NOT escaped if the
    * child is inlined, which is only known after the markup walk. */
@@ -883,6 +893,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
 
     accessors.set(getter.id, { cellId, access: "read", name: getter.name });
     accessors.set(setter.id, { cellId, access: "write", name: setter.name });
+    setterByCell.set(cellId, setter);
     cells.push({ id: cellId, getter: getter.name, setter: setter.name, initial, loc: locOf(call) });
 
     pendingAudits.push({ symbol: getter, role: "read" });
@@ -912,12 +923,14 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     const result = moduleInfo.symbolOf(pattern);
     if (result === null) continue;
 
+    const cellId = `d${derivedIndex++}`;
     accessors.set(result.id, {
-      cellId: `d${derivedIndex++}`,
+      cellId,
       access: "read",
       name: result.name,
       derived: true,
     });
+    pendingDerived.push({ cellId, name: result.name, call, summary });
     pendingAudits.push({ symbol: result, role: "read" });
   }
 
@@ -4080,6 +4093,298 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         { binding: site.read.name, store: site.read.store, path: site.read.path },
       );
     }
+  }
+
+  // ------------------------------------------------------------------ derived cells
+  //
+  // A derived accessor is recorded in `cells` only when a binding compute
+  // captured it as a cell-read. The factory initializer must fold to a literal
+  // over the call-site arguments; every argument must be foldable-to-literal or
+  // a getter whose setter's only admitted seats are mount-time ref replay.
+
+  const capturedReads = new Set<string>();
+  const collectCellReads = (slots: CaptureSlot[]): void => {
+    for (const slot of slots) {
+      if (isCellSlot(slot) && slot.access === "read") capturedReads.add(slot.cell);
+    }
+  };
+  for (const binding of bindings) collectCellReads(binding.captures);
+  for (const region of regions) collectCellReads(region.captures);
+  for (const region of keyedRegions) {
+    collectCellReads(region.captures);
+    for (const binding of region.itemBindings) collectCellReads(binding.captures);
+  }
+
+  function topLevelReturned(fn: Node): Node | null {
+    if (fn.body == null) return null;
+    if (fn.body.type !== "BlockStatement") return unwrap(fn.body);
+    const returns = (fn.body.body as Node[]).filter((statement: Node) => statement.type === "ReturnStatement");
+    if (returns.length !== 1 || returns[0].argument == null) return null;
+    return unwrap(returns[0].argument);
+  }
+
+  function factoryInitializerOf(summary: DerivedAccessorSummary): Node | null | undefined {
+    const factories = signalFactorySymbols(summary.module);
+    for (const call of summary.module.findAll("CallExpression")) {
+      if (!contains(summary.fn, call) || !isFactoryCall(summary.module, call, factories)) continue;
+      let node: Node = call;
+      let parent: Node = summary.module.parentOf(node);
+      while (parent != null && isTransparent(parent)) {
+        node = parent;
+        parent = summary.module.parentOf(node);
+      }
+      if (parent == null || parent.type !== "VariableDeclarator" || parent.init !== node) continue;
+      const pattern = parent.id;
+      if (pattern?.type !== "ArrayPattern" || pattern.elements.length !== 2) continue;
+      const getter = summary.module.symbolOf(pattern.elements[0]);
+      if (getter === null || getter.id !== summary.returnedGetter.id) continue;
+      return call.arguments.length === 0 ? null : call.arguments[0];
+    }
+    return undefined;
+  }
+
+  type FoldBinding =
+    | { kind: "literal"; value: StaticValue }
+    | { kind: "closure"; returned: Node }
+    | { kind: "getter" };
+
+  function isLiteralReturningClosure(node: Node): boolean {
+    if (node == null) return false;
+    if (node.type !== "ArrowFunctionExpression" && node.type !== "FunctionExpression") return false;
+    if ((node.params?.length ?? 0) !== 0) return false;
+    const returned = topLevelReturned(node);
+    return returned != null && frozenInitial(moduleInfo, returned).ok;
+  }
+
+  function bindCallSiteArg(arg: Node): FoldBinding | null {
+    const inner = unwrap(arg);
+    const frozen = frozenInitial(moduleInfo, inner);
+    if (frozen.ok) return { kind: "literal", value: frozen.value };
+    if (isLiteralReturningClosure(inner)) {
+      const returned = topLevelReturned(inner);
+      return returned == null ? null : { kind: "closure", returned };
+    }
+    const accessor = accessorOf(inner);
+    if (accessor !== null && accessor.access === "read" && accessor.derived !== true) {
+      return { kind: "getter" };
+    }
+    return null;
+  }
+
+  function argFoldableToLiteral(arg: Node): boolean {
+    const inner = unwrap(arg);
+    return frozenInitial(moduleInfo, inner).ok || isLiteralReturningClosure(inner);
+  }
+
+  function setterOnlyRefReplay(cellId: string): boolean {
+    const setter = setterByCell.get(cellId);
+    if (setter === undefined) return false;
+    for (const reference of setter.references) {
+      if (reference.inTypePosition) continue;
+      if (!seenThroughArrayRef.has(reference.node)) return false;
+    }
+    return true;
+  }
+
+  function functionOfSymbol(mod: Module, symbol: YukuSymbol): Node | null {
+    if (symbol.declarations.length !== 1) return null;
+    const declaration: Node = symbol.declarations[0];
+    if (declaration == null) return null;
+    if (
+      declaration.type === "FunctionDeclaration" ||
+      declaration.type === "FunctionExpression" ||
+      declaration.type === "ArrowFunctionExpression"
+    ) {
+      return declaration;
+    }
+    const parent: Node = mod.parentOf(declaration);
+    if (parent == null) return null;
+    if (
+      (parent.type === "FunctionDeclaration" || parent.type === "FunctionExpression") &&
+      parent.id === declaration
+    ) {
+      return parent;
+    }
+    if (parent.type === "VariableDeclarator" && parent.id === declaration && parent.init != null) {
+      const init = unwrap(parent.init);
+      return init.type === "ArrowFunctionExpression" || init.type === "FunctionExpression" ? init : null;
+    }
+    return null;
+  }
+
+  function foldThroughSingleReturn(
+    mod: Module,
+    call: Node,
+    env: Map<number, FoldBinding>,
+  ): { ok: true; value: StaticValue } | { ok: false } | null {
+    const args: Node[] = call.arguments ?? [];
+    const summary = summarize(mod, call.callee);
+    if (summary !== null && args.length === summary.params.length) {
+      const innerEnv = new Map<number, FoldBinding>();
+      for (let index = 0; index < summary.params.length; index++) {
+        const folded = foldStatic(mod, args[index], env);
+        if (!folded.ok) return { ok: false };
+        innerEnv.set(summary.paramSymbols[index].id, { kind: "literal", value: folded.value });
+      }
+      return foldStatic(summary.module, summary.returned, innerEnv);
+    }
+
+    const callee = unwrap(call.callee);
+    if (callee == null || callee.type !== "Identifier") return null;
+    const symbol = mod.referenceOf(callee)?.symbol ?? null;
+    if (symbol === null) return null;
+    const definition = symbol.definition();
+    if (definition == null || definition.symbol == null) return null;
+    const fnMod = definition.module;
+    const fn = functionOfSymbol(fnMod, definition.symbol);
+    if (fn == null) return null;
+    const params: Node[] = fn.params ?? [];
+    if (params.length !== args.length) return null;
+    if (!params.every((param: Node) => param != null && param.type === "Identifier")) return null;
+    const returned = topLevelReturned(fn);
+    if (returned == null) return null;
+    const innerEnv = new Map<number, FoldBinding>();
+    for (let index = 0; index < params.length; index++) {
+      const paramSymbol = fnMod.symbolOf(params[index]);
+      if (paramSymbol === null) return null;
+      const folded = foldStatic(mod, args[index], env);
+      if (!folded.ok) return { ok: false };
+      innerEnv.set(paramSymbol.id, { kind: "literal", value: folded.value });
+    }
+    return foldStatic(fnMod, returned, innerEnv);
+  }
+
+  function foldStatic(
+    mod: Module,
+    node: Node,
+    env: Map<number, FoldBinding>,
+  ): { ok: true; value: StaticValue } | { ok: false } {
+    const inner = unwrap(node);
+    if (inner == null) return { ok: false };
+
+    const frozen = frozenInitial(mod, inner);
+    if (frozen.ok) return frozen;
+
+    if (inner.type === "ChainExpression") return foldStatic(mod, inner.expression, env);
+
+    if (inner.type === "Identifier") {
+      const symbol = mod.referenceOf(inner)?.symbol ?? null;
+      if (symbol === null) return { ok: false };
+      const bound = env.get(symbol.id);
+      return bound?.kind === "literal" ? { ok: true, value: bound.value } : { ok: false };
+    }
+
+    if (inner.type === "CallExpression" || inner.type === "OptionalCallExpression") {
+      if ((inner.arguments?.length ?? 0) === 0) {
+        const callee = unwrap(inner.callee);
+        if (callee?.type === "Identifier") {
+          const symbol = mod.referenceOf(callee)?.symbol ?? null;
+          const bound = symbol === null ? undefined : env.get(symbol.id);
+          if (bound?.kind === "closure") return foldStatic(mod, bound.returned, env);
+          if (
+            bound?.kind === "literal" &&
+            (inner.type === "OptionalCallExpression" || inner.optional === true) &&
+            bound.value === null
+          ) {
+            return { ok: true, value: null };
+          }
+          return { ok: false };
+        }
+      }
+
+      const through = foldThroughSingleReturn(mod, inner, env);
+      if (through !== null) return through;
+      return { ok: false };
+    }
+
+    if (inner.type === "UnaryExpression" && inner.operator === "typeof") {
+      const argument = foldStatic(mod, inner.argument, env);
+      if (!argument.ok) return { ok: false };
+      return { ok: true, value: argument.value === null ? "object" : typeof argument.value };
+    }
+
+    if (inner.type === "BinaryExpression" && (inner.operator === "===" || inner.operator === "!==")) {
+      const left = foldStatic(mod, inner.left, env);
+      const right = foldStatic(mod, inner.right, env);
+      if (!left.ok || !right.ok) return { ok: false };
+      const equal = left.value === right.value;
+      return { ok: true, value: inner.operator === "===" ? equal : !equal };
+    }
+
+    if (inner.type === "ConditionalExpression") {
+      const test = foldStatic(mod, inner.test, env);
+      if (!test.ok) return { ok: false };
+      return foldStatic(mod, test.value ? inner.consequent : inner.alternate, env);
+    }
+
+    return { ok: false };
+  }
+
+  function foldDerivedCellInitial(
+    pending: (typeof pendingDerived)[number],
+  ): { ok: true; value: StaticValue } | { ok: false } {
+    const initializer = factoryInitializerOf(pending.summary);
+    if (initializer === undefined) return { ok: false };
+    if (initializer === null) return { ok: true, value: null };
+
+    const args: Node[] = pending.call.arguments;
+    if (args.length !== pending.summary.params.length) return { ok: false };
+
+    const env = new Map<number, FoldBinding>();
+    for (let index = 0; index < args.length; index++) {
+      const bound = bindCallSiteArg(args[index]);
+      if (bound !== null) env.set(pending.summary.paramSymbols[index].id, bound);
+    }
+    return foldStatic(pending.summary.module, initializer, env);
+  }
+
+  function derivedCellInputsMountStable(pending: (typeof pendingDerived)[number]): boolean {
+    const args: Node[] = pending.call.arguments;
+    if (args.length !== pending.summary.params.length) return false;
+    for (const arg of args) {
+      if (argFoldableToLiteral(arg)) continue;
+      const accessor = accessorOf(unwrap(arg));
+      if (
+        accessor !== null &&
+        accessor.access === "read" &&
+        accessor.derived !== true &&
+        setterOnlyRefReplay(accessor.cellId)
+      ) {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  for (const pending of pendingDerived) {
+    if (!capturedReads.has(pending.cellId)) continue;
+
+    const folded = foldDerivedCellInitial(pending);
+    if (!folded.ok) {
+      refuse(
+        "derived-cell-initial-not-foldable" as ReasonCode,
+        "The derived cell's factory initializer does not fold to a literal over the call-site arguments.",
+        pending.call,
+      );
+      continue;
+    }
+
+    if (!derivedCellInputsMountStable(pending)) {
+      refuse(
+        "derived-cell-input-not-mount-stable" as ReasonCode,
+        "A call-site argument of the derived-cell helper is neither foldable to a literal nor a getter of a component cell whose setter's only admitted seats are mount-time ref replay.",
+        pending.call,
+      );
+      continue;
+    }
+
+    cells.push({
+      id: pending.cellId,
+      getter: pending.name,
+      initial: folded.value,
+      loc: locOf(pending.call),
+    });
   }
 
   // ------------------------------------------------------------------ verdict

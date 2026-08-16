@@ -23,7 +23,7 @@ export interface CellSpec {
   id: string;
   initial: unknown;
   getter: string;
-  setter: string;
+  setter?: string;
 }
 
 /** A slot filled from one of the component's own cells. */

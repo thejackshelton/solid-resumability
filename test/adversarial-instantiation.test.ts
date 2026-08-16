@@ -13,6 +13,7 @@ import { RefFanoutUnseen } from "./fixtures/shapes/RefFanoutHost.tsx";
 import { DerivedConditionalUnseen } from "./fixtures/shapes/DerivedConditionalHost.tsx";
 import { MeasuredRestUnseen } from "./fixtures/shapes/MeasuredRestHost.tsx";
 import { FoldedMeasuredSeenLive, FoldedMeasuredUnseenLive } from "./fixtures/shapes/FoldedMeasuredHost.tsx";
+import { DerivedCellUnseen } from "./fixtures/shapes/DerivedCellHost.tsx";
 
 /**
  * THE ADVERSARIAL INSTANTIATION GATE.
@@ -915,5 +916,132 @@ describe("adversarial instantiation gate — folded-measured-conjunction", () =>
     expect(
       FOLDED_MEASURED_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
     ).toEqual(["identity-class-rest"]);
+  });
+});
+
+const DERIVED_CELL_HOSTS = `${SHAPES}/DerivedCellHost.tsx`;
+const DERIVED_CELL_UNFOLDABLE = `${SHAPES}/DerivedCellUnfoldable.tsx`;
+const DERIVED_CELL_UNSTABLE = `${SHAPES}/DerivedCellUnstable.tsx`;
+
+const DERIVED_CELL_FOLD_CLAUSES: ShapeClause[] = [
+  {
+    id: "derived-cell-initial-foldable",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("derived-cell-initial-not-foldable"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function derivedCellInitialRule(): ShapeRuleRegistration {
+  return {
+    id: "derived-cell-initial-foldable",
+    clauses: DERIVED_CELL_FOLD_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: DERIVED_CELL_UNFOLDABLE, component: "DerivedCellUnfoldable" },
+    secondInstantiation: {
+      path: DERIVED_CELL_HOSTS,
+      component: "DerivedCellUnseen",
+      render: DerivedCellUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — derived-cell-initial-foldable", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([derivedCellInitialRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the unfoldable host", () => {
+    const lying: ShapeRuleRegistration = { ...derivedCellInitialRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("derived-cell-initial-foldable");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(DERIVED_CELL_HOSTS, "DerivedCellHost");
+    const lying: ShapeRuleRegistration = {
+      ...derivedCellInitialRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<hr class="seen">'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("derived-cell-initial-foldable");
+  });
+
+  it("the counter-instantiation fails exactly the derived-cell-initial-foldable clause", () => {
+    const counter = classify(DERIVED_CELL_UNFOLDABLE, "DerivedCellUnfoldable");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("derived-cell-initial-not-foldable")).toBe(true);
+    expect(
+      DERIVED_CELL_FOLD_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["derived-cell-initial-foldable"]);
+  });
+});
+
+const DERIVED_CELL_STABLE_CLAUSES: ShapeClause[] = [
+  {
+    id: "derived-cell-input-mount-stable",
+    holds: (analysis) =>
+      analysis.status === "provable" || !codes(analysis).has("derived-cell-input-not-mount-stable"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function derivedCellInputRule(): ShapeRuleRegistration {
+  return {
+    id: "derived-cell-input-mount-stable",
+    clauses: DERIVED_CELL_STABLE_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: DERIVED_CELL_UNSTABLE, component: "DerivedCellUnstable" },
+    secondInstantiation: {
+      path: DERIVED_CELL_HOSTS,
+      component: "DerivedCellUnseen",
+      render: DerivedCellUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — derived-cell-input-mount-stable", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([derivedCellInputRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the handler-wired host", () => {
+    const lying: ShapeRuleRegistration = { ...derivedCellInputRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("derived-cell-input-mount-stable");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(DERIVED_CELL_HOSTS, "DerivedCellHost");
+    const lying: ShapeRuleRegistration = {
+      ...derivedCellInputRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<hr class="seen">'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("derived-cell-input-mount-stable");
+  });
+
+  it("the counter-instantiation fails exactly the derived-cell-input-mount-stable clause", () => {
+    const counter = classify(DERIVED_CELL_UNSTABLE, "DerivedCellUnstable");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("derived-cell-input-not-mount-stable")).toBe(true);
+    expect(
+      DERIVED_CELL_STABLE_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["derived-cell-input-mount-stable"]);
   });
 });

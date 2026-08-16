@@ -351,3 +351,76 @@ describe("comptime pass — the verdict is analysis-driven, not name-driven", ()
     expect(analysis.reasons.map((reason) => reason.code)).toContain("signal-escapes-to-opaque-callee");
   });
 });
+
+describe("derived-cell admission", () => {
+  it("classifies the host as provable with cells [c0, d0] and a folded initial", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/DerivedCellHost.tsx", {
+      write: false,
+      component: "DerivedCellHost",
+    });
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.cells.map((cell) => cell.id)).toEqual(["c0", "d0"]);
+    expect(analysis.cells[1]).toMatchObject({ id: "d0", initial: "hr", getter: "tagName" });
+    expect(analysis.cells[1].setter).toBeUndefined();
+  });
+
+  it("refuses an unfoldable initializer by name", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/DerivedCellUnfoldable.tsx", {
+      write: false,
+      component: "DerivedCellUnfoldable",
+    });
+    expect(analysis.status).toBe("fallback");
+    if (analysis.status !== "fallback") return;
+    expect(analysis.reasons.map((reason) => reason.code)).toContain("derived-cell-initial-not-foldable");
+  });
+
+  it("refuses a handler-wired input setter by name", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/DerivedCellUnstable.tsx", {
+      write: false,
+      component: "DerivedCellUnstable",
+    });
+    expect(analysis.status).toBe("fallback");
+    if (analysis.status !== "fallback") return;
+    expect(analysis.reasons.map((reason) => reason.code)).toContain("derived-cell-input-not-mount-stable");
+  });
+
+  it("emits the derived cell without a setter, and refuses a handler that names it", () => {
+    const result = runComptime("test/fixtures/shapes/DerivedCellHost.tsx", {
+      component: "DerivedCellHost",
+      outRoot: scratch(),
+    });
+    expect(result.analysis.status).toBe("provable");
+    if (result.analysis.status !== "provable" || result.emitted === null) return;
+    const structure = readFileSync(join(result.emitted.dir, "structure.js"), "utf8");
+    expect(structure).toContain('id: "d0"');
+    expect(structure).toContain('initial: "hr"');
+    expect(structure).not.toMatch(/id: "d0"[\s\S]*setter:/);
+
+    const forged: ProvableAnalysis = {
+      ...result.analysis,
+      handlers: [
+        {
+          id: "s0",
+          event: "click",
+          locator: "/",
+          module: "./handlers/s0.js",
+          captures: [{ name: "tagName", cell: "d0", access: "read" }],
+          source: "() => {}",
+          origin: "component",
+          loc: result.analysis.cells[0].loc,
+        },
+      ],
+      wiring: [
+        {
+          locator: "/",
+          event: "click",
+          module: "./handlers/s0.js",
+          handler: "s0",
+          captures: [{ name: "tagName", cell: "d0", access: "read" }],
+        },
+      ],
+    };
+    expect(() => emit(forged, scratch())).toThrow(/derived cell d0/);
+  });
+});

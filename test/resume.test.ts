@@ -1,9 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { afterAll, describe, expect, it, vi } from "vitest";
+import { render } from "@solidjs/web";
 
+import { runComptime } from "../src/comptime/index.ts";
 import { cellKernel } from "../src/resume/cells.ts";
 import { createIdentityRegistry } from "../src/resume/identities.ts";
-import type { Bundle, HandlerModule, IdentityCaptureSlotSpec } from "../src/resume/registry.ts";
+import { createRegistry, type Bundle, type HandlerModule, type IdentityCaptureSlotSpec } from "../src/resume/registry.ts";
 import { resumeBundle } from "../src/resume/resumer.ts";
+import { DerivedCellDrift, DerivedCellHost } from "./fixtures/shapes/DerivedCellHost.tsx";
 import { resumeSuite } from "./resume-suite.ts";
 
 /**
@@ -209,5 +215,102 @@ describe("mount-time measured-attribute restore", () => {
     expect(node.getAttribute("role")).toBe("separator");
     expect(node.getAttributeNames()).toEqual(["role"]);
     app.dispose();
+  });
+});
+
+const derivedCellDirs: string[] = [];
+
+function derivedCellScratch(): string {
+  const dir = mkdtempSync(join(process.cwd(), ".artifacts-derived-cell-"));
+  derivedCellDirs.push(dir);
+  return dir;
+}
+
+afterAll(() => {
+  for (const dir of derivedCellDirs) rmSync(dir, { recursive: true, force: true });
+});
+
+async function flush(): Promise<void> {
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+}
+
+function snapshotHr(host: HTMLElement): string {
+  const node = host.querySelector("hr");
+  return node?.outerHTML ?? host.innerHTML;
+}
+
+async function settledEquivalence(
+  file: string,
+  component: string,
+  liveRender: () => unknown,
+): Promise<{ ok: boolean; live: string; resumed: string }> {
+  const liveHost = document.createElement("div");
+  document.body.appendChild(liveHost);
+  const dispose = render(liveRender as never, liveHost);
+  await flush();
+  const live = snapshotHr(liveHost);
+  dispose();
+  liveHost.remove();
+
+  const result = runComptime(file, { component, outRoot: derivedCellScratch() });
+  if (result.analysis.status !== "provable" || result.emitted === null) {
+    return { ok: false, live, resumed: `unemitted:${result.analysis.status}` };
+  }
+
+  const dir = result.emitted.dir;
+  const load = async (fileName: string) =>
+    (await import(pathToFileURL(join(dir, fileName)).href)) as Record<string, unknown>;
+  const template = await load("template.js");
+  const structure = await load("structure.js");
+  const wiring = await load("wiring.js");
+  const registry = createRegistry(
+    {
+      [`/artifacts/${component}/template.js`]: template,
+      [`/artifacts/${component}/structure.js`]: structure,
+      [`/artifacts/${component}/wiring.js`]: wiring,
+    },
+    {},
+  );
+  const bundle = registry.get(component);
+  if (!bundle) return { ok: false, live, resumed: "no-bundle" };
+
+  const resumedHost = document.createElement("div");
+  resumedHost.innerHTML = bundle.template!.html;
+  document.body.appendChild(resumedHost);
+  const identities = createIdentityRegistry();
+  const extra = (node: Element) => {
+    void node;
+  };
+  identities.provide(resumedHost, { name: "props", path: ["extra"] }, extra);
+  const app = resumeBundle(resumedHost, bundle, { identities });
+  await flush();
+  const resumed = snapshotHr(resumedHost);
+  app.dispose();
+  resumedHost.remove();
+
+  return { ok: live === resumed, live, resumed };
+}
+
+describe("derived-cell settled-equivalence", () => {
+  it("the admit host's live page matches the resumed bundle after settle", async () => {
+    const verdict = await settledEquivalence(
+      "test/fixtures/shapes/DerivedCellHost.tsx",
+      "DerivedCellHost",
+      () => DerivedCellHost(),
+    );
+    expect(verdict.live).toBe(verdict.resumed);
+    expect(verdict.ok).toBe(true);
+  });
+
+  it("catches a deferred write that moves the output away from the folded initial", async () => {
+    const verdict = await settledEquivalence(
+      "test/fixtures/shapes/DerivedCellHost.tsx",
+      "DerivedCellDrift",
+      () => DerivedCellDrift(),
+    );
+    expect(verdict.ok).toBe(false);
+    expect(verdict.live).toContain("moved");
+    expect(verdict.resumed).toContain("init");
   });
 });

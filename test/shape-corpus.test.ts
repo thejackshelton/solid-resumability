@@ -444,12 +444,55 @@ function freeInStructure(file: string): Array<{ owner: string; name: string }> {
   return free;
 }
 
+describe("derived-cell admission — first-party host", () => {
+  const analysis = shape("DerivedCellHost.tsx", "DerivedCellHost");
+
+  it("classifies the host as provable with cells [c0, d0]", () => {
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.cells.map((cell) => ({ id: cell.id, initial: cell.initial }))).toEqual([
+      { id: "c0", initial: null },
+      { id: "d0", initial: "hr" },
+    ]);
+  });
+
+  it("refuses the unfoldable-initializer counter by name", () => {
+    const counter = shape("DerivedCellUnfoldable.tsx", "DerivedCellUnfoldable");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toEqual(["derived-cell-initial-not-foldable"]);
+  });
+
+  it("refuses the handler-wired input counter by name", () => {
+    const counter = shape("DerivedCellUnstable.tsx", "DerivedCellUnstable");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toEqual(["derived-cell-input-not-mount-stable"]);
+  });
+});
+
 describe("compute closure — every emitted artifact", () => {
   it("closes every compute, when, and each over slot names only", () => {
     const files = [...structureFiles("artifacts"), ...structureFiles("demo/artifacts")];
     expect(files.length).toBeGreaterThan(0);
     for (const file of files) {
       expect(freeInStructure(file), file).toEqual([]);
+    }
+  });
+});
+
+describe("corpus cell-id invariant — every emitted artifact", () => {
+  it("every cell-read capture id exists in that artifact's cells array", () => {
+    const files = [...structureFiles("artifacts"), ...structureFiles("demo/artifacts")];
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      const cellsBlock = source.match(/export const cells = \[([\s\S]*?)\];/);
+      expect(cellsBlock, file).not.toBeNull();
+      const cellIds = new Set(
+        [...(cellsBlock?.[1].matchAll(/id: "([^"]+)"/g) ?? [])].map((match) => match[1]),
+      );
+      for (const match of source.matchAll(/cell: "([^"]+)"/g)) {
+        expect(cellIds.has(match[1]), `${file} capture ${match[1]} missing from cells`).toBe(true);
+      }
     }
   });
 });

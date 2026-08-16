@@ -108,12 +108,13 @@ export type HandlerOrigin = "component" | "helper" | "action";
 /** A serialized literal: the only thing a source cell may start life as. */
 export type StaticValue = string | number | boolean | null;
 
-/** One `createSignal(<literal>)` whose getter and setter never leave the
- * component. `initial` is the literal, read straight off the AST. */
+/** One source cell (`createSignal(<literal>)`) or one admitted derived cell.
+ * `initial` is the literal, read straight off the AST or folded at the call
+ * site. `setter` is absent on a derived cell: the writer stays in the callee. */
 export interface CellInfo {
   id: string;
   getter: string;
-  setter: string;
+  setter?: string;
   initial: StaticValue;
   loc: SourceLoc;
 }

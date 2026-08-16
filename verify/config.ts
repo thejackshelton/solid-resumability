@@ -414,13 +414,25 @@ export const CLICK_SENTINEL_AFTER = '1';
 /**
  * Eager-JS ceiling for the resumable dialog page, in bytes on the wire.
  *
- * Own page, own cap: a live DialogRoot at load puts the renderer and the
- * dialog chunk on the eager entry by design. Other pages' caps do not move.
+ * Own page, own cap. T085 deferred the live DialogRoot behind
+ * `dialog-provider.ts`; the renderer and the library chunk are no longer
+ * on the eager entry. T086 file 20,671 B; cap 21,100 is file + CDP
+ * header gap + jitter, rounded up. Other pages' caps do not move.
  */
-export const DIALOG_EAGER_JS_CAP_BYTES = 90_000;
+export const DIALOG_EAGER_JS_CAP_BYTES = 21_100;
 
-/** First recorded dialog-page eager file bytes (T069). Reported, not asserted. */
-export const DIALOG_EAGER_JS_BASELINE_BYTES = 80_548;
+/** First recorded deferred-provider dialog eager file bytes (T086). Reported, not asserted. */
+export const DIALOG_EAGER_JS_BASELINE_BYTES = 20_671;
+
+/**
+ * The provider partition, by the stem the bundler gives `demo/src/dialog-provider.ts`.
+ *
+ * Matching the stem rather than a content-hashed filename keeps a rebuild
+ * that changed nothing but the hash from going red. The box uses this to
+ * tell an eager load (provider already on the wire) from a miss-triggered
+ * fetch (exactly one arrival after the click).
+ */
+export const DIALOG_PROVIDER_CHUNK = /\/dialog-provider-[\w-]+\.js$/;
 
 /**
  * The dialog page's trigger mount: the installed package's own DialogTrigger,

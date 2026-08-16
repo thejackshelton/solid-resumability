@@ -177,6 +177,13 @@ function setProperty(element: Element, name: string, value: unknown): boolean {
   return !Object.is(target[name], value) && ((target[name] = value), true);
 }
 
+/** Solid ref semantics: call a function, or write `.value` on an object. */
+function writeRef(target: unknown, element: Element): boolean {
+  if (typeof target === "function") return (target as (node: Element) => void)(element), true;
+  if (target != null && typeof target === "object") return ((target as { value: unknown }).value = element), true;
+  return false;
+}
+
 export function resumeBundle(container: Element, bundle: Bundle, options: ResumeOptions = {}): ResumedApp {
   const component = bundle.component;
   const template = bundle.template;
@@ -335,27 +342,23 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
       }
       if (isStoreReadSlot(slot) || isActionSlot(slot)) {
         const path = `[${slot.path.map((step) => (typeof step === "number" ? String(step) : JSON.stringify(step))).join(", ")}]`;
-        if (!stores || !stores.has(slot.store)) {
+        const replay = () => {
+          const member = stores!.read(slot.store, slot.path);
+          if (!writeRef(member, element)) {
+            throw new Error(
+              `resume: store ${JSON.stringify(slot.store)} path ${path} is not a ref target (got ${typeof member})`,
+            );
+          }
+        };
+        if (stores?.has(slot.store)) replay();
+        else if (!stores?.park(slot.store, replay)) {
           throw new Error(
             `resume: no live store is registered as ${JSON.stringify(slot.store)}, so the ref at ${path} cannot be replayed`,
           );
         }
-        const member = stores.read(slot.store, slot.path);
-        if (typeof member === "function") (member as (node: Element) => void)(element);
-        else if (member != null && typeof member === "object") (member as { value: unknown }).value = element;
-        else {
-          throw new Error(
-            `resume: store ${JSON.stringify(slot.store)} path ${path} is not a ref target (got ${typeof member})`,
-          );
-        }
         continue;
       }
-      if (isIdentitySlot(slot)) {
-        const target = liveIdentity(slot);
-        if (target == null) continue;
-        if (typeof target === "function") (target as (node: Element) => void)(element);
-        else if (typeof target === "object") (target as { value: unknown }).value = element;
-      }
+      if (isIdentitySlot(slot)) writeRef(liveIdentity(slot), element);
     }
   }
   // Own-host projections on the already-held root, same batch as ref writes.
@@ -398,7 +401,16 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
     if (spec.property === true && spec.initialValue !== undefined) {
       setProperty(binding.element, spec.attribute, spec.initialValue);
     }
-    if (spec.initialValue == null && typeof spec.compute === "function") apply(binding);
+    if (spec.initialValue == null && typeof spec.compute === "function") {
+      const miss = spec.captures.filter(isStoreReadSlot).filter((slot) => !stores?.has(slot.store));
+      if (
+        miss.length &&
+        miss.every((slot) => stores?.park(slot.store, () => miss.every((s) => stores!.has(s.store)) && apply(binding)))
+      ) {
+        continue;
+      }
+      apply(binding);
+    }
   }
 
   const records: LiveWiring[] = bundle.wiring.map((spec) => ({ spec, element: locate(root, spec.locator), bound: null }));

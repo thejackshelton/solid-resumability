@@ -8,13 +8,14 @@ import {
 	DIALOG_EAGER_JS_BASELINE_BYTES,
 	DIALOG_EAGER_JS_CAP_BYTES,
 	DIALOG_LIVE,
-	DIALOG_MERGED_PROPS,
 	DIALOG_MOUNT,
+	DIALOG_PROVIDER_CHUNK,
 	DIALOG_STORE_ATTRS,
 	pageUrl,
 } from '../config.ts';
 import { reachableChunks } from './support/chunks.ts';
 import {
+	arrivedSince,
 	assert,
 	describe,
 	kindOf,
@@ -26,33 +27,39 @@ import {
 import { eagerScriptBytes } from './support/page-bytes.ts';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// T061 Ruling 5 / T068 WP-δ: live DialogRoot, resumed DialogTrigger, real click.
+// T085 / T086 WP-ζ: priced deferral. Live DialogRoot is NOT on the eager
+// graph. A miss starts one dynamic import of the provider; the same click
+// awaits whenProvided and still flips aria-expanded / mounts content.
 //
-//   (1) SERVED SHAPE. A plain fetch: the trigger mount holds a div hole
-//       stamped with the claimed child's artifact id, holding the child's
-//       own <button> with the record's baked aria-haspopup="dialog", and NO
-//       store-derived attr. Served content region: empty.
+//   (1) SERVED SHAPE. Unchanged from T068: the trigger mount holds a div
+//       hole stamped with the claimed child's artifact id, holding the
+//       child's own <button> with the record's baked aria-haspopup="dialog",
+//       and NO store-derived attr. Served content region: empty.
 //
-//   (2) ADOPTED BYTES. Exactly one trigger button on the page (a live
-//       repaint would leave two). After load the same mount carries values
-//       equal to the artifact's own compute over the live provider. Served
-//       bytes carried none of those attrs.
+//   (2) ADOPTED BYTES / ZERO-EAGER LOAD. Exactly one trigger button (a
+//       live repaint would leave two). On load no request fetches the
+//       provider chunk or a library chunk it names. Store-derived attrs
+//       stay absent — the provider has not run. A box that passes with
+//       the provider already executed is tightened, not shipped.
 //
 //   (3) CHILD FROM ITS OWN ARTIFACT. The eager entry names the claimed
 //       child's structure and wiring under the qualified id, and the hole's
 //       data-resume equals that id. Not the click page's record-free id.
 //
-//   (4) REAL CLICK. Before: aria-expanded is the closed value and no
-//       content is mounted. A real Chrome click on the resumed trigger;
-//       after: aria-expanded flips AND dialog content mounts in the live
-//       region. No /fallback/ fetch for the resumed mounts.
+//   (4) REAL CLICK. A real Chrome click on the resumed trigger fetches
+//       exactly ONE provider chunk, sequenced after the click (the
+//       dispatch awaited whenProvided). After: aria-expanded flips AND
+//       dialog content mounts in the live region. No /fallback/ fetch
+//       for the resumed mounts.
 //
 //   (5) CONTENT STAYS LIVE. The mounted content sits under no [data-resume]
 //       ancestor, and no content artifact exists.
 //
-//   (6) STUB-TIGHTENING. A box that can pass without the click, with
-//       page-painted aria-expanded, with a repainted trigger, or with
-//       page-constructed context is tightened, not shipped.
+//   (6) STUB-TIGHTENING (T068, retargeted). A box that can pass with the
+//       provider executed on load, without the click, with page-painted
+//       aria-expanded, with a repainted trigger, or with page-constructed
+//       context is tightened, not shipped. Eager-by-design (T061 Ruling 5)
+//       is the topology this witness inverted.
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function servedDocument(url: string): Promise<string> {
@@ -100,14 +107,6 @@ function hasAttribute(openTag: string, name: string): boolean {
 	return new RegExp(`\\s${name}(?:=|\\s|>)`, 'i').test(openTag);
 }
 
-function hostTagName(openTag: string): string {
-	const match = /^<([a-z0-9]+)/i.exec(openTag);
-	if (!match) {
-		throw new Error(`could not read the host tag name from ${openTag}.`);
-	}
-	return match[1]!.toLowerCase();
-}
-
 function claimedChildId(html: string, where: string): string {
 	const inner = mountInner(html, DIALOG_ARTIFACT, where);
 	const match = /data-resume="([^"]+)"/.exec(inner);
@@ -115,79 +114,6 @@ function claimedChildId(html: string, where: string): string {
 		throw new Error(`no claimed-child [data-resume] inside the trigger mount in ${where}.`);
 	}
 	return match[1]!;
-}
-
-function artifactCompute(entrySource: string, attribute: string): (slots: Record<string, unknown>) => unknown {
-	const marker = new RegExp(`attribute:\\s*"${attribute}"`);
-	const found = marker.exec(entrySource);
-	if (!found || found.index === undefined) {
-		throw new Error(`the eager entry does not name a binding for attribute "${attribute}".`);
-	}
-	const from = found.index;
-	const computeAt = entrySource.indexOf('compute(', from);
-	if (computeAt === -1 || computeAt - from > 800) {
-		throw new Error(`no compute() near the "${attribute}" binding in the eager entry.`);
-	}
-	const paramsStart = computeAt + 'compute('.length;
-	const paramsEnd = matchPair(entrySource, paramsStart - 1, '(', ')');
-	const params = entrySource.slice(paramsStart, paramsEnd);
-	if (entrySource[paramsEnd + 1] !== '{') {
-		throw new Error(`compute for "${attribute}" is not a block function in the eager entry.`);
-	}
-	const bodyEnd = matchPair(entrySource, paramsEnd + 1, '{', '}');
-	const body = entrySource.slice(paramsEnd + 2, bodyEnd);
-	try {
-		return new Function('slots', `return ((${params}) => { ${body} })(slots);`) as (
-			slots: Record<string, unknown>,
-		) => unknown;
-	} catch (error) {
-		throw new Error(
-			`could not reconstruct the "${attribute}" compute from the eager entry (${error instanceof Error ? error.message : String(error)}).`,
-		);
-	}
-}
-
-function matchPair(source: string, openIndex: number, open: string, close: string): number {
-	let depth = 0;
-	for (let index = openIndex; index < source.length; index += 1) {
-		const ch = source[index]!;
-		if (ch === open) depth += 1;
-		else if (ch === close) {
-			depth -= 1;
-			if (depth === 0) return index;
-		}
-	}
-	throw new Error(`unbalanced ${open}${close} in eager entry starting at ${openIndex}.`);
-}
-
-function attrValue(computed: unknown): string | null {
-	if (computed == null || computed === false) return null;
-	if (computed === true) return '';
-	return String(computed);
-}
-
-function liveResolvedSlots(liveButton: string, store: { isOpen: () => boolean; contentId: () => unknown }): Record<string, unknown> {
-	const tagName = hostTagName(liveButton);
-	return {
-		tagName: () => tagName,
-		type: DIALOG_MERGED_PROPS,
-		disabled: DIALOG_MERGED_PROPS,
-		ref: () => ({ getAttribute: () => null }),
-		context: store,
-	};
-}
-
-function assertAttrMatches(
-	liveButton: string,
-	name: string,
-	expected: string | null,
-	where: string,
-): void {
-	const live = attributeOf(liveButton, name);
-	assert(
-		expected === null ? !hasAttribute(liveButton, name) : live === expected,
-		`${where} — live ${name} is ${hasAttribute(liveButton, name) ? JSON.stringify(live) : '(absent)'}, not the artifact compute result ${expected === null ? '(absent)' : JSON.stringify(expected)} over live-resolved slots.\n${liveButton}`,
-	);
 }
 
 function countButtons(html: string): number {
@@ -225,7 +151,7 @@ function taggedInner(html: string, attr: string): string {
 
 export default box(
 	{
-		name: 'resumable dialog: live DialogRoot, resumed DialogTrigger, claimed child from qualified artifact; real click flips aria-expanded and mounts content; no fallback',
+		name: 'resumable dialog: deferred live DialogRoot, resumed DialogTrigger; click fetches provider once then flips aria-expanded and mounts content; no fallback',
 		modes: ['dev'],
 		tags: ['network', 'resumable', 'dialog'],
 	},
@@ -313,6 +239,26 @@ export default box(
 			`(4) — a fallback chunk was fetched on load:\n${describe(load)}`,
 		);
 
+		const loadProvider = load.filter((request) => DIALOG_PROVIDER_CHUNK.test(pathOf(request)));
+		assert(
+			loadProvider.length === 0,
+			`(2) — the provider chunk was fetched on load; deferred execution requires it absent until the first dispatch:\n${describe(loadProvider)}`,
+		);
+		const dynamicProvider = [...entrySource.matchAll(/import\("([^"]+)"\)/g)]
+			.map((match) => match[1]!)
+			.filter((specifier) => DIALOG_PROVIDER_CHUNK.test(`/${specifier.split('/').pop()}`));
+		assert(
+			dynamicProvider.length === 1,
+			`(2) — the eager entry should dynamically import exactly one provider chunk; found ${dynamicProvider.length}: ${dynamicProvider.join(', ') || 'none'}.`,
+		);
+		assert(
+			!/(?:^|[;}\s])import\s*[^"'`]*["'][^"']*dialog-provider/.test(entrySource),
+			`(2) — the eager entry statically imports the provider; those bytes must sit behind import().`,
+		);
+		receipt.note(
+			`(2) — load set has no provider-chunk request. Eager entry dynamically imports ${dynamicProvider[0]}.`,
+		);
+
 		const live = await page.content();
 		assert(
 			countButtons(live) === 1,
@@ -324,43 +270,45 @@ export default box(
 			liveButton !== null,
 			`(2) — after resume the child hole no longer holds a <button>; the component body ran or the mount was replaced:\n${liveChildInner}`,
 		);
+		for (const name of DIALOG_STORE_ATTRS) {
+			assert(
+				!hasAttribute(liveButton, name),
+				`(2) — after load the <button> already carries ${name}="${attributeOf(liveButton, name)}"; store-derived attrs arrive only after the provider mounts, so a value here means the provider ran on load:\n${liveButton}`,
+			);
+		}
 
 		const reachable = await reachableChunks(entryUrl);
 		receipt.note(`reachable chunks: ${reachable.length}`);
-
-		const storeSlot = {
-			isOpen: () => false,
-			contentId: () => undefined,
-		};
-		const slots = liveResolvedSlots(liveButton, storeSlot);
-		for (const name of DIALOG_STORE_ATTRS) {
-			if (!entrySource.includes(`attribute: "${name}"`) && !entrySource.includes(`attribute:"${name}"`)) {
-				continue;
-			}
-			const expected = attrValue(artifactCompute(entrySource, name)(slots));
-			assertAttrMatches(liveButton, name, expected, '(2)');
-		}
 		receipt.note(
-			`(2) — exactly one <button>. Live store-derived attrs equal the artifact compute over the live provider's closed slots. Served bytes had none of them.`,
+			`(2) — exactly one <button>. Store-derived attrs still absent after load (provider not executed). Served bytes had none of them.`,
 		);
 
 		await expect.page.exists(page, `${DIALOG_MOUNT} button`);
-		await expect.page.attribute(page, `${DIALOG_MOUNT} button`, 'aria-expanded', 'false');
 		await expect.page.bodyText(page, { notContains: DIALOG_CONTENT });
 
 		const beforeClick = await quietRequests(page);
 		await page.click(`${DIALOG_MOUNT} button`);
 		const afterClick = await quietRequests(page);
+		const clickArrivals = arrivedSince(beforeClick, afterClick);
 		assert(
 			!afterClick.some((request) => /fallback/i.test(pathOf(request))),
 			`(4) — a fallback chunk was fetched after the click:\n${describe(afterClick)}`,
 		);
 		assert(
-			afterClick.slice(beforeClick.length).every((request) => {
+			clickArrivals.every((request) => {
 				const path = pathOf(request);
 				return path === '/favicon.ico' || kindOf(request) !== 'script' || !/fallback/i.test(path);
 			}),
-			`(4) — the click put a fallback script on the wire:\n${describe(afterClick.slice(beforeClick.length))}`,
+			`(4) — the click put a fallback script on the wire:\n${describe(clickArrivals)}`,
+		);
+
+		const providerArrivals = clickArrivals.filter((request) => DIALOG_PROVIDER_CHUNK.test(pathOf(request)));
+		assert(
+			providerArrivals.length === 1,
+			`(4) — the click should fetch exactly one provider chunk after the click; got ${providerArrivals.length}:\n${describe(clickArrivals)}`,
+		);
+		receipt.note(
+			`(4) — click fetched provider ${pathOf(providerArrivals[0]!)} (${providerArrivals[0]!.encodedDataLength} B), sequenced after the click.`,
 		);
 
 		await expect.page.attribute(page, `${DIALOG_MOUNT} button`, 'aria-expanded', 'true');
@@ -382,7 +330,7 @@ export default box(
 			`(5) — the eager entry names a content artifact; content must not be resumed.`,
 		);
 		receipt.note(
-			`(4)(5) — real Chrome click on ${DIALOG_MOUNT} button. aria-expanded "false" → "true". Content mounted in the live region under no [data-resume] ancestor. Still zero /fallback/ fetches.`,
+			`(4)(5) — real Chrome click on ${DIALOG_MOUNT} button fetched the provider once after the click. aria-expanded flipped to "true". Content mounted in the live region under no [data-resume] ancestor. Still zero /fallback/ fetches.`,
 		);
 
 		const eagerBytes = totalBytes(eagerScripts);
@@ -392,7 +340,7 @@ export default box(
 		);
 		const entryFile = await eagerScriptBytes(url);
 		receipt.note(
-			`eager JS: ${entryFile.bytes} B file (baseline ${DIALOG_EAGER_JS_BASELINE_BYTES} B), ${eagerBytes} B on the wire, cap ${DIALOG_EAGER_JS_CAP_BYTES} B. Framework + dialog chunk eager by design.`,
+			`eager JS: ${entryFile.bytes} B file (baseline ${DIALOG_EAGER_JS_BASELINE_BYTES} B), ${eagerBytes} B on the wire, cap ${DIALOG_EAGER_JS_CAP_BYTES} B. Provider / library chunk deferred.`,
 		);
 
 		await expect.page.outcome(page, {

@@ -161,12 +161,16 @@ export const RULE_EAGER_JS_CAP_BYTES = 20000;
 export const CLICK_EAGER_JS_CAP_BYTES = 20000;
 
 /**
- * The dialog page's own eager cap. A live DialogRoot at load puts the
- * renderer and the library's dialog chunk on the eager entry by design
- * (T061 Ruling 5). First honest measurement plus jitter headroom; not a
- * leak, and no other page's cap moves to fit.
+ * The dialog page's own eager cap. T085 revised the tranche-4 bar: the
+ * live DialogRoot sits behind a dynamic `import()` of `dialog-provider.ts`,
+ * so the renderer and the library's dialog chunk are no longer on the
+ * eager entry (the T061-Ruling-5 eager-by-design figure is superseded).
+ * T086 measurement: file 20,671 B (`dialog-0shcvsV4.js`). Cap = measured
+ * file + CDP-header gap + ≥200 B jitter, rounded up to the next 100
+ * → 21,100. Headroom is for jitter only, not a budget. Other pages'
+ * caps do not move to fit.
  */
-export const DIALOG_EAGER_JS_CAP_BYTES = 90000;
+export const DIALOG_EAGER_JS_CAP_BYTES = 21100;
 
 /**
  * The group's own caps, raw and gzipped (G3'). Kept in step with
@@ -726,6 +730,56 @@ check(
 );
 check("the dialog document carries the claimed child button", /<button\b/.test(dialogHtml));
 check("the dialog document carries the page-owned live region", /data-dialog-live/.test(dialogHtml));
+
+const dialogChunks = JSON.parse(readFileSync(join(DIALOG_DIST, ".vite/module-sizes.json"), "utf8"));
+
+/** Static import closure of the dialog entry — what executes on load. */
+const dialogEager = new Set([dialogEntry.file]);
+for (const file of dialogEager) {
+  for (const next of dialogChunks[file]?.imports ?? []) dialogEager.add(next);
+}
+
+const dialogProviderEntries = Object.entries(dialogManifest).filter(([id]) =>
+  /(?:^|\/)dialog-provider\.ts$/.test(id),
+);
+const dialogProviderFiles = nameSet(dialogProviderEntries.map(([, info]) => info.file));
+check(
+  "the dialog build emits a dialog-provider dynamic entry",
+  dialogProviderFiles.length === 1,
+  dialogProviderFiles.length === 1
+    ? dialogProviderFiles[0]
+    : dialogProviderFiles.join(", ") || "none",
+);
+
+const providerInEager = [...dialogEager].filter(file => dialogProviderFiles.includes(file));
+check(
+  "the dialog entry's eager import closure excludes the provider chunk",
+  providerInEager.length === 0 && dialogProviderFiles.length === 1,
+  providerInEager.length
+    ? `eager closure reached ${providerInEager.join(", ")}`
+    : `${dialogEager.size} eager chunk(s) from ${dialogEntry.file}, provider ${dialogProviderFiles[0] ?? "(missing)"} is not among them`,
+);
+
+const entryDynamic = dialogChunks[dialogEntry.file]?.dynamicImports ?? [];
+const providerNamedByEntry = dialogProviderFiles.filter(file => entryDynamic.includes(file));
+check(
+  "the dialog entry dynamically imports the provider chunk",
+  providerNamedByEntry.length === 1,
+  providerNamedByEntry.length === 1
+    ? providerNamedByEntry[0]
+    : `dynamicImports ${entryDynamic.join(", ") || "none"}; provider ${dialogProviderFiles.join(", ") || "none"}`,
+);
+
+const eagerLibrary = [...dialogEager].flatMap(file =>
+  Object.keys(dialogChunks[file]?.modules ?? {})
+    .filter(id => /@kobalte\/core\/dialog|dialog-provider\.ts$/.test(id))
+    .map(id => `${moduleName(id)} in ${file}`),
+);
+check(
+  "no eager dialog chunk carries the provider module or @kobalte/core/dialog",
+  eagerLibrary.length === 0,
+  eagerLibrary.length ? eagerLibrary.sort().join(", ") : `${dialogEager.size} eager chunk(s), none names the library`,
+);
 
 /* ── 8. the frozen corpus ──────────────────────────────────────────────── */
 

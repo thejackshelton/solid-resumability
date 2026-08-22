@@ -25,6 +25,10 @@ export const ORIGINS = {
 export const PAGES = {
 	fixtures: '/fixtures/fixtures.html',
 	todos: '/todos/todos.html',
+	rule: '/rule/rule.html',
+	click: '/click/click.html',
+	dialog: '/dialog/dialog.html',
+	tabs: '/tabs/tabs.html',
 } as const;
 
 export function pageUrl(variant: Variant, page: keyof typeof PAGES): string {
@@ -260,9 +264,9 @@ export const COMPOSED_OUTER: Composed = {
 
 export const COMPOSED_INNER: Composed = {
 	component: 'ComposedInner',
-	artifactId: 'ComposedCounter.ComposedInner',
+	artifactId: 'ComposedCounter.ComposedInner~65b38574',
 	handlerId: 's0',
-	mount: '[data-resume="ComposedCounter.ComposedInner"]',
+	mount: '[data-resume="ComposedCounter.ComposedInner~65b38574"]',
 	button: '[data-testid="composed-inner-inc"]',
 	readout: '[data-testid="composed-inner-label"]',
 };
@@ -284,21 +288,21 @@ export const COMPOSED_RECORDED = {
  * before inline-template fill writes the child's painted markup inside.
  */
 export const COMPOSED_HOLE_BEFORE_FILL =
-	'<div data-resume="ComposedCounter.ComposedInner" data-component="ComposedInner"></div>';
+	'<div data-resume="ComposedCounter.ComposedInner~65b38574" data-component="ComposedInner"></div>';
 
 /**
  * Eager-JS ceiling for the resumable todos page, in bytes on the wire.
  *
- * The whole fallback group — the framework, the four component bodies (two the
- * pass cannot prove, two it proves but may not substitute), the store they
- * share — sits behind one dynamic import, so the load set is one bootstrap
- * chunk: the resumer, the cell kernel, the store registry, one component's
- * structure and wiring, and the deferral loader. The headroom under this cap
- * is for that loader and nothing else: the smallest framework leak available
- * (`solid-js/dist` alone, ~9.5 kB minified) does not fit beneath it, so a
- * build that quietly fused the group back in cannot clear the cap.
+ * Post-T071 measurement of the resumable todos eager entry
+ * (`todos-Cu6ovhai.js`): 16,099 B on disk, 16,307 B CDP wire. The 208 B
+ * gap is CDP response-header accounting, unchanged from the previous
+ * derivation. Cap = measured wire + ≥200 B, rounded up to the next 100
+ * → 16,600. Headroom is for jitter only, not a budget. The smallest
+ * framework leak (`solid-js/dist` alone, ~9,500 B minified) is ≥ 29×
+ * that headroom, so a build that quietly fused the group back in cannot
+ * clear the cap.
  */
-export const TODOS_EAGER_JS_CAP_BYTES = 15_000;
+export const TODOS_EAGER_JS_CAP_BYTES = 16_600;
 
 /**
  * Ceilings for the todos page's fallback group — the one chunk the first touch
@@ -322,3 +326,168 @@ export const TODOS_EAGER_JS_CAP_BYTES = 15_000;
  */
 export const TODOS_GROUP_RAW_CAP = 63_000;
 export const TODOS_GROUP_GZ_CAP = 23_500;
+
+/**
+ * Eager-JS ceiling for the resumable rule page, in bytes on the wire.
+ *
+ * Own page, own cap: ceiling is parity with fixtures (20,000 B) and is not
+ * to be moved to fit a build. The recorded baseline is the last measured
+ * eager file size (T045: 13,445 B), not a diff.
+ */
+export const RULE_EAGER_JS_CAP_BYTES = 20_000;
+
+/** Last recorded rule-page eager file bytes (T045). Reported, not asserted. */
+export const RULE_EAGER_JS_BASELINE_BYTES = 13_445;
+
+/**
+ * The rule page's one mount: the installed package's own SeparatorRoot,
+ * addressed by the artifact directory the build stamped into the markup.
+ *
+ * `artifactId` is what `data-resume` carries and what the eager entry names
+ * in its glob map. The box asserts those two strings are the same string.
+ */
+export const RULE_ARTIFACT = 'QhqEt4aD.SeparatorRoot';
+export const RULE_COMPONENT = 'SeparatorRoot';
+export const RULE_MOUNT = `[data-resume="${RULE_ARTIFACT}"]`;
+
+/**
+ * Identities the page publishes at the mount site (`demo/src/rule-page.ts`).
+ *
+ * These are the caller's own props object and rest projection — not attribute
+ * values the page or the box paints. The box feeds them to the artifact's
+ * own compute and asserts the live DOM against that result.
+ */
+export const RULE_ORIENTATION_PROVIDE = { orientation: 'vertical' } as const;
+export const RULE_REST_PROVIDE = { id: 'rule-root' } as const;
+
+/**
+ * The tag-name effect contract for this folded intrinsic: createTagName's
+ * fallback is `"hr"`, and the served host is `<hr>`, so a ref-replay that
+ * ran before the effect (or the initial cell) reads `"hr"` either way.
+ */
+export const RULE_TAG_NAME_CONTRACT = 'hr';
+
+/**
+ * Eager-JS ceiling for the resumable click page, in bytes on the wire.
+ *
+ * Own page, own cap: ceiling is parity with fixtures (20,000 B) and is not
+ * to be moved to fit a build. The recorded baseline is the first measured
+ * eager file size (T055: 16,449 B), not a diff.
+ */
+export const CLICK_EAGER_JS_CAP_BYTES = 20_000;
+
+/** First recorded click-page eager file bytes (T055). Reported, not asserted. */
+export const CLICK_EAGER_JS_BASELINE_BYTES = 16_449;
+
+/**
+ * The click page's one mount: the installed package's own ButtonRoot,
+ * addressed by the artifact directory the build stamped into the markup.
+ *
+ * `artifactId` is what `data-resume` carries and what the eager entry names
+ * in its glob map. The box asserts those two strings are the same string.
+ */
+export const CLICK_ARTIFACT = 'DvspU6cJ.ButtonRoot';
+export const CLICK_COMPONENT = 'ButtonRoot';
+export const CLICK_MOUNT = `[data-resume="${CLICK_ARTIFACT}"]`;
+
+/**
+ * The five attributes ButtonRoot was refused-then-admitted for. Served
+ * markup must carry none of them; after resume each must equal the
+ * artifact's own compute over live-resolved slots.
+ */
+export const CLICK_COMPUTED_ATTRS = ['type', 'role', 'tabindex', 'disabled', 'aria-disabled'] as const;
+
+/**
+ * Identities the page publishes at the mount site (`demo/src/click-page.ts`).
+ *
+ * These are the caller's own props object and rest projection — not attribute
+ * values the page or the box paints. The box feeds them to the artifact's
+ * own compute and asserts the live DOM against that result.
+ */
+export const CLICK_MERGED_PROPS = { type: 'button' } as const;
+export const CLICK_REST_PROVIDE = { id: 'click-root' } as const;
+
+/** Page-owned sentinel outside the mount. The click handler sets `data-clicked="1"`. */
+export const CLICK_SENTINEL = '[data-click-sentinel]';
+export const CLICK_SENTINEL_ATTR = 'data-clicked';
+export const CLICK_SENTINEL_AFTER = '1';
+
+/**
+ * Eager-JS ceiling for the resumable dialog page, in bytes on the wire.
+ *
+ * Own page, own cap. T085 deferred the live DialogRoot behind
+ * `dialog-provider.ts`; the renderer and the library chunk are no longer
+ * on the eager entry. T086 file 20,671 B; cap 21,100 is file + CDP
+ * header gap + jitter, rounded up. Other pages' caps do not move.
+ */
+export const DIALOG_EAGER_JS_CAP_BYTES = 21_100;
+
+/** First recorded deferred-provider dialog eager file bytes (T086). Reported, not asserted. */
+export const DIALOG_EAGER_JS_BASELINE_BYTES = 20_671;
+
+/**
+ * The provider partition, by the stem the bundler gives `demo/src/dialog-provider.ts`.
+ *
+ * Matching the stem rather than a content-hashed filename keeps a rebuild
+ * that changed nothing but the hash from going red. The box uses this to
+ * tell an eager load (provider already on the wire) from a miss-triggered
+ * fetch (exactly one arrival after the click).
+ */
+export const DIALOG_PROVIDER_CHUNK = /\/dialog-provider-[\w-]+\.js$/;
+
+/**
+ * The dialog page's trigger mount: the installed package's own DialogTrigger,
+ * addressed by the artifact directory the build stamped into the markup.
+ */
+export const DIALOG_ARTIFACT = 'C9YDO9vc.DialogTrigger';
+export const DIALOG_COMPONENT = 'DialogTrigger';
+export const DIALOG_MOUNT = `[data-resume="${DIALOG_ARTIFACT}"]`;
+export const DIALOG_LIVE = '[data-dialog-live]';
+export const DIALOG_CHILD_COMPONENT = 'ButtonRoot';
+
+/**
+ * Store-derived attributes the claimed child must not carry in served bytes.
+ * After resume each must equal the artifact's own compute over the live
+ * provider. `aria-haspopup` is a v1 bake, not in this list.
+ */
+export const DIALOG_STORE_ATTRS = ['aria-expanded', 'aria-controls', 'data-expanded', 'data-closed'] as const;
+
+export const DIALOG_MERGED_PROPS = { type: 'button' } as const;
+export const DIALOG_REST_PROVIDE = { id: 'dialog-trigger' } as const;
+export const DIALOG_CONTENT = 'Dialog content';
+
+/**
+ * Eager-JS ceiling for the resumable tabs page, in bytes on the wire.
+ *
+ * Own page, own cap. T090/T091 deferred the live TabsRoot behind
+ * `tabs-provider.ts`; the renderer and the library chunk are not on
+ * the eager entry. T091 file 4,106 B; cap 4,600 is file + CDP
+ * header gap + jitter, rounded up. Other pages' caps do not move.
+ */
+export const TABS_EAGER_JS_CAP_BYTES = 4_600;
+
+/** First recorded deferred-provider tabs eager file bytes (T091). Reported, not asserted. */
+export const TABS_EAGER_JS_BASELINE_BYTES = 4_106;
+
+/**
+ * The provider partition, by the stem the bundler gives `demo/src/tabs-provider.ts`.
+ *
+ * Matching the stem rather than a content-hashed filename keeps a rebuild
+ * that changed nothing but the hash from going red. The box uses this to
+ * tell an eager load (provider already on the wire) from a miss-triggered
+ * fetch (exactly one arrival after the click).
+ */
+export const TABS_PROVIDER_CHUNK = /\/tabs-provider-[\w-]+\.js$/;
+
+export const TABS_DISPATCH = '[data-tabs-dispatch]';
+export const TABS_LIVE = '[data-tabs-live]';
+export const TABS_LIVE_TAB = `${TABS_LIVE} [role="tab"]`;
+export const TABS_PANEL_PROFILE = 'Profile panel';
+export const TABS_PANEL_SETTINGS = 'Settings panel';
+
+/**
+ * Store-derived attributes the served page and the first-party dispatch
+ * must not carry. After the provider mounts they appear on the live
+ * triggers; a value in served bytes was painted by the page or the build.
+ */
+export const TABS_STORE_ATTRS = ['aria-selected', 'data-selected', 'aria-controls', 'data-key'] as const;

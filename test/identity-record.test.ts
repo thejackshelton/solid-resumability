@@ -8,7 +8,7 @@ import {
   analyzeWithRecordedProps,
   runComptime,
 } from "../src/comptime/index.ts";
-import { isIdentitySlot, type Analysis, type IdentityProp } from "../src/comptime/types.ts";
+import { isIdentitySlot, isStoreReadSlot, type Analysis, type IdentityProp } from "../src/comptime/types.ts";
 
 /**
  * Identity-shaped record, compiler-side: a parent that addresses a child
@@ -179,5 +179,111 @@ describe("identity record — classify with the record", () => {
     expect(folded.claimedChildren[0].recordedProps).toBeUndefined();
     expect(JSON.stringify(folded.claimedChildren[0].identityProps)).not.toContain("unseen-runtime-cargo");
     expect(folded.html).not.toContain("unseen-runtime-cargo");
+  });
+});
+
+const SLOT_FIXTURE = "test/fixtures/shapes/ClaimedSlotHost.tsx";
+
+describe("claimed-child slot-valued / proven-handler / ref-array records", () => {
+  it("records a slot-valued attribute and the child carries store-read captures", () => {
+    const parent = analyzeFixture(SLOT_FIXTURE, { write: false, component: "SlotValuedHost" });
+    expect(parent.status).toBe("provable");
+    if (parent.status !== "provable") return;
+    const record = parent.claimedChildren[0]?.identityProps?.find((prop) => prop.role === "slot-valued");
+    expect(record).toBeDefined();
+    if (record?.role !== "slot-valued") return;
+    expect(record.expression).toContain("isOpen");
+    expect(JSON.stringify(record)).not.toMatch(/"value":/);
+    expect(parent.html).toMatch(/data-component="SlotInner"/);
+    expect(parent.html).not.toContain("aria-expanded");
+
+    const child = analyzeWithIdentityProps(SLOT_FIXTURE, parent.claimedChildren[0].identityProps ?? [], {
+      write: false,
+      component: "SlotInner",
+    });
+    expect(child.status).toBe("provable");
+    if (child.status !== "provable") return;
+    const storeReads = child.bindings.flatMap((binding) => binding.captures.filter(isStoreReadSlot));
+    expect(storeReads.length).toBeGreaterThan(0);
+    expect(child.stores.some((store) => store.id === record.store.id)).toBe(true);
+  });
+
+  it("records a proven-handler and the child wires it", () => {
+    const parent = analyzeFixture(SLOT_FIXTURE, { write: false, component: "ProvenHandlerHost" });
+    expect(parent.status).toBe("provable");
+    if (parent.status !== "provable") return;
+    const record = parent.claimedChildren[0]?.identityProps?.find((prop) => prop.role === "proven-handler");
+    expect(record).toBeDefined();
+    if (record?.role !== "proven-handler") return;
+    expect(record.source).toContain("toggle");
+
+    const child = analyzeWithIdentityProps(SLOT_FIXTURE, parent.claimedChildren[0].identityProps ?? [], {
+      write: false,
+      component: "SlotInner",
+    });
+    expect(child.status).toBe("provable");
+    if (child.status !== "provable") return;
+    expect(child.handlers.length).toBeGreaterThan(0);
+    expect(child.wiring.length).toBeGreaterThan(0);
+  });
+
+  it("records a ref-array of store member plus identity path", () => {
+    const parent = analyzeFixture(SLOT_FIXTURE, { write: false, component: "RefArrayHost" });
+    expect(parent.status).toBe("provable");
+    if (parent.status !== "provable") return;
+    const record = parent.claimedChildren[0]?.identityProps?.find((prop) => prop.role === "ref-array");
+    expect(record).toBeDefined();
+    if (record?.role !== "ref-array") return;
+    expect(record.elements).toHaveLength(2);
+    expect(record.elements[0]).toMatchObject({ kind: "store", path: ["setAnchor"] });
+    expect(record.elements[1]).toMatchObject({ kind: "identity" });
+  });
+
+  it("declines a second address with a different slot-valued record", () => {
+    const analysis = analyzeFixture(SLOT_FIXTURE, { write: false, component: "SlotValuedTwiceHost" });
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toContain("jsx-component-element");
+  });
+
+  it("refuses a ternary that mixes an admitted slot with a free name", () => {
+    const analysis = analyzeFixture(SLOT_FIXTURE, { write: false, component: "SlotValuedMixedFree" });
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toContain("jsx-component-element");
+  });
+
+  it("refuses a ternary over a store that did not admit", () => {
+    const analysis = analyzeFixture(SLOT_FIXTURE, { write: false, component: "SlotValuedRefusedStore" });
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toContain("store-binding-not-provable");
+  });
+
+  it("refuses a closure with an extra free call", () => {
+    const analysis = analyzeFixture(SLOT_FIXTURE, { write: false, component: "ProvenHandlerExtra" });
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toContain("jsx-component-element");
+  });
+
+  it("refuses a closure with a free reference outside the admitted set", () => {
+    const analysis = analyzeFixture(SLOT_FIXTURE, { write: false, component: "ProvenHandlerFree" });
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toContain("jsx-component-element");
+  });
+
+  it("refuses a closure whose callee does not resolve", () => {
+    const analysis = analyzeFixture(SLOT_FIXTURE, { write: false, component: "ProvenHandlerUnresolvedCallee" });
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toContain("jsx-component-element");
+  });
+
+  it("refuses a ref array with a computed member, a non-slot element, or a spread", () => {
+    expect(codes(analyzeFixture(SLOT_FIXTURE, { write: false, component: "RefArrayComputed" }))).toContain(
+      "jsx-component-element",
+    );
+    expect(codes(analyzeFixture(SLOT_FIXTURE, { write: false, component: "RefArrayNonSlot" }))).toContain(
+      "jsx-component-element",
+    );
+    expect(codes(analyzeFixture(SLOT_FIXTURE, { write: false, component: "RefArraySpread" }))).toContain(
+      "jsx-component-element",
+    );
   });
 });

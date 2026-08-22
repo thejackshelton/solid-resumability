@@ -13,7 +13,7 @@
  *
  *   2. THE EAGER PAYLOAD IS ONE CHUNK, UNDER THE CAP. The document loads
  *      exactly one script, that script statically imports no other chunk, and
- *      it is at most 15,000 raw bytes. The cap is raw rather than gzipped
+ *      it is at most 15,500 raw bytes. The cap is raw rather than gzipped
  *      because it is a budget for what the build may emit, not a claim about
  *      a particular transport.
  *
@@ -123,22 +123,66 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "pathe";
 import { gzipSync } from "node:zlib";
 
-import { DEMO_ROOT, REPO_ROOT } from "../build/fixtures.mjs";
+import { CLICK, DEMO_ROOT, DIALOG, REPO_ROOT, RULE } from "../build/fixtures.mjs";
 
 const DIST = join(DEMO_ROOT, "dist/resumable/todos");
 const FIXTURES_DIST = join(DEMO_ROOT, "dist/resumable/fixtures");
+const RULE_DIST = join(DEMO_ROOT, "dist/resumable/rule");
+const CLICK_DIST = join(DEMO_ROOT, "dist/resumable/click");
+const DIALOG_DIST = join(DEMO_ROOT, "dist/resumable/dialog");
+const TABS_DIST = join(DEMO_ROOT, "dist/resumable/tabs");
 
 /**
- * The eager cap, in raw bytes on the wire for the one entry chunk.
+ * The eager cap for the one todos entry chunk. This gate measures the
+ * on-disk file; `verify/config.ts` (`TODOS_EAGER_JS_CAP_BYTES`) measures
+ * the same payload on the CDP wire. Both homes are the same number.
  *
- * Derived, not chosen: the resumable fixtures page measures 11,131 B on the
- * wire for a bootstrap of the same shape carrying four components' structure
- * and wiring; this page carries one component's, plus the deferral loader,
- * minus the template artifact. The headroom is for the loader, not for a
- * framework — the smallest possible framework leak (`solid-js/dist` alone,
- * ~9.5 kB minified) does not fit under it.
+ * Post-T071 measurement: file 16,099 B (`todos-Cu6ovhai.js`), CDP wire
+ * 16,307 B. The 208 B gap is CDP response-header accounting, unchanged
+ * from the previous derivation. Cap = measured wire + ≥200 B, rounded
+ * up to the next 100 → 16,600. Headroom is for jitter only, not a
+ * budget. The smallest framework leak (`solid-js/dist` alone, ~9,500 B
+ * minified) is ≥ 29× that headroom, so a quietly fused group still
+ * fails loudly.
  */
-export const EAGER_JS_CAP_BYTES = 15000;
+export const EAGER_JS_CAP_BYTES = 16600;
+
+/**
+ * The rule page's own eager cap. Ceiling is parity with fixtures (20,000 B);
+ * the first measured build's byte figure is the ratchet baseline, recorded
+ * in the WP3 receipt rather than written back here.
+ */
+export const RULE_EAGER_JS_CAP_BYTES = 20000;
+
+/**
+ * The click page's own eager cap. Ceiling is parity with fixtures (20,000 B);
+ * the first measured build's byte figure is the ratchet baseline, recorded
+ * in the WP-C receipt rather than written back here.
+ */
+export const CLICK_EAGER_JS_CAP_BYTES = 20000;
+
+/**
+ * The dialog page's own eager cap. T085 revised the tranche-4 bar: the
+ * live DialogRoot sits behind a dynamic `import()` of `dialog-provider.ts`,
+ * so the renderer and the library's dialog chunk are no longer on the
+ * eager entry (the T061-Ruling-5 eager-by-design figure is superseded).
+ * T086 measurement: file 20,671 B (`dialog-0shcvsV4.js`). Cap = measured
+ * file + CDP-header gap + ≥200 B jitter, rounded up to the next 100
+ * → 21,100. Headroom is for jitter only, not a budget. Other pages'
+ * caps do not move to fit.
+ */
+export const DIALOG_EAGER_JS_CAP_BYTES = 21100;
+
+/**
+ * The tabs page's own eager cap. Tranche 5 replays the dialog deferral
+ * kernel on tabs: the live TabsRoot sits behind a dynamic `import()` of
+ * `tabs-provider.ts`, so the renderer and `@kobalte/core/tabs` are not
+ * on the eager entry. T091 measurement: file 4,106 B (`tabs-CN_Eg3K7.js`).
+ * Cap = measured file + CDP-header gap + ≥200 B jitter, rounded up to
+ * the next 100 → 4,600. Headroom is for jitter only, not a budget.
+ * Other pages' caps do not move to fit.
+ */
+export const TABS_EAGER_JS_CAP_BYTES = 4600;
 
 /**
  * The group's own caps, raw and gzipped (G3'). Kept in step with
@@ -608,6 +652,219 @@ check(
       ]
         .filter(Boolean)
         .join("; "),
+);
+
+/* ── 7c. the rule page's own eager cap ─────────────────────────────────── */
+
+if (!existsSync(RULE_DIST)) {
+  process.stderr.write(`check-zero-eager: ${relative(REPO_ROOT, RULE_DIST)} does not exist. Run \`pnpm build\` first.\n`);
+  process.exit(1);
+}
+
+const ruleHtml = readFileSync(join(RULE_DIST, "rule.html"), "utf8");
+const ruleManifest = JSON.parse(readFileSync(join(RULE_DIST, ".vite/manifest.json"), "utf8"));
+const ruleEntry = ruleManifest["rule.html"];
+if (!ruleEntry) {
+  process.stderr.write("check-zero-eager: the rule build manifest has no entry for rule.html\n");
+  process.exit(1);
+}
+
+const ruleBytes = statSync(join(RULE_DIST, ruleEntry.file)).size;
+check(
+  `the rule eager chunk is at most ${RULE_EAGER_JS_CAP_BYTES} raw bytes`,
+  ruleBytes <= RULE_EAGER_JS_CAP_BYTES,
+  `${ruleEntry.file} is ${ruleBytes} B (${RULE_EAGER_JS_CAP_BYTES - ruleBytes} B of headroom)`,
+);
+check(
+  "the rule document carries the resume mount",
+  ruleHtml.includes(`data-resume="${RULE[0].artifact}"`),
+  RULE[0].artifact,
+);
+check("the rule document carries the folded intrinsic", /<hr\b/.test(ruleHtml));
+
+/* ── 7d. the click page's own eager cap ────────────────────────────────── */
+
+if (!existsSync(CLICK_DIST)) {
+  process.stderr.write(`check-zero-eager: ${relative(REPO_ROOT, CLICK_DIST)} does not exist. Run \`pnpm build\` first.\n`);
+  process.exit(1);
+}
+
+const clickHtml = readFileSync(join(CLICK_DIST, "click.html"), "utf8");
+const clickManifest = JSON.parse(readFileSync(join(CLICK_DIST, ".vite/manifest.json"), "utf8"));
+const clickEntry = clickManifest["click.html"];
+if (!clickEntry) {
+  process.stderr.write("check-zero-eager: the click build manifest has no entry for click.html\n");
+  process.exit(1);
+}
+
+const clickBytes = statSync(join(CLICK_DIST, clickEntry.file)).size;
+check(
+  `the click eager chunk is at most ${CLICK_EAGER_JS_CAP_BYTES} raw bytes`,
+  clickBytes <= CLICK_EAGER_JS_CAP_BYTES,
+  `${clickEntry.file} is ${clickBytes} B (${CLICK_EAGER_JS_CAP_BYTES - clickBytes} B of headroom)`,
+);
+check(
+  "the click document carries the resume mount",
+  clickHtml.includes(`data-resume="${CLICK[0].artifact}"`),
+  CLICK[0].artifact,
+);
+check("the click document carries the folded intrinsic", /<button\b/.test(clickHtml));
+check(
+  "the click document carries the page-owned sentinel outside the mount",
+  /data-click-sentinel/.test(clickHtml),
+);
+
+/* ── 7e. the dialog page's own eager cap ───────────────────────────────── */
+
+if (!existsSync(DIALOG_DIST)) {
+  process.stderr.write(`check-zero-eager: ${relative(REPO_ROOT, DIALOG_DIST)} does not exist. Run \`pnpm build\` first.\n`);
+  process.exit(1);
+}
+
+const dialogHtml = readFileSync(join(DIALOG_DIST, "dialog.html"), "utf8");
+const dialogManifest = JSON.parse(readFileSync(join(DIALOG_DIST, ".vite/manifest.json"), "utf8"));
+const dialogEntry = dialogManifest["dialog.html"];
+if (!dialogEntry) {
+  process.stderr.write("check-zero-eager: the dialog build manifest has no entry for dialog.html\n");
+  process.exit(1);
+}
+
+const dialogBytes = statSync(join(DIALOG_DIST, dialogEntry.file)).size;
+check(
+  `the dialog eager chunk is at most ${DIALOG_EAGER_JS_CAP_BYTES} raw bytes`,
+  dialogBytes <= DIALOG_EAGER_JS_CAP_BYTES,
+  `${dialogEntry.file} is ${dialogBytes} B (${DIALOG_EAGER_JS_CAP_BYTES - dialogBytes} B of headroom)`,
+);
+check(
+  "the dialog document carries the resume mount",
+  dialogHtml.includes(`data-resume="${DIALOG[0].artifact}"`),
+  DIALOG[0].artifact,
+);
+check("the dialog document carries the claimed child button", /<button\b/.test(dialogHtml));
+check("the dialog document carries the page-owned live region", /data-dialog-live/.test(dialogHtml));
+
+const dialogChunks = JSON.parse(readFileSync(join(DIALOG_DIST, ".vite/module-sizes.json"), "utf8"));
+
+/** Static import closure of the dialog entry — what executes on load. */
+const dialogEager = new Set([dialogEntry.file]);
+for (const file of dialogEager) {
+  for (const next of dialogChunks[file]?.imports ?? []) dialogEager.add(next);
+}
+
+const dialogProviderEntries = Object.entries(dialogManifest).filter(([id]) =>
+  /(?:^|\/)dialog-provider\.ts$/.test(id),
+);
+const dialogProviderFiles = nameSet(dialogProviderEntries.map(([, info]) => info.file));
+check(
+  "the dialog build emits a dialog-provider dynamic entry",
+  dialogProviderFiles.length === 1,
+  dialogProviderFiles.length === 1
+    ? dialogProviderFiles[0]
+    : dialogProviderFiles.join(", ") || "none",
+);
+
+const providerInEager = [...dialogEager].filter(file => dialogProviderFiles.includes(file));
+check(
+  "the dialog entry's eager import closure excludes the provider chunk",
+  providerInEager.length === 0 && dialogProviderFiles.length === 1,
+  providerInEager.length
+    ? `eager closure reached ${providerInEager.join(", ")}`
+    : `${dialogEager.size} eager chunk(s) from ${dialogEntry.file}, provider ${dialogProviderFiles[0] ?? "(missing)"} is not among them`,
+);
+
+const entryDynamic = dialogChunks[dialogEntry.file]?.dynamicImports ?? [];
+const providerNamedByEntry = dialogProviderFiles.filter(file => entryDynamic.includes(file));
+check(
+  "the dialog entry dynamically imports the provider chunk",
+  providerNamedByEntry.length === 1,
+  providerNamedByEntry.length === 1
+    ? providerNamedByEntry[0]
+    : `dynamicImports ${entryDynamic.join(", ") || "none"}; provider ${dialogProviderFiles.join(", ") || "none"}`,
+);
+
+const eagerLibrary = [...dialogEager].flatMap(file =>
+  Object.keys(dialogChunks[file]?.modules ?? {})
+    .filter(id => /@kobalte\/core\/dialog|dialog-provider\.ts$/.test(id))
+    .map(id => `${moduleName(id)} in ${file}`),
+);
+check(
+  "no eager dialog chunk carries the provider module or @kobalte/core/dialog",
+  eagerLibrary.length === 0,
+  eagerLibrary.length ? eagerLibrary.sort().join(", ") : `${dialogEager.size} eager chunk(s), none names the library`,
+);
+
+/* ── 7f. the tabs page's own eager cap ─────────────────────────────────── */
+
+if (!existsSync(TABS_DIST)) {
+  process.stderr.write(`check-zero-eager: ${relative(REPO_ROOT, TABS_DIST)} does not exist. Run \`pnpm build\` first.\n`);
+  process.exit(1);
+}
+
+const tabsHtml = readFileSync(join(TABS_DIST, "tabs.html"), "utf8");
+const tabsManifest = JSON.parse(readFileSync(join(TABS_DIST, ".vite/manifest.json"), "utf8"));
+const tabsEntry = tabsManifest["tabs.html"];
+if (!tabsEntry) {
+  process.stderr.write("check-zero-eager: the tabs build manifest has no entry for tabs.html\n");
+  process.exit(1);
+}
+
+const tabsBytes = statSync(join(TABS_DIST, tabsEntry.file)).size;
+check(
+  `the tabs eager chunk is at most ${TABS_EAGER_JS_CAP_BYTES} raw bytes`,
+  tabsBytes <= TABS_EAGER_JS_CAP_BYTES,
+  `${tabsEntry.file} is ${tabsBytes} B (${TABS_EAGER_JS_CAP_BYTES - tabsBytes} B of headroom)`,
+);
+check("the tabs document carries the first-party dispatch", /data-tabs-dispatch/.test(tabsHtml));
+check("the tabs document carries the page-owned live region", /data-tabs-live/.test(tabsHtml));
+
+const tabsChunks = JSON.parse(readFileSync(join(TABS_DIST, ".vite/module-sizes.json"), "utf8"));
+
+/** Static import closure of the tabs entry — what executes on load. */
+const tabsEager = new Set([tabsEntry.file]);
+for (const file of tabsEager) {
+  for (const next of tabsChunks[file]?.imports ?? []) tabsEager.add(next);
+}
+
+const tabsProviderEntries = Object.entries(tabsManifest).filter(([id]) =>
+  /(?:^|\/)tabs-provider\.ts$/.test(id),
+);
+const tabsProviderFiles = nameSet(tabsProviderEntries.map(([, info]) => info.file));
+check(
+  "the tabs build emits a tabs-provider dynamic entry",
+  tabsProviderFiles.length === 1,
+  tabsProviderFiles.length === 1
+    ? tabsProviderFiles[0]
+    : tabsProviderFiles.join(", ") || "none",
+);
+
+const tabsProviderInEager = [...tabsEager].filter(file => tabsProviderFiles.includes(file));
+check(
+  "the tabs entry's eager import closure excludes the provider chunk",
+  tabsProviderInEager.length === 0 && tabsProviderFiles.length === 1,
+  tabsProviderInEager.length
+    ? `eager closure reached ${tabsProviderInEager.join(", ")}`
+    : `${tabsEager.size} eager chunk(s) from ${tabsEntry.file}, provider ${tabsProviderFiles[0] ?? "(missing)"} is not among them`,
+);
+
+const tabsEntryDynamic = tabsChunks[tabsEntry.file]?.dynamicImports ?? [];
+const tabsProviderNamedByEntry = tabsProviderFiles.filter(file => tabsEntryDynamic.includes(file));
+check(
+  "the tabs entry dynamically imports the provider chunk",
+  tabsProviderNamedByEntry.length === 1,
+  tabsProviderNamedByEntry.length === 1
+    ? tabsProviderNamedByEntry[0]
+    : `dynamicImports ${tabsEntryDynamic.join(", ") || "none"}; provider ${tabsProviderFiles.join(", ") || "none"}`,
+);
+
+const tabsEagerLibrary = [...tabsEager].flatMap(file =>
+  Object.keys(tabsChunks[file]?.modules ?? {})
+    .filter(id => /@kobalte\/core\/tabs|tabs-provider\.ts$/.test(id))
+    .map(id => `${moduleName(id)} in ${file}`),
+);
+check(
+  "no eager tabs chunk carries the provider module or @kobalte/core/tabs",
+  tabsEagerLibrary.length === 0,
+  tabsEagerLibrary.length ? tabsEagerLibrary.sort().join(", ") : `${tabsEager.size} eager chunk(s), none names the library`,
 );
 
 /* ── 8. the frozen corpus ──────────────────────────────────────────────── */

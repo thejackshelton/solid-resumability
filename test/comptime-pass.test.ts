@@ -5,8 +5,8 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { Analyzer } from "yuku-analyzer";
 
-import { analyzeFixture, classify, runComptime } from "../src/comptime/index.ts";
-import type { EmitResult } from "../src/comptime/types.ts";
+import { analyzeFixture, classify, emit, runComptime } from "../src/comptime/index.ts";
+import type { EmitResult, ProvableAnalysis } from "../src/comptime/types.ts";
 import { textBinding } from "./bindings.ts";
 
 /**
@@ -226,6 +226,44 @@ describe("comptime pass — Fixture B is refused", () => {
   });
 });
 
+describe("comptime pass — emit refuses an unclosed compute", () => {
+  it("names the binding and the free identifier", () => {
+    const analysis: ProvableAnalysis = {
+      status: "provable",
+      component: "Host",
+      module: "host.tsx",
+      cells: [],
+      stores: [],
+      actions: [],
+      reads: [],
+      inlined: [],
+      claimedChildren: [],
+      bindings: [
+        {
+          id: "b0",
+          kind: "text",
+          locator: "/",
+          captures: [{ name: "count", cell: "c0", access: "read" }],
+          expression: "other()",
+          initialText: "",
+          initialTextFrom: "derivation",
+          origin: "component",
+          loc: { start: 0, end: 0, line: 1, column: 1 },
+        },
+      ],
+      regions: [],
+      keyedRegions: [],
+      handlers: [],
+      wiring: [],
+      html: "<p></p>",
+      reasons: [],
+    };
+    expect(() => emit(analysis, scratch())).toThrow(
+      /emit: b0 compute is not closed: free identifier `other` is not bound by the parameter pattern/,
+    );
+  });
+});
+
 describe("comptime pass — emission is deterministic", () => {
   it("produces identical bytes on two independent runs", () => {
     const first = runComptime(FIXTURE_A, { outRoot: scratch() });
@@ -311,5 +349,165 @@ describe("comptime pass — the verdict is analysis-driven, not name-driven", ()
     expect(analysis.status).toBe("fallback");
     if (analysis.status !== "fallback") return;
     expect(analysis.reasons.map((reason) => reason.code)).toContain("signal-escapes-to-opaque-callee");
+  });
+});
+
+describe("derived-cell admission", () => {
+  it("classifies the host as provable with cells [c0, d0] and a folded initial", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/DerivedCellHost.tsx", {
+      write: false,
+      component: "DerivedCellHost",
+    });
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.cells.map((cell) => cell.id)).toEqual(["c0", "d0"]);
+    expect(analysis.cells[1]).toMatchObject({ id: "d0", initial: "hr", getter: "tagName" });
+    expect(analysis.cells[1].setter).toBeUndefined();
+  });
+
+  it("refuses an unfoldable initializer by name", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/DerivedCellUnfoldable.tsx", {
+      write: false,
+      component: "DerivedCellUnfoldable",
+    });
+    expect(analysis.status).toBe("fallback");
+    if (analysis.status !== "fallback") return;
+    expect(analysis.reasons.map((reason) => reason.code)).toContain("derived-cell-initial-not-foldable");
+  });
+
+  it("refuses a handler-wired input setter by name", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/DerivedCellUnstable.tsx", {
+      write: false,
+      component: "DerivedCellUnstable",
+    });
+    expect(analysis.status).toBe("fallback");
+    if (analysis.status !== "fallback") return;
+    expect(analysis.reasons.map((reason) => reason.code)).toContain("derived-cell-input-not-mount-stable");
+  });
+
+  it("emits the derived cell without a setter, and refuses a handler that names it", () => {
+    const result = runComptime("test/fixtures/shapes/DerivedCellHost.tsx", {
+      component: "DerivedCellHost",
+      outRoot: scratch(),
+    });
+    expect(result.analysis.status).toBe("provable");
+    if (result.analysis.status !== "provable" || result.emitted === null) return;
+    const structure = readFileSync(join(result.emitted.dir, "structure.js"), "utf8");
+    expect(structure).toContain('id: "d0"');
+    expect(structure).toContain('initial: "hr"');
+    expect(structure).not.toMatch(/id: "d0"[\s\S]*setter:/);
+
+    const forged: ProvableAnalysis = {
+      ...result.analysis,
+      handlers: [
+        {
+          id: "s0",
+          event: "click",
+          locator: "/",
+          module: "./handlers/s0.js",
+          captures: [{ name: "tagName", cell: "d0", access: "read" }],
+          source: "() => {}",
+          origin: "component",
+          loc: result.analysis.cells[0].loc,
+        },
+      ],
+      wiring: [
+        {
+          locator: "/",
+          event: "click",
+          module: "./handlers/s0.js",
+          handler: "s0",
+          captures: [{ name: "tagName", cell: "d0", access: "read" }],
+        },
+      ],
+    };
+    expect(() => emit(forged, scratch())).toThrow(/derived cell d0/);
+  });
+});
+
+describe("element-projection cell admission", () => {
+  it("classifies the host as provable with a projection on d0", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/ElementProjectionHost.tsx", {
+      write: false,
+      component: "ElementProjectionHost",
+    });
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.cells.map((cell) => cell.id)).toEqual(["c0", "d0"]);
+    expect(analysis.cells[1]).toMatchObject({
+      id: "d0",
+      initial: "div",
+      getter: "tagName",
+      projection: {
+        host: "c0",
+        steps: [
+          { kind: "property", name: "tagName" },
+          { kind: "call", name: "toLowerCase" },
+        ],
+      },
+    });
+  });
+
+  it("refuses a projection of a non-host element by name", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/ElementProjectionCounter.tsx", {
+      write: false,
+      component: "ElementProjectionOther",
+    });
+    expect(analysis.status).toBe("fallback");
+    if (analysis.status !== "fallback") return;
+    expect(analysis.reasons.map((reason) => reason.code)).toContain("element-projection-not-own-host");
+  });
+
+  it("refuses getAttribute with a non-literal argument by name", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/ElementProjectionCounter.tsx", {
+      write: false,
+      component: "ElementProjectionNonLiteral",
+    });
+    expect(analysis.status).toBe("fallback");
+    if (analysis.status !== "fallback") return;
+    expect(analysis.reasons.map((reason) => reason.code)).toContain("element-projection-not-pure");
+  });
+
+  it("refuses a handler that captures the projection cell", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/ElementProjectionCounter.tsx", {
+      write: false,
+      component: "ElementProjectionHandler",
+    });
+    expect(analysis.status).toBe("fallback");
+    if (analysis.status !== "fallback") return;
+    expect(analysis.reasons.map((reason) => reason.code)).toContain("handler-captures-unprovable-binding");
+  });
+});
+
+describe("whole-bind object-shaped context — emit and DialogTrigger", () => {
+  it("emits object stores by their own keys, not tuple fields", () => {
+    const analysis = analyzeFixture("test/fixtures/shapes/ObjectStoreHost.tsx", {
+      write: false,
+      component: "ObjectStoreHost",
+    });
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    const dir = scratch();
+    const result = emit(analysis, dir);
+    const structure = readFileSync(join(result.dir, "structure.js"), "utf8");
+    expect(structure).toContain("keys:");
+    expect(structure).not.toContain("actionsSlot");
+    expect(structure).toContain('path: ["toggle"]');
+  });
+
+  it("flips DialogTrigger to provable once the claimed-child record widens", () => {
+    const analysis = analyzeFixture("demo/node_modules/@kobalte/core/dist/dialog/C9YDO9vc.jsx", {
+      write: false,
+      component: "DialogTrigger",
+    });
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.claimedChildren).toHaveLength(1);
+    expect(analysis.claimedChildren[0].component).toBe("ButtonRoot");
+    expect(analysis.claimedChildren[0].artifact).not.toBe("DvspU6cJ.ButtonRoot");
+    expect(analysis.claimedChildren[0].artifact).toMatch(/^DvspU6cJ\.ButtonRoot~/);
+    expect(analysis.html).toMatch(/data-component="ButtonRoot"/);
+    expect(analysis.html).toContain(`data-resume="${analysis.claimedChildren[0].artifact}"`);
+    expect(analysis.html).not.toContain("aria-expanded");
   });
 });

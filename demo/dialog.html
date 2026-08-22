@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solid 2.0 — folded dialog (__VARIANT__)</title>
+    <link rel="stylesheet" href="/src/styles/demo.css" />
+  </head>
+  <body>
+    <main class="page">
+      <h1>Folded dialog</h1>
+      <p class="lede">
+        A live provider and a resumed trigger: the installed package's own
+        DialogRoot paints at load; DialogTrigger resumes from artifacts. This
+        build is the <strong data-variant>__VARIANT__</strong> variant.
+      </p>
+
+      <section class="fixture">
+        <h2>Dialog</h2>
+        <p class="blurb">Live DialogRoot, resumed trigger, identity-routed context.</p>
+        <div class="live-region" data-dialog-live></div>
+        <!-- Filled by `demo-installed-mount-ids`; see the note in rule.html. -->
+        <div class="mount" data-component="DialogTrigger" data-resume="__ARTIFACT_DialogTrigger__"></div>
+      </section>
+
+      <p class="nav"><a href="/fixtures.html">← fixtures</a></p>
+    </main>
+    <script type="module" src="/src/pages/dialog-classic.ts"></script>
+  </body>
+</html>

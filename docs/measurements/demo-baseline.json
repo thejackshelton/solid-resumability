@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "date": "2026-08-14",
+  "date": "2026-08-16",
   "method": {
     "eager": "Every file reachable from the page's HTML entry by static import, transitively, as recorded in vite's build manifest. No exclusions: framework, resume runtime, artifact modules and vite's own preload helper all count.",
     "lazy": "Chunks reachable from the eager set only through a dynamic import(), plus their static deps.",
@@ -27,15 +27,15 @@
   "comparedPage": "fixtures.html",
   "classic": {
     "page": "fixtures.html",
-    "eagerBytes": 33912,
-    "eagerGzipBytes": 12987,
+    "eagerBytes": 34003,
+    "eagerGzipBytes": 13045,
     "eagerChunks": [
       {
-        "file": "assets/fixtures-Dr3DxnN9.js",
+        "file": "assets/fixtures-Blmq5a78.js",
         "name": "fixtures",
         "source": "fixtures.html",
-        "bytes": 33912,
-        "gzipBytes": 12987
+        "bytes": 34003,
+        "gzipBytes": 13045
       }
     ],
     "lazyChunks": [],
@@ -44,7 +44,7 @@
     "html": {
       "file": "fixtures.html",
       "bytes": 7070,
-      "gzipBytes": 2532
+      "gzipBytes": 2534
     },
     "css": [
       {
@@ -55,8 +55,8 @@
     ],
     "cssBytes": 1097,
     "cssGzipBytes": 559,
-    "initialTransferBytes": 42079,
-    "initialTransferGzipBytes": 16078,
+    "initialTransferBytes": 42170,
+    "initialTransferGzipBytes": 16138,
     "whereTheBytesGo": [
       {
         "group": "signals",
@@ -96,9 +96,9 @@
       {
         "group": "fixture-components",
         "label": "fixture component bodies",
-        "renderedBytes": 5556,
-        "minifiedBytes": 3445,
-        "minifiedGzipBytes": 1023,
+        "renderedBytes": 5708,
+        "minifiedBytes": 3541,
+        "minifiedGzipBytes": 1071,
         "modules": [
           "app/src/fixtures/ComposedCounter.tsx",
           "app/src/fixtures/KeyedRoster.tsx",
@@ -138,25 +138,25 @@
   },
   "resumable": {
     "page": "fixtures.html",
-    "eagerBytes": 18166,
-    "eagerGzipBytes": 5850,
+    "eagerBytes": 19102,
+    "eagerGzipBytes": 6211,
     "eagerChunks": [
       {
-        "file": "assets/fixtures-DzOBkuni.js",
+        "file": "assets/fixtures-F8nWQMum.js",
         "name": "fixtures",
         "source": "fixtures.html",
-        "bytes": 18166,
-        "gzipBytes": 5850
+        "bytes": 19102,
+        "gzipBytes": 6211
       }
     ],
     "lazyChunks": [
       {
-        "file": "assets/regions-DdJBHQqy.js",
+        "file": "assets/regions-CZaPoZEv.js",
         "name": "regions",
         "source": "../src/resume/regions.ts",
-        "bytes": 1308,
-        "gzipBytes": 658,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "bytes": 1512,
+        "gzipBytes": 757,
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "trigger": "dynamic import"
       },
       {
@@ -165,7 +165,7 @@
         "source": "src/roster-store.ts",
         "bytes": 334,
         "gzipBytes": 235,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "trigger": "dynamic import"
       },
       {
@@ -174,7 +174,7 @@
         "source": "artifacts/ProvableStepper/handlers/s0.js",
         "bytes": 282,
         "gzipBytes": 195,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "component": "ProvableStepper",
         "handler": "s0",
         "event": "click",
@@ -188,7 +188,7 @@
         "source": "artifacts/ProvableCounter/handlers/s0.js",
         "bytes": 235,
         "gzipBytes": 178,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "component": "ProvableCounter",
         "handler": "s0",
         "event": "click",
@@ -202,7 +202,7 @@
         "source": "artifacts/PropsPair.PropsPairParent/handlers/s0.js",
         "bytes": 235,
         "gzipBytes": 178,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "component": "PropsPairParent",
         "handler": "s0",
         "event": "click",
@@ -216,7 +216,7 @@
         "source": "artifacts/ComposedCounter.ComposedInner/handlers/s0.js",
         "bytes": 235,
         "gzipBytes": 180,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "trigger": "dynamic import"
       },
       {
@@ -225,7 +225,7 @@
         "source": "artifacts/KeyedRoster.RosterList/handlers/s0.js",
         "bytes": 306,
         "gzipBytes": 224,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "trigger": "dynamic import"
       },
       {
@@ -234,7 +234,7 @@
         "source": "artifacts/ComposedCounter.ComposedOuter/handlers/s0.js",
         "bytes": 235,
         "gzipBytes": 179,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "component": "ComposedOuter",
         "handler": "s0",
         "event": "click",
@@ -248,7 +248,7 @@
         "source": "artifacts/ProvableGreeting/handlers/s0.js",
         "bytes": 188,
         "gzipBytes": 163,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "component": "ProvableGreeting",
         "handler": "s0",
         "event": "click",
@@ -262,7 +262,7 @@
         "source": "artifacts/ProvableStepper/handlers/s1.js",
         "bytes": 231,
         "gzipBytes": 177,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "component": "ProvableStepper",
         "handler": "s1",
         "event": "click",
@@ -276,7 +276,7 @@
         "source": "artifacts/ProvableGreeting/handlers/s1.js",
         "bytes": 188,
         "gzipBytes": 165,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "component": "ProvableGreeting",
         "handler": "s1",
         "event": "click",
@@ -290,7 +290,7 @@
         "source": "artifacts/ProvableCounter/handlers/s1.js",
         "bytes": 235,
         "gzipBytes": 179,
-        "importedBy": "assets/fixtures-DzOBkuni.js",
+        "importedBy": "assets/fixtures-F8nWQMum.js",
         "component": "ProvableCounter",
         "handler": "s1",
         "event": "click",
@@ -299,12 +299,12 @@
         "trigger": "click on [data-testid=\"provable-counter-dec\"] (ProvableCounter)"
       }
     ],
-    "lazyBytes": 4012,
-    "lazyGzipBytes": 2711,
+    "lazyBytes": 4216,
+    "lazyGzipBytes": 2810,
     "html": {
       "file": "fixtures.html",
-      "bytes": 8134,
-      "gzipBytes": 2763
+      "bytes": 8185,
+      "gzipBytes": 2774
     },
     "css": [
       {
@@ -315,15 +315,15 @@
     ],
     "cssBytes": 1097,
     "cssGzipBytes": 559,
-    "initialTransferBytes": 27397,
-    "initialTransferGzipBytes": 9172,
+    "initialTransferBytes": 28384,
+    "initialTransferGzipBytes": 9544,
     "whereTheBytesGo": [
       {
         "group": "bootstrap",
         "label": "resume bootstrap (resumer + registry + locate + page glue)",
-        "renderedBytes": 19299,
-        "minifiedBytes": 11970,
-        "minifiedGzipBytes": 4080,
+        "renderedBytes": 21232,
+        "minifiedBytes": 12920,
+        "minifiedGzipBytes": 4440,
         "modules": [
           "demo/src/pages/fixtures-resumable.ts",
           "demo/src/resumable-page.ts",
@@ -338,9 +338,9 @@
       {
         "group": "artifacts",
         "label": "structure + wiring artifacts",
-        "renderedBytes": 14131,
-        "minifiedBytes": 4412,
-        "minifiedGzipBytes": 961,
+        "renderedBytes": 14344,
+        "minifiedBytes": 4503,
+        "minifiedGzipBytes": 981,
         "modules": [
           "demo/artifacts/ComposedCounter.ComposedInner/structure.js",
           "demo/artifacts/ComposedCounter.ComposedInner/wiring.js",
@@ -393,9 +393,9 @@
       {
         "group": "bootstrap",
         "label": "resume bootstrap (resumer + registry + locate + page glue)",
-        "renderedBytes": 2815,
-        "minifiedBytes": 1284,
-        "minifiedGzipBytes": 627,
+        "renderedBytes": 3161,
+        "minifiedBytes": 1481,
+        "minifiedGzipBytes": 718,
         "modules": [
           "src/resume/regions.ts"
         ]
@@ -424,9 +424,9 @@
     "bootstrap": {
       "group": "bootstrap",
       "label": "resume bootstrap (resumer + registry + locate + page glue)",
-      "renderedBytes": 19299,
-      "minifiedBytes": 11970,
-      "minifiedGzipBytes": 4080,
+      "renderedBytes": 21232,
+      "minifiedBytes": 12920,
+      "minifiedGzipBytes": 4440,
       "modules": [
         "demo/src/pages/fixtures-resumable.ts",
         "demo/src/resumable-page.ts",
@@ -437,14 +437,14 @@
         "src/resume/resumer.ts",
         "src/resume/stores.ts"
       ],
-      "sharePercent": 52.5,
-      "shareOfChunkBytes": 9544,
+      "sharePercent": 54.6,
+      "shareOfChunkBytes": 10432,
       "marklessReferenceBytes": 700,
       "kernel": {
         "module": "src/resume/cells.ts",
-        "renderedBytes": 916,
-        "minifiedBytes": 514,
-        "minifiedGzipBytes": 294
+        "renderedBytes": 1018,
+        "minifiedBytes": 579,
+        "minifiedGzipBytes": 316
       }
     },
     "componentExecutionsBeforeInteraction": 0,
@@ -453,11 +453,11 @@
     "componentModuleLoadsAfterInteraction": 0
   },
   "delta": {
-    "eagerBytes": -15746,
-    "eagerGzipBytes": -7137,
-    "eagerGzipPercent": -55,
-    "initialTransferBytes": -14682,
-    "initialTransferGzipBytes": -6906
+    "eagerBytes": -14901,
+    "eagerGzipBytes": -6834,
+    "eagerGzipPercent": -52.4,
+    "initialTransferBytes": -13786,
+    "initialTransferGzipBytes": -6594
   },
   "todos": {
     "page": "todos.html",
@@ -481,16 +481,16 @@
       ]
     },
     "resumable": {
-      "eagerRawBytes": 14665,
-      "eagerGzipBytes": 5917,
-      "initialTransferBytes": 22998,
-      "initialTransferGzipBytes": 8921,
+      "eagerRawBytes": 15488,
+      "eagerGzipBytes": 6262,
+      "initialTransferBytes": 23821,
+      "initialTransferGzipBytes": 9267,
       "gates": {
-        "eagerRawCapBytes": 15000,
-        "eagerRawHeadroomBytes": 335,
+        "eagerRawCapBytes": 16000,
+        "eagerRawHeadroomBytes": 512,
         "eagerRawCapHolds": true,
         "eagerGzipCompanionCapBytes": 4500,
-        "eagerGzipOverCompanionBytes": 1417,
+        "eagerGzipOverCompanionBytes": 1762,
         "eagerGzipCompanionHolds": false,
         "replaySplitCeiling": {
           "bytes": 569,
@@ -501,9 +501,9 @@
       "eagerBootstrapModules": [
         {
           "module": "src/resume/resumer.ts",
-          "renderedBytes": 8321,
-          "minifiedBytes": 4514,
-          "minifiedGzipBytes": 2001
+          "renderedBytes": 10033,
+          "minifiedBytes": 5318,
+          "minifiedGzipBytes": 2320
         },
         {
           "module": "src/resume/defer.ts",
@@ -525,15 +525,15 @@
         },
         {
           "module": "src/resume/registry.ts",
-          "renderedBytes": 2696,
-          "minifiedBytes": 1405,
-          "minifiedGzipBytes": 649
+          "renderedBytes": 2765,
+          "minifiedBytes": 1459,
+          "minifiedGzipBytes": 661
         },
         {
           "module": "src/resume/cells.ts",
-          "renderedBytes": 916,
-          "minifiedBytes": 514,
-          "minifiedGzipBytes": 294
+          "renderedBytes": 1018,
+          "minifiedBytes": 579,
+          "minifiedGzipBytes": 316
         },
         {
           "module": "src/resume/locate.ts",
@@ -544,12 +544,12 @@
       ],
       "lazyChunks": [
         {
-          "file": "assets/regions-DaNynrFN.js",
+          "file": "assets/regions-DptOpuPb.js",
           "name": "regions",
           "source": "../src/resume/regions.ts",
-          "bytes": 1305,
-          "gzipBytes": 660,
-          "importedBy": "assets/todos-aLg5f_Wt.js",
+          "bytes": 1509,
+          "gzipBytes": 756,
+          "importedBy": "assets/todos-CRp3vDvR.js",
           "trigger": "dynamic import"
         },
         {
@@ -558,7 +558,7 @@
           "source": "artifacts/app.Header/handlers/s0.js",
           "bytes": 397,
           "gzipBytes": 288,
-          "importedBy": "assets/todos-aLg5f_Wt.js",
+          "importedBy": "assets/todos-CRp3vDvR.js",
           "component": "Header",
           "handler": "s0",
           "event": "keydown",
@@ -567,23 +567,23 @@
           "trigger": "keydown on input.new-todo (Header)"
         },
         {
-          "file": "assets/todos-group-jFv9uQSM.js",
+          "file": "assets/todos-group-Dm7tdkSY.js",
           "name": "todos-group",
           "source": "src/todos-group.ts",
           "bytes": 62331,
-          "gzipBytes": 23139,
-          "importedBy": "assets/todos-aLg5f_Wt.js",
+          "gzipBytes": 23140,
+          "importedBy": "assets/todos-CRp3vDvR.js",
           "group": true,
           "trigger": "the first event that commits the group — an interaction with the group's own DOM, or a resumed dispatch that needs the store only the group can create",
           "transferredOn": "a pointer press anywhere in the page, or a keystroke in the resumed mount — the earliest real interaction signal, which buys the transfer and not the execution"
         }
       ],
-      "lazyBytes": 64033,
-      "lazyGzipBytes": 24087,
+      "lazyBytes": 64237,
+      "lazyGzipBytes": 24184,
       "groupChunk": {
-        "file": "assets/todos-group-jFv9uQSM.js",
+        "file": "assets/todos-group-Dm7tdkSY.js",
         "bytes": 62331,
-        "gzipBytes": 23139,
+        "gzipBytes": 23140,
         "trigger": "the first event that commits the group — an interaction with the group's own DOM, or a resumed dispatch that needs the store only the group can create",
         "transferredOn": "a pointer press anywhere in the page, or a keystroke in the resumed mount — the earliest real interaction signal, which buys the transfer and not the execution",
         "observedTrigger": "click on the deferred group",
@@ -598,9 +598,9 @@
         ]
       },
       "groupAnatomy": {
-        "chunk": "assets/todos-group-jFv9uQSM.js",
+        "chunk": "assets/todos-group-Dm7tdkSY.js",
         "bytes": 62331,
-        "gzipBytes": 23139,
+        "gzipBytes": 23140,
         "moduleCount": 28,
         "framework": {
           "moduleCount": 22,
@@ -673,7 +673,7 @@
         "theLever": "What shrinks this chunk is not chunk surgery, it is provable coverage — with the correction phase 2 forced on that sentence. A proved component leaves the group only when its mount can be SUBSTITUTED: then its body becomes structure + wiring artifacts in the eager chunk and a handler chunk fetched on the interaction that needs it, and the framework goes with it once the last body does. `MainSection` and `Footer` are proved and do NOT leave. What flips their guard is a store write, and a store write is the group's — substitute them and the document would carry an empty mount for markup the group has not built yet, and the resumer would throw rather than resume. Their verdicts are analysis with guard-only artifacts; their bodies stay where the group renders them the ordinary way, and this chunk is recorded UNCHANGED across both flips. A no-drop is the correct outcome here, not a missed one — an unexplained drop would be the red gate. At full coverage the group empties only where the ROOT is provable too, and `App`'s mount point is where the store is provided, so on this page it never will be. That end state is not hypothetical elsewhere — the fixtures page, whose five mounts the pass proves every one of, already ships it, and ships it harder than a branch nobody takes: its fallback branch is not BUILT, auto-omitted because every declared mount on the page is provable, so the ordinary renderer is in no chunk of that build at all, eager or lazy (claim 7b). What the page does fetch is a STORE — the carrier's mount point imports one when a dispatch finds no live store, and the module it imports imports nothing itself — while no chunk the page can fetch carries a store-partition module of the framework (claim 7a). A resumed page on this build fetches a STORE without fetching a RENDERER. The todos page is the same page at 3 of 5 proved and exactly one of the three resumed."
       },
       "prefetchedBytes": 62331,
-      "prefetchedGzipBytes": 23139,
+      "prefetchedGzipBytes": 23140,
       "prefetchTrigger": "focusin in the resumed mount",
       "componentExecutionsAtPrefetch": 0,
       "componentExecutions": 4,
@@ -695,9 +695,9 @@
         {
           "group": "bootstrap",
           "label": "resume bootstrap (resumer + registry + locate + page glue)",
-          "renderedBytes": 23820,
-          "minifiedBytes": 13234,
-          "minifiedGzipBytes": 5094,
+          "renderedBytes": 25703,
+          "minifiedBytes": 14157,
+          "minifiedGzipBytes": 5441,
           "modules": [
             "demo/src/pages/todos-resumable.ts",
             "demo/src/todos-resume.ts",
@@ -788,9 +788,9 @@
         {
           "group": "bootstrap",
           "label": "resume bootstrap (resumer + registry + locate + page glue)",
-          "renderedBytes": 2815,
-          "minifiedBytes": 1284,
-          "minifiedGzipBytes": 627,
+          "renderedBytes": 3161,
+          "minifiedBytes": 1481,
+          "minifiedGzipBytes": 718,
           "modules": [
             "src/resume/regions.ts"
           ]
@@ -838,10 +838,10 @@
       ]
     },
     "delta": {
-      "eagerRawBytes": -47595,
-      "eagerGzipBytes": -17170,
-      "eagerGzipPercent": -74.4,
-      "initialTransferGzipBytes": -17039,
+      "eagerRawBytes": -46772,
+      "eagerGzipBytes": -16825,
+      "eagerGzipPercent": -72.9,
+      "initialTransferGzipBytes": -16693,
       "componentExecutions": -1
     }
   },
@@ -867,15 +867,15 @@
       "fixturesFallbackChunkBytes": 32415
     },
     "phase2": {
-      "todosEagerRawBytes": 14665,
-      "todosEagerRawCapBytes": 15000,
-      "todosEagerRawHeadroomBytes": 335,
+      "todosEagerRawBytes": 15488,
+      "todosEagerRawCapBytes": 16000,
+      "todosEagerRawHeadroomBytes": 512,
       "todosComponentExecutionsBeforeInteraction": 0,
       "fixturesComponentExecutionsBeforeInteraction": 0,
-      "fixturesEagerRawBytes": 18166,
+      "fixturesEagerRawBytes": 19102,
       "fixturesFallbackChunkBytes": 0,
       "groupBytes": 62331,
-      "groupGzipBytes": 23139,
+      "groupGzipBytes": 23140,
       "coverage": {
         "app": {
           "provable": 3,
@@ -886,7 +886,7 @@
           "components": 28
         }
       },
-      "witnessBoxes": 8
+      "witnessBoxes": 10
     },
     "whyNotGroupBytes": "The group did not shrink and it was not supposed to. `MainSection` and `Footer` flipped to provable in phase 2, and neither one may be substituted out of the group: what flips their guard is a store WRITE, a store write is the group's, and a substituted mount would sit in the document empty while the markup that fills it is still inside the chunk nobody has fetched — the resumer throws on an empty mount rather than resuming one. So both flips are ANALYSIS verdicts carrying guard-only artifacts, both bodies stay where the group renders them the ordinary way, and gate A's anatomy is re-recorded UNCHANGED at 22 framework + 6 app modules. T006 predicted 22 + 5 and that prediction is VOID, not missed: it assumed the flips would move bodies, and the doctrine that forbids the move was ruled after it. A no-drop is the correct outcome for this page; an unexplained drop would be the red gate."
   },
@@ -895,16 +895,16 @@
       "fixtures": {
         "variant": "classic",
         "page": "fixtures",
-        "entryChunk": "assets/fixtures-Dr3DxnN9.js",
-        "eagerBytes": 33912,
-        "eagerGzipBytes": 12987,
+        "entryChunk": "assets/fixtures-Blmq5a78.js",
+        "eagerBytes": 34003,
+        "eagerGzipBytes": 13045,
         "eagerChunks": [
           {
-            "file": "assets/fixtures-Dr3DxnN9.js",
+            "file": "assets/fixtures-Blmq5a78.js",
             "name": "fixtures",
             "source": "fixtures.html",
-            "bytes": 33912,
-            "gzipBytes": 12987
+            "bytes": 34003,
+            "gzipBytes": 13045
           }
         ],
         "lazyChunks": [],
@@ -922,10 +922,10 @@
         "html": {
           "file": "fixtures.html",
           "bytes": 7070,
-          "gzipBytes": 2532
+          "gzipBytes": 2534
         },
-        "initialTransferBytes": 42079,
-        "initialTransferGzipBytes": 16078,
+        "initialTransferBytes": 42170,
+        "initialTransferGzipBytes": 16138,
         "whereTheBytesGo": [
           {
             "group": "signals",
@@ -965,9 +965,9 @@
           {
             "group": "fixture-components",
             "label": "fixture component bodies",
-            "renderedBytes": 5556,
-            "minifiedBytes": 3445,
-            "minifiedGzipBytes": 1023,
+            "renderedBytes": 5708,
+            "minifiedBytes": 3541,
+            "minifiedGzipBytes": 1071,
             "modules": [
               "app/src/fixtures/ComposedCounter.tsx",
               "app/src/fixtures/KeyedRoster.tsx",
@@ -1153,32 +1153,244 @@
             "minifiedGzipBytes": 420
           }
         ]
+      },
+      "rule": {
+        "variant": "classic",
+        "page": "rule",
+        "entryChunk": "assets/rule-KTSUm9A8.js",
+        "eagerBytes": 36156,
+        "eagerGzipBytes": 14188,
+        "eagerChunks": [
+          {
+            "file": "assets/rule-KTSUm9A8.js",
+            "name": "rule",
+            "source": "rule.html",
+            "bytes": 36156,
+            "gzipBytes": 14188
+          }
+        ],
+        "lazyChunks": [],
+        "lazyBytes": 0,
+        "lazyGzipBytes": 0,
+        "css": [
+          {
+            "file": "assets/rule-DZd5V4VE.css",
+            "bytes": 1097,
+            "gzipBytes": 559
+          }
+        ],
+        "cssBytes": 1097,
+        "cssGzipBytes": 559,
+        "html": {
+          "file": "rule.html",
+          "bytes": 1378,
+          "gzipBytes": 733
+        },
+        "initialTransferBytes": 38631,
+        "initialTransferGzipBytes": 15480,
+        "whereTheBytesGo": [
+          {
+            "group": "signals",
+            "label": "@solidjs/signals (reactive runtime)",
+            "renderedBytes": 109774,
+            "minifiedBytes": 32259,
+            "minifiedGzipBytes": 10310,
+            "modules": [
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/boundaries.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/async.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/constants.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/core.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/effect.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/error.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/graph.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/heap.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/lanes.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/owner.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/scheduler.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/signals.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/store.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/utils.js"
+            ]
+          },
+          {
+            "group": "renderer",
+            "label": "@solidjs/web + solid-js (renderer)",
+            "renderedBytes": 26420,
+            "minifiedBytes": 14164,
+            "minifiedGzipBytes": 5329,
+            "modules": [
+              "demo/node_modules/.pnpm/@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0/node_modules/@solidjs/web/dist/web.js",
+              "demo/node_modules/.pnpm/solid-js@2.0.0-rc.0/node_modules/solid-js/dist/solid.js"
+            ]
+          },
+          {
+            "group": "other",
+            "label": "other",
+            "renderedBytes": 1323,
+            "minifiedBytes": 891,
+            "minifiedGzipBytes": 457,
+            "modules": [
+              "demo/node_modules/.pnpm/@kobalte+core@2.0.0-alpha.0_@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0__solid-js@2.0.0-rc.0/node_modules/@kobalte/core/dist/create-tag-name/D6_aBB9R.jsx",
+              "demo/node_modules/.pnpm/@kobalte+core@2.0.0-alpha.0_@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0__solid-js@2.0.0-rc.0/node_modules/@kobalte/core/dist/polymorphic/index.jsx",
+              "demo/node_modules/.pnpm/@kobalte+core@2.0.0-alpha.0_@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0__solid-js@2.0.0-rc.0/node_modules/@kobalte/core/dist/separator/QhqEt4aD.jsx"
+            ]
+          },
+          {
+            "group": "vite-runtime",
+            "label": "vite runtime (preload helper, modulepreload polyfill)",
+            "renderedBytes": 1168,
+            "minifiedBytes": 731,
+            "minifiedGzipBytes": 420,
+            "modules": [
+              "demo/\u0000vite/modulepreload-polyfill.js"
+            ]
+          },
+          {
+            "group": "demo-glue",
+            "label": "demo page glue",
+            "renderedBytes": 178,
+            "minifiedBytes": 151,
+            "minifiedGzipBytes": 145,
+            "modules": [
+              "demo/src/pages/rule-classic.ts"
+            ]
+          }
+        ],
+        "lazyWhereTheBytesGo": [],
+        "kernel": null,
+        "eagerBootstrapModules": []
+      },
+      "click": {
+        "variant": "classic",
+        "page": "click",
+        "entryChunk": "assets/click-TBZQnTk5.js",
+        "eagerBytes": 36777,
+        "eagerGzipBytes": 14390,
+        "eagerChunks": [
+          {
+            "file": "assets/click-TBZQnTk5.js",
+            "name": "click",
+            "source": "click.html",
+            "bytes": 36777,
+            "gzipBytes": 14390
+          }
+        ],
+        "lazyChunks": [],
+        "lazyBytes": 0,
+        "lazyGzipBytes": 0,
+        "css": [
+          {
+            "file": "assets/click-DZd5V4VE.css",
+            "bytes": 1097,
+            "gzipBytes": 559
+          }
+        ],
+        "cssBytes": 1097,
+        "cssGzipBytes": 559,
+        "html": {
+          "file": "click.html",
+          "bytes": 1171,
+          "gzipBytes": 634
+        },
+        "initialTransferBytes": 39045,
+        "initialTransferGzipBytes": 15583,
+        "whereTheBytesGo": [
+          {
+            "group": "signals",
+            "label": "@solidjs/signals (reactive runtime)",
+            "renderedBytes": 109774,
+            "minifiedBytes": 32259,
+            "minifiedGzipBytes": 10310,
+            "modules": [
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/boundaries.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/async.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/constants.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/core.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/effect.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/error.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/graph.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/heap.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/lanes.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/owner.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/core/scheduler.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/signals.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/store.js",
+              "demo/node_modules/.pnpm/@solidjs+signals@2.0.0-rc.0/node_modules/@solidjs/signals/dist/prod/store/utils.js"
+            ]
+          },
+          {
+            "group": "renderer",
+            "label": "@solidjs/web + solid-js (renderer)",
+            "renderedBytes": 26514,
+            "minifiedBytes": 14226,
+            "minifiedGzipBytes": 5342,
+            "modules": [
+              "demo/node_modules/.pnpm/@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0/node_modules/@solidjs/web/dist/web.js",
+              "demo/node_modules/.pnpm/solid-js@2.0.0-rc.0/node_modules/solid-js/dist/solid.js"
+            ]
+          },
+          {
+            "group": "other",
+            "label": "other",
+            "renderedBytes": 2536,
+            "minifiedBytes": 1448,
+            "minifiedGzipBytes": 682,
+            "modules": [
+              "demo/node_modules/.pnpm/@kobalte+core@2.0.0-alpha.0_@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0__solid-js@2.0.0-rc.0/node_modules/@kobalte/core/dist/button/DvspU6cJ.jsx",
+              "demo/node_modules/.pnpm/@kobalte+core@2.0.0-alpha.0_@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0__solid-js@2.0.0-rc.0/node_modules/@kobalte/core/dist/create-tag-name/D6_aBB9R.jsx",
+              "demo/node_modules/.pnpm/@kobalte+core@2.0.0-alpha.0_@solidjs+web@2.0.0-rc.0_solid-js@2.0.0-rc.0__solid-js@2.0.0-rc.0/node_modules/@kobalte/core/dist/polymorphic/index.jsx"
+            ]
+          },
+          {
+            "group": "vite-runtime",
+            "label": "vite runtime (preload helper, modulepreload polyfill)",
+            "renderedBytes": 1168,
+            "minifiedBytes": 731,
+            "minifiedGzipBytes": 420,
+            "modules": [
+              "demo/\u0000vite/modulepreload-polyfill.js"
+            ]
+          },
+          {
+            "group": "demo-glue",
+            "label": "demo page glue",
+            "renderedBytes": 285,
+            "minifiedBytes": 249,
+            "minifiedGzipBytes": 193,
+            "modules": [
+              "demo/src/pages/click-classic.ts"
+            ]
+          }
+        ],
+        "lazyWhereTheBytesGo": [],
+        "kernel": null,
+        "eagerBootstrapModules": []
       }
     },
     "resumable": {
       "fixtures": {
         "variant": "resumable",
         "page": "fixtures",
-        "entryChunk": "assets/fixtures-DzOBkuni.js",
-        "eagerBytes": 18166,
-        "eagerGzipBytes": 5850,
+        "entryChunk": "assets/fixtures-F8nWQMum.js",
+        "eagerBytes": 19102,
+        "eagerGzipBytes": 6211,
         "eagerChunks": [
           {
-            "file": "assets/fixtures-DzOBkuni.js",
+            "file": "assets/fixtures-F8nWQMum.js",
             "name": "fixtures",
             "source": "fixtures.html",
-            "bytes": 18166,
-            "gzipBytes": 5850
+            "bytes": 19102,
+            "gzipBytes": 6211
           }
         ],
         "lazyChunks": [
           {
-            "file": "assets/regions-DdJBHQqy.js",
+            "file": "assets/regions-CZaPoZEv.js",
             "name": "regions",
             "source": "../src/resume/regions.ts",
-            "bytes": 1308,
-            "gzipBytes": 658,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "bytes": 1512,
+            "gzipBytes": 757,
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "trigger": "dynamic import"
           },
           {
@@ -1187,7 +1399,7 @@
             "source": "src/roster-store.ts",
             "bytes": 334,
             "gzipBytes": 235,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "trigger": "dynamic import"
           },
           {
@@ -1196,7 +1408,7 @@
             "source": "artifacts/ProvableStepper/handlers/s0.js",
             "bytes": 282,
             "gzipBytes": 195,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "component": "ProvableStepper",
             "handler": "s0",
             "event": "click",
@@ -1210,7 +1422,7 @@
             "source": "artifacts/ProvableCounter/handlers/s0.js",
             "bytes": 235,
             "gzipBytes": 178,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "component": "ProvableCounter",
             "handler": "s0",
             "event": "click",
@@ -1224,7 +1436,7 @@
             "source": "artifacts/PropsPair.PropsPairParent/handlers/s0.js",
             "bytes": 235,
             "gzipBytes": 178,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "component": "PropsPairParent",
             "handler": "s0",
             "event": "click",
@@ -1238,7 +1450,7 @@
             "source": "artifacts/ComposedCounter.ComposedInner/handlers/s0.js",
             "bytes": 235,
             "gzipBytes": 180,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "trigger": "dynamic import"
           },
           {
@@ -1247,7 +1459,7 @@
             "source": "artifacts/KeyedRoster.RosterList/handlers/s0.js",
             "bytes": 306,
             "gzipBytes": 224,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "trigger": "dynamic import"
           },
           {
@@ -1256,7 +1468,7 @@
             "source": "artifacts/ComposedCounter.ComposedOuter/handlers/s0.js",
             "bytes": 235,
             "gzipBytes": 179,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "component": "ComposedOuter",
             "handler": "s0",
             "event": "click",
@@ -1270,7 +1482,7 @@
             "source": "artifacts/ProvableGreeting/handlers/s0.js",
             "bytes": 188,
             "gzipBytes": 163,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "component": "ProvableGreeting",
             "handler": "s0",
             "event": "click",
@@ -1284,7 +1496,7 @@
             "source": "artifacts/ProvableStepper/handlers/s1.js",
             "bytes": 231,
             "gzipBytes": 177,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "component": "ProvableStepper",
             "handler": "s1",
             "event": "click",
@@ -1298,7 +1510,7 @@
             "source": "artifacts/ProvableGreeting/handlers/s1.js",
             "bytes": 188,
             "gzipBytes": 165,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "component": "ProvableGreeting",
             "handler": "s1",
             "event": "click",
@@ -1312,7 +1524,7 @@
             "source": "artifacts/ProvableCounter/handlers/s1.js",
             "bytes": 235,
             "gzipBytes": 179,
-            "importedBy": "assets/fixtures-DzOBkuni.js",
+            "importedBy": "assets/fixtures-F8nWQMum.js",
             "component": "ProvableCounter",
             "handler": "s1",
             "event": "click",
@@ -1321,8 +1533,8 @@
             "trigger": "click on [data-testid=\"provable-counter-dec\"] (ProvableCounter)"
           }
         ],
-        "lazyBytes": 4012,
-        "lazyGzipBytes": 2711,
+        "lazyBytes": 4216,
+        "lazyGzipBytes": 2810,
         "css": [
           {
             "file": "assets/fixtures-DZd5V4VE.css",
@@ -1334,18 +1546,18 @@
         "cssGzipBytes": 559,
         "html": {
           "file": "fixtures.html",
-          "bytes": 8134,
-          "gzipBytes": 2763
+          "bytes": 8185,
+          "gzipBytes": 2774
         },
-        "initialTransferBytes": 27397,
-        "initialTransferGzipBytes": 9172,
+        "initialTransferBytes": 28384,
+        "initialTransferGzipBytes": 9544,
         "whereTheBytesGo": [
           {
             "group": "bootstrap",
             "label": "resume bootstrap (resumer + registry + locate + page glue)",
-            "renderedBytes": 19299,
-            "minifiedBytes": 11970,
-            "minifiedGzipBytes": 4080,
+            "renderedBytes": 21232,
+            "minifiedBytes": 12920,
+            "minifiedGzipBytes": 4440,
             "modules": [
               "demo/src/pages/fixtures-resumable.ts",
               "demo/src/resumable-page.ts",
@@ -1360,9 +1572,9 @@
           {
             "group": "artifacts",
             "label": "structure + wiring artifacts",
-            "renderedBytes": 14131,
-            "minifiedBytes": 4412,
-            "minifiedGzipBytes": 961,
+            "renderedBytes": 14344,
+            "minifiedBytes": 4503,
+            "minifiedGzipBytes": 981,
             "modules": [
               "demo/artifacts/ComposedCounter.ComposedInner/structure.js",
               "demo/artifacts/ComposedCounter.ComposedInner/wiring.js",
@@ -1415,9 +1627,9 @@
           {
             "group": "bootstrap",
             "label": "resume bootstrap (resumer + registry + locate + page glue)",
-            "renderedBytes": 2815,
-            "minifiedBytes": 1284,
-            "minifiedGzipBytes": 627,
+            "renderedBytes": 3161,
+            "minifiedBytes": 1481,
+            "minifiedGzipBytes": 718,
             "modules": [
               "src/resume/regions.ts"
             ]
@@ -1445,20 +1657,20 @@
         ],
         "kernel": {
           "module": "src/resume/cells.ts",
-          "renderedBytes": 916,
-          "minifiedBytes": 514,
-          "minifiedGzipBytes": 294
+          "renderedBytes": 1018,
+          "minifiedBytes": 579,
+          "minifiedGzipBytes": 316
         },
         "eagerBootstrapModules": [
           {
             "module": "src/resume/resumer.ts",
-            "renderedBytes": 8321,
-            "minifiedBytes": 4514,
-            "minifiedGzipBytes": 2001
+            "renderedBytes": 10033,
+            "minifiedBytes": 5318,
+            "minifiedGzipBytes": 2320
           },
           {
             "module": "demo/src/resume.ts",
-            "renderedBytes": 2802,
+            "renderedBytes": 2810,
             "minifiedBytes": 2671,
             "minifiedGzipBytes": 467
           },
@@ -1470,21 +1682,21 @@
           },
           {
             "module": "src/resume/registry.ts",
-            "renderedBytes": 2696,
-            "minifiedBytes": 1405,
-            "minifiedGzipBytes": 649
+            "renderedBytes": 2765,
+            "minifiedBytes": 1459,
+            "minifiedGzipBytes": 661
           },
           {
             "module": "demo/src/resumable-page.ts",
-            "renderedBytes": 1214,
-            "minifiedBytes": 849,
-            "minifiedGzipBytes": 534
+            "renderedBytes": 1256,
+            "minifiedBytes": 876,
+            "minifiedGzipBytes": 548
           },
           {
             "module": "src/resume/cells.ts",
-            "renderedBytes": 916,
-            "minifiedBytes": 514,
-            "minifiedGzipBytes": 294
+            "renderedBytes": 1018,
+            "minifiedBytes": 579,
+            "minifiedGzipBytes": 316
           },
           {
             "module": "src/resume/locate.ts",
@@ -1497,26 +1709,26 @@
       "todos": {
         "variant": "resumable",
         "page": "todos",
-        "entryChunk": "assets/todos-aLg5f_Wt.js",
-        "eagerBytes": 14665,
-        "eagerGzipBytes": 5917,
+        "entryChunk": "assets/todos-CRp3vDvR.js",
+        "eagerBytes": 15488,
+        "eagerGzipBytes": 6262,
         "eagerChunks": [
           {
-            "file": "assets/todos-aLg5f_Wt.js",
+            "file": "assets/todos-CRp3vDvR.js",
             "name": "todos",
             "source": "todos.html",
-            "bytes": 14665,
-            "gzipBytes": 5917
+            "bytes": 15488,
+            "gzipBytes": 6262
           }
         ],
         "lazyChunks": [
           {
-            "file": "assets/regions-DaNynrFN.js",
+            "file": "assets/regions-DptOpuPb.js",
             "name": "regions",
             "source": "../src/resume/regions.ts",
-            "bytes": 1305,
-            "gzipBytes": 660,
-            "importedBy": "assets/todos-aLg5f_Wt.js",
+            "bytes": 1509,
+            "gzipBytes": 756,
+            "importedBy": "assets/todos-CRp3vDvR.js",
             "trigger": "dynamic import"
           },
           {
@@ -1525,7 +1737,7 @@
             "source": "artifacts/app.Header/handlers/s0.js",
             "bytes": 397,
             "gzipBytes": 288,
-            "importedBy": "assets/todos-aLg5f_Wt.js",
+            "importedBy": "assets/todos-CRp3vDvR.js",
             "component": "Header",
             "handler": "s0",
             "event": "keydown",
@@ -1534,19 +1746,19 @@
             "trigger": "keydown on input.new-todo (Header)"
           },
           {
-            "file": "assets/todos-group-jFv9uQSM.js",
+            "file": "assets/todos-group-Dm7tdkSY.js",
             "name": "todos-group",
             "source": "src/todos-group.ts",
             "bytes": 62331,
-            "gzipBytes": 23139,
-            "importedBy": "assets/todos-aLg5f_Wt.js",
+            "gzipBytes": 23140,
+            "importedBy": "assets/todos-CRp3vDvR.js",
             "group": true,
             "trigger": "the first event that commits the group — an interaction with the group's own DOM, or a resumed dispatch that needs the store only the group can create",
             "transferredOn": "a pointer press anywhere in the page, or a keystroke in the resumed mount — the earliest real interaction signal, which buys the transfer and not the execution"
           }
         ],
-        "lazyBytes": 64033,
-        "lazyGzipBytes": 24087,
+        "lazyBytes": 64237,
+        "lazyGzipBytes": 24184,
         "css": [
           {
             "file": "assets/todos-f2TZ4gxc.css",
@@ -1559,17 +1771,17 @@
         "html": {
           "file": "todos.html",
           "bytes": 2145,
-          "gzipBytes": 1121
+          "gzipBytes": 1122
         },
-        "initialTransferBytes": 22998,
-        "initialTransferGzipBytes": 8921,
+        "initialTransferBytes": 23821,
+        "initialTransferGzipBytes": 9267,
         "whereTheBytesGo": [
           {
             "group": "bootstrap",
             "label": "resume bootstrap (resumer + registry + locate + page glue)",
-            "renderedBytes": 23820,
-            "minifiedBytes": 13234,
-            "minifiedGzipBytes": 5094,
+            "renderedBytes": 25703,
+            "minifiedBytes": 14157,
+            "minifiedGzipBytes": 5441,
             "modules": [
               "demo/src/pages/todos-resumable.ts",
               "demo/src/todos-resume.ts",
@@ -1660,9 +1872,9 @@
           {
             "group": "bootstrap",
             "label": "resume bootstrap (resumer + registry + locate + page glue)",
-            "renderedBytes": 2815,
-            "minifiedBytes": 1284,
-            "minifiedGzipBytes": 627,
+            "renderedBytes": 3161,
+            "minifiedBytes": 1481,
+            "minifiedGzipBytes": 718,
             "modules": [
               "src/resume/regions.ts"
             ]
@@ -1710,16 +1922,16 @@
         ],
         "kernel": {
           "module": "src/resume/cells.ts",
-          "renderedBytes": 916,
-          "minifiedBytes": 514,
-          "minifiedGzipBytes": 294
+          "renderedBytes": 1018,
+          "minifiedBytes": 579,
+          "minifiedGzipBytes": 316
         },
         "eagerBootstrapModules": [
           {
             "module": "src/resume/resumer.ts",
-            "renderedBytes": 8321,
-            "minifiedBytes": 4514,
-            "minifiedGzipBytes": 2001
+            "renderedBytes": 10033,
+            "minifiedBytes": 5318,
+            "minifiedGzipBytes": 2320
           },
           {
             "module": "src/resume/defer.ts",
@@ -1741,15 +1953,343 @@
           },
           {
             "module": "src/resume/registry.ts",
-            "renderedBytes": 2696,
-            "minifiedBytes": 1405,
-            "minifiedGzipBytes": 649
+            "renderedBytes": 2765,
+            "minifiedBytes": 1459,
+            "minifiedGzipBytes": 661
           },
           {
             "module": "src/resume/cells.ts",
-            "renderedBytes": 916,
-            "minifiedBytes": 514,
-            "minifiedGzipBytes": 294
+            "renderedBytes": 1018,
+            "minifiedBytes": 579,
+            "minifiedGzipBytes": 316
+          },
+          {
+            "module": "src/resume/locate.ts",
+            "renderedBytes": 409,
+            "minifiedBytes": 250,
+            "minifiedGzipBytes": 207
+          }
+        ]
+      },
+      "rule": {
+        "variant": "resumable",
+        "page": "rule",
+        "entryChunk": "assets/rule-JCvHYXQH.js",
+        "eagerBytes": 13825,
+        "eagerGzipBytes": 5361,
+        "eagerChunks": [
+          {
+            "file": "assets/rule-JCvHYXQH.js",
+            "name": "rule",
+            "source": "rule.html",
+            "bytes": 13825,
+            "gzipBytes": 5361
+          }
+        ],
+        "lazyChunks": [
+          {
+            "file": "assets/regions-C4CbC0c7.js",
+            "name": "regions",
+            "source": "../src/resume/regions.ts",
+            "bytes": 1508,
+            "gzipBytes": 757,
+            "importedBy": "assets/rule-JCvHYXQH.js",
+            "trigger": "dynamic import"
+          }
+        ],
+        "lazyBytes": 1508,
+        "lazyGzipBytes": 757,
+        "css": [
+          {
+            "file": "assets/rule-DZd5V4VE.css",
+            "bytes": 1097,
+            "gzipBytes": 559
+          }
+        ],
+        "cssBytes": 1097,
+        "cssGzipBytes": 559,
+        "html": {
+          "file": "rule.html",
+          "bytes": 1386,
+          "gzipBytes": 737
+        },
+        "initialTransferBytes": 16308,
+        "initialTransferGzipBytes": 6657,
+        "whereTheBytesGo": [
+          {
+            "group": "bootstrap",
+            "label": "resume bootstrap (resumer + registry + locate + page glue)",
+            "renderedBytes": 18469,
+            "minifiedBytes": 10167,
+            "minifiedGzipBytes": 3966,
+            "modules": [
+              "src/resume/cells.ts",
+              "src/resume/identities.ts",
+              "src/resume/locate.ts",
+              "src/resume/registry.ts",
+              "src/resume/resumer.ts",
+              "src/resume/stores.ts"
+            ]
+          },
+          {
+            "group": "vite-runtime",
+            "label": "vite runtime (preload helper, modulepreload polyfill)",
+            "renderedBytes": 3303,
+            "minifiedBytes": 2030,
+            "minifiedGzipBytes": 1026,
+            "modules": [
+              "demo/\u0000vite/modulepreload-polyfill.js",
+              "demo/\u0000vite/preload-helper.js"
+            ]
+          },
+          {
+            "group": "artifacts",
+            "label": "structure + wiring artifacts",
+            "renderedBytes": 3915,
+            "minifiedBytes": 1539,
+            "minifiedGzipBytes": 478,
+            "modules": [
+              "demo/artifacts/QhqEt4aD.SeparatorRoot/structure.js",
+              "demo/artifacts/QhqEt4aD.SeparatorRoot/wiring.js"
+            ]
+          },
+          {
+            "group": "demo-glue",
+            "label": "demo page glue",
+            "renderedBytes": 1331,
+            "minifiedBytes": 954,
+            "minifiedGzipBytes": 503,
+            "modules": [
+              "demo/src/pages/rule-resumable.ts",
+              "demo/src/rule-page.ts",
+              "demo/src/rule-resume.ts"
+            ]
+          }
+        ],
+        "lazyWhereTheBytesGo": [
+          {
+            "group": "bootstrap",
+            "label": "resume bootstrap (resumer + registry + locate + page glue)",
+            "renderedBytes": 3161,
+            "minifiedBytes": 1481,
+            "minifiedGzipBytes": 718,
+            "modules": [
+              "src/resume/regions.ts"
+            ]
+          }
+        ],
+        "kernel": {
+          "module": "src/resume/cells.ts",
+          "renderedBytes": 1018,
+          "minifiedBytes": 579,
+          "minifiedGzipBytes": 316
+        },
+        "eagerBootstrapModules": [
+          {
+            "module": "src/resume/resumer.ts",
+            "renderedBytes": 10033,
+            "minifiedBytes": 5318,
+            "minifiedGzipBytes": 2320
+          },
+          {
+            "module": "src/resume/stores.ts",
+            "renderedBytes": 2924,
+            "minifiedBytes": 1747,
+            "minifiedGzipBytes": 774
+          },
+          {
+            "module": "src/resume/registry.ts",
+            "renderedBytes": 2765,
+            "minifiedBytes": 1459,
+            "minifiedGzipBytes": 661
+          },
+          {
+            "module": "src/resume/identities.ts",
+            "renderedBytes": 1320,
+            "minifiedBytes": 809,
+            "minifiedGzipBytes": 431
+          },
+          {
+            "module": "demo/src/rule-page.ts",
+            "renderedBytes": 957,
+            "minifiedBytes": 648,
+            "minifiedGzipBytes": 369
+          },
+          {
+            "module": "src/resume/cells.ts",
+            "renderedBytes": 1018,
+            "minifiedBytes": 579,
+            "minifiedGzipBytes": 316
+          },
+          {
+            "module": "demo/src/rule-resume.ts",
+            "renderedBytes": 357,
+            "minifiedBytes": 291,
+            "minifiedGzipBytes": 185
+          },
+          {
+            "module": "src/resume/locate.ts",
+            "renderedBytes": 409,
+            "minifiedBytes": 250,
+            "minifiedGzipBytes": 207
+          }
+        ]
+      },
+      "click": {
+        "variant": "resumable",
+        "page": "click",
+        "entryChunk": "assets/click-Bs3SzwSN.js",
+        "eagerBytes": 16449,
+        "eagerGzipBytes": 5689,
+        "eagerChunks": [
+          {
+            "file": "assets/click-Bs3SzwSN.js",
+            "name": "click",
+            "source": "click.html",
+            "bytes": 16449,
+            "gzipBytes": 5689
+          }
+        ],
+        "lazyChunks": [
+          {
+            "file": "assets/regions-_yOlWiOw.js",
+            "name": "regions",
+            "source": "../src/resume/regions.ts",
+            "bytes": 1509,
+            "gzipBytes": 755,
+            "importedBy": "assets/click-Bs3SzwSN.js",
+            "trigger": "dynamic import"
+          }
+        ],
+        "lazyBytes": 1509,
+        "lazyGzipBytes": 755,
+        "css": [
+          {
+            "file": "assets/click-DZd5V4VE.css",
+            "bytes": 1097,
+            "gzipBytes": 559
+          }
+        ],
+        "cssBytes": 1097,
+        "cssGzipBytes": 559,
+        "html": {
+          "file": "click.html",
+          "bytes": 1192,
+          "gzipBytes": 640
+        },
+        "initialTransferBytes": 18738,
+        "initialTransferGzipBytes": 6888,
+        "whereTheBytesGo": [
+          {
+            "group": "bootstrap",
+            "label": "resume bootstrap (resumer + registry + locate + page glue)",
+            "renderedBytes": 18469,
+            "minifiedBytes": 10167,
+            "minifiedGzipBytes": 3966,
+            "modules": [
+              "src/resume/cells.ts",
+              "src/resume/identities.ts",
+              "src/resume/locate.ts",
+              "src/resume/registry.ts",
+              "src/resume/resumer.ts",
+              "src/resume/stores.ts"
+            ]
+          },
+          {
+            "group": "artifacts",
+            "label": "structure + wiring artifacts",
+            "renderedBytes": 7735,
+            "minifiedBytes": 4007,
+            "minifiedGzipBytes": 738,
+            "modules": [
+              "demo/artifacts/DvspU6cJ.ButtonRoot/structure.js",
+              "demo/artifacts/DvspU6cJ.ButtonRoot/wiring.js"
+            ]
+          },
+          {
+            "group": "vite-runtime",
+            "label": "vite runtime (preload helper, modulepreload polyfill)",
+            "renderedBytes": 3303,
+            "minifiedBytes": 2030,
+            "minifiedGzipBytes": 1026,
+            "modules": [
+              "demo/\u0000vite/modulepreload-polyfill.js",
+              "demo/\u0000vite/preload-helper.js"
+            ]
+          },
+          {
+            "group": "demo-glue",
+            "label": "demo page glue",
+            "renderedBytes": 1535,
+            "minifiedBytes": 1138,
+            "minifiedGzipBytes": 561,
+            "modules": [
+              "demo/src/click-page.ts",
+              "demo/src/click-resume.ts",
+              "demo/src/pages/click-resumable.ts"
+            ]
+          }
+        ],
+        "lazyWhereTheBytesGo": [
+          {
+            "group": "bootstrap",
+            "label": "resume bootstrap (resumer + registry + locate + page glue)",
+            "renderedBytes": 3161,
+            "minifiedBytes": 1481,
+            "minifiedGzipBytes": 718,
+            "modules": [
+              "src/resume/regions.ts"
+            ]
+          }
+        ],
+        "kernel": {
+          "module": "src/resume/cells.ts",
+          "renderedBytes": 1018,
+          "minifiedBytes": 579,
+          "minifiedGzipBytes": 316
+        },
+        "eagerBootstrapModules": [
+          {
+            "module": "src/resume/resumer.ts",
+            "renderedBytes": 10033,
+            "minifiedBytes": 5318,
+            "minifiedGzipBytes": 2320
+          },
+          {
+            "module": "src/resume/stores.ts",
+            "renderedBytes": 2924,
+            "minifiedBytes": 1747,
+            "minifiedGzipBytes": 774
+          },
+          {
+            "module": "src/resume/registry.ts",
+            "renderedBytes": 2765,
+            "minifiedBytes": 1459,
+            "minifiedGzipBytes": 661
+          },
+          {
+            "module": "demo/src/click-page.ts",
+            "renderedBytes": 1167,
+            "minifiedBytes": 838,
+            "minifiedGzipBytes": 432
+          },
+          {
+            "module": "src/resume/identities.ts",
+            "renderedBytes": 1320,
+            "minifiedBytes": 809,
+            "minifiedGzipBytes": 431
+          },
+          {
+            "module": "src/resume/cells.ts",
+            "renderedBytes": 1018,
+            "minifiedBytes": 579,
+            "minifiedGzipBytes": 316
+          },
+          {
+            "module": "demo/src/click-resume.ts",
+            "renderedBytes": 351,
+            "minifiedBytes": 285,
+            "minifiedGzipBytes": 184
           },
           {
             "module": "src/resume/locate.ts",

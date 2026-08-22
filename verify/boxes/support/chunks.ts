@@ -10,7 +10,7 @@
 // chunk URL for a component is whatever the page itself would ask for.
 
 const HANDLER_ENTRY =
-	/"\.\.\/artifacts\/([\w.]+)\/handlers\/(s\d+)\.js"\s*:\s*\(\)\s*=>\s*[\w$]+\(\s*\(\)\s*=>\s*import\("([^"]+)"/g;
+	/"\.\.\/artifacts\/([\w.~]+)\/handlers\/(s\d+)\.js"\s*:\s*\(\)\s*=>\s*[\w$]+\(\s*\(\)\s*=>\s*import\("([^"]+)"/g;
 
 export type HandlerChunks = {
 	/** Absolute URL of the chunk for `<artifactId>/<handlerId>`. */

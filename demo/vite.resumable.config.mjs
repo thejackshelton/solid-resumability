@@ -1,6 +1,6 @@
 /**
- * Resumable variant — the same two pages, with the fixtures page delivered as
- * comptime artifacts.
+ * Resumable variant — the same pages, with the fixtures and rule pages
+ * delivered as comptime artifacts.
  *
  * This file is for `pnpm dev:resumable` / `pnpm preview:resumable`, which
  * serve both pages together. The measured production builds go one page at a

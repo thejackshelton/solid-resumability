@@ -10,6 +10,18 @@ import { AccessorSummaryUnseen } from "./fixtures/shapes/AccessorSummaryHost.tsx
 import { OptionsInitializerUnseen } from "./fixtures/shapes/OptionsInitializerHost.tsx";
 import { ElementIndirectionUnseen } from "./fixtures/shapes/ElementIndirectionHost.tsx";
 import { RefFanoutUnseen } from "./fixtures/shapes/RefFanoutHost.tsx";
+import { DerivedConditionalUnseen } from "./fixtures/shapes/DerivedConditionalHost.tsx";
+import { DerivedLogicalUnseen } from "./fixtures/shapes/DerivedLogicalHost.tsx";
+import { MemoConditionalUnseen } from "./fixtures/shapes/MemoConditionalHost.tsx";
+import { MeasuredRestUnseen } from "./fixtures/shapes/MeasuredRestHost.tsx";
+import { FoldedMeasuredSeenLive, FoldedMeasuredUnseenLive } from "./fixtures/shapes/FoldedMeasuredHost.tsx";
+import { DerivedCellUnseen } from "./fixtures/shapes/DerivedCellHost.tsx";
+import { GuardedReturnUnseen } from "./fixtures/shapes/GuardedReturnHost.tsx";
+import { ElementProjectionUnseen } from "./fixtures/shapes/ElementProjectionHost.tsx";
+import { MemberNamespaceUnseen } from "./fixtures/shapes/MemberNamespaceHost.tsx";
+import { GuardThrowContextUnseen } from "./fixtures/shapes/GuardThrowContextHost.tsx";
+import { ObjectStoreUnseen } from "./fixtures/shapes/ObjectStoreHost.tsx";
+import { SlotValuedSeenLive, SlotValuedUnseenLive } from "./fixtures/shapes/ClaimedSlotHost.tsx";
 
 /**
  * THE ADVERSARIAL INSTANTIATION GATE.
@@ -695,5 +707,947 @@ describe("adversarial instantiation gate — array-ref-wiring", () => {
     expect(
       ARRAY_REF_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
     ).toEqual(["admitted-array-elements"]);
+  });
+});
+
+const CONDITIONAL_HOSTS = `${SHAPES}/DerivedConditionalHost.tsx`;
+const CONDITIONAL_COUNTER = `${SHAPES}/DerivedConditionalCounter.tsx`;
+
+/** Clauses of the derived-conditional cargo admission — first-party, no library name. */
+const DERIVED_CONDITIONAL_CLAUSES: ShapeClause[] = [
+  {
+    id: "both-branches-derivable",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function derivedConditionalCargoRule(): ShapeRuleRegistration {
+  return {
+    id: "derived-conditional-cargo",
+    clauses: DERIVED_CONDITIONAL_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "title"),
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: CONDITIONAL_COUNTER, component: "DerivedConditionalCounter" },
+    secondInstantiation: {
+      path: CONDITIONAL_HOSTS,
+      component: "DerivedConditionalUnseen",
+      render: DerivedConditionalUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — derived-conditional-cargo", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([derivedConditionalCargoRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the opaque-branch ternary", () => {
+    const lying: ShapeRuleRegistration = { ...derivedConditionalCargoRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("derived-conditional-cargo");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(CONDITIONAL_HOSTS, "DerivedConditionalHost");
+    const lying: ShapeRuleRegistration = {
+      ...derivedConditionalCargoRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="cond" title="on">seen</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("derived-conditional-cargo");
+  });
+
+  it("the counter-instantiation fails exactly the both-branches-derivable clause", () => {
+    const counter = classify(CONDITIONAL_COUNTER, "DerivedConditionalCounter");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-dynamic-attribute")).toBe(true);
+    expect(
+      DERIVED_CONDITIONAL_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["both-branches-derivable"]);
+  });
+});
+
+const LOGICAL_HOSTS = `${SHAPES}/DerivedLogicalHost.tsx`;
+const LOGICAL_COUNTER = `${SHAPES}/DerivedLogicalCounter.tsx`;
+
+/** Clauses of the derived-logical-condition admission — first-party, no library name. */
+const DERIVED_LOGICAL_CLAUSES: ShapeClause[] = [
+  {
+    id: "both-sides-derivable",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function derivedLogicalConditionRule(): ShapeRuleRegistration {
+  return {
+    id: "derived-logical-condition",
+    clauses: DERIVED_LOGICAL_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "title"),
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: LOGICAL_COUNTER, component: "DerivedLogicalCounter" },
+    secondInstantiation: {
+      path: LOGICAL_HOSTS,
+      component: "DerivedLogicalUnseen",
+      render: DerivedLogicalUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — derived-logical-condition", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([derivedLogicalConditionRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the opaque-side connective", () => {
+    const lying: ShapeRuleRegistration = { ...derivedLogicalConditionRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("derived-logical-condition");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(LOGICAL_HOSTS, "DerivedLogicalHost");
+    const lying: ShapeRuleRegistration = {
+      ...derivedLogicalConditionRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="logical" title="on">seen</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("derived-logical-condition");
+  });
+
+  it("the counter-instantiation fails exactly the both-sides-derivable clause", () => {
+    const counter = classify(LOGICAL_COUNTER, "DerivedLogicalCounter");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-dynamic-attribute")).toBe(true);
+    expect(
+      DERIVED_LOGICAL_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["both-sides-derivable"]);
+  });
+});
+
+const MEMO_HOSTS = `${SHAPES}/MemoConditionalHost.tsx`;
+const MEMO_COUNTER = `${SHAPES}/MemoConditionalCounter.tsx`;
+
+/** Clauses of the memo-callback cargo admission — first-party, no library name. */
+const MEMO_CONDITIONAL_CLAUSES: ShapeClause[] = [
+  {
+    id: "callback-derivable",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function memoConditionalCargoRule(): ShapeRuleRegistration {
+  return {
+    id: "memo-callback-cargo",
+    clauses: MEMO_CONDITIONAL_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "title"),
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: MEMO_COUNTER, component: "MemoConditionalCounter" },
+    secondInstantiation: {
+      path: MEMO_HOSTS,
+      component: "MemoConditionalUnseen",
+      render: MemoConditionalUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — memo-callback-cargo", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([memoConditionalCargoRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the opaque-callback memo", () => {
+    const lying: ShapeRuleRegistration = { ...memoConditionalCargoRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("memo-callback-cargo");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(MEMO_HOSTS, "MemoConditionalHost");
+    const lying: ShapeRuleRegistration = {
+      ...memoConditionalCargoRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="memo" title="on">seen</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("memo-callback-cargo");
+  });
+
+  it("the counter-instantiation fails exactly the callback-derivable clause", () => {
+    const counter = classify(MEMO_COUNTER, "MemoConditionalCounter");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-dynamic-attribute")).toBe(true);
+    expect(
+      MEMO_CONDITIONAL_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["callback-derivable"]);
+  });
+});
+
+const REST_HOSTS = `${SHAPES}/MeasuredRestHost.tsx`;
+const REST_COUNTER = `${SHAPES}/MeasuredRestCounter.tsx`;
+
+/** Clauses of the measured rest-spread admission — first-party, no library name. */
+const MEASURED_REST_CLAUSES: ShapeClause[] = [
+  {
+    id: "identity-class-rest",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+  {
+    id: "no-dynamic-attribute",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+];
+
+function measuredRestSpreadRule(): ShapeRuleRegistration {
+  return {
+    id: "measured-rest-spread",
+    clauses: MEASURED_REST_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" && analysis.bindings.some((binding) => binding.kind === "spread"),
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: REST_COUNTER, component: "MeasuredRestCounter" },
+    secondInstantiation: {
+      path: REST_HOSTS,
+      component: "MeasuredRestUnseen",
+      render: MeasuredRestUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — measured-rest-spread", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([measuredRestSpreadRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the call-valued spread", () => {
+    const lying: ShapeRuleRegistration = { ...measuredRestSpreadRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("measured-rest-spread");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(REST_HOSTS, "MeasuredRestHost");
+    const lying: ShapeRuleRegistration = {
+      ...measuredRestSpreadRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="rest">seen</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("measured-rest-spread");
+  });
+
+  it("the counter-instantiation fails exactly the identity-class-rest clause", () => {
+    const counter = classify(REST_COUNTER, "MeasuredRestCounter");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-spread")).toBe(true);
+    expect(
+      MEASURED_REST_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["identity-class-rest"]);
+  });
+});
+
+const CONJUNCTION_HOSTS = `${SHAPES}/FoldedMeasuredHost.tsx`;
+const CONJUNCTION_COUNTER = `${SHAPES}/FoldedMeasuredCounter.tsx`;
+
+/** Clauses of the four-shape conjunction — first-party, no library name. */
+const FOLDED_MEASURED_CLAUSES: ShapeClause[] = [
+  {
+    id: "literal-intrinsic-tag",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-component-element"),
+  },
+  {
+    id: "admitted-array-elements",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+  {
+    id: "both-branches-derivable",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-dynamic-attribute"),
+  },
+  {
+    id: "identity-class-rest",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function measureFoldedMeasured(render: () => unknown): string {
+  const host = mount(render);
+  const node = host.querySelector("hr");
+  return node?.outerHTML ?? host.innerHTML;
+}
+
+function foldedMeasuredConjunctionRule(): ShapeRuleRegistration {
+  return {
+    id: "folded-measured-conjunction",
+    clauses: FOLDED_MEASURED_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.html === "<hr>" &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "ref") &&
+      analysis.bindings.some((binding) => binding.kind === "spread") &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "role"),
+    publishedHtml: () => measureFoldedMeasured(FoldedMeasuredUnseenLive),
+    counterInstantiation: { path: CONJUNCTION_COUNTER, component: "FoldedMeasuredCounter" },
+    secondInstantiation: {
+      path: CONJUNCTION_HOSTS,
+      component: "FoldedMeasuredUnseen",
+      render: FoldedMeasuredUnseenLive,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — folded-measured-conjunction", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([foldedMeasuredConjunctionRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the call-valued spread", () => {
+    const lying: ShapeRuleRegistration = { ...foldedMeasuredConjunctionRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("folded-measured-conjunction");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's cargo", () => {
+    const first = measureFoldedMeasured(FoldedMeasuredSeenLive);
+    const lying: ShapeRuleRegistration = {
+      ...foldedMeasuredConjunctionRule(),
+      publishedHtml: () => first,
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("folded-measured-conjunction");
+  });
+
+  it("the counter-instantiation fails exactly the identity-class-rest clause", () => {
+    const counter = classify(CONJUNCTION_COUNTER, "FoldedMeasuredCounter");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-spread")).toBe(true);
+    expect(
+      FOLDED_MEASURED_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["identity-class-rest"]);
+  });
+});
+
+const DERIVED_CELL_HOSTS = `${SHAPES}/DerivedCellHost.tsx`;
+const DERIVED_CELL_UNFOLDABLE = `${SHAPES}/DerivedCellUnfoldable.tsx`;
+const DERIVED_CELL_UNSTABLE = `${SHAPES}/DerivedCellUnstable.tsx`;
+
+const DERIVED_CELL_FOLD_CLAUSES: ShapeClause[] = [
+  {
+    id: "derived-cell-initial-foldable",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("derived-cell-initial-not-foldable"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function derivedCellInitialRule(): ShapeRuleRegistration {
+  return {
+    id: "derived-cell-initial-foldable",
+    clauses: DERIVED_CELL_FOLD_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: DERIVED_CELL_UNFOLDABLE, component: "DerivedCellUnfoldable" },
+    secondInstantiation: {
+      path: DERIVED_CELL_HOSTS,
+      component: "DerivedCellUnseen",
+      render: DerivedCellUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — derived-cell-initial-foldable", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([derivedCellInitialRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the unfoldable host", () => {
+    const lying: ShapeRuleRegistration = { ...derivedCellInitialRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("derived-cell-initial-foldable");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(DERIVED_CELL_HOSTS, "DerivedCellHost");
+    const lying: ShapeRuleRegistration = {
+      ...derivedCellInitialRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<hr class="seen">'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("derived-cell-initial-foldable");
+  });
+
+  it("the counter-instantiation fails exactly the derived-cell-initial-foldable clause", () => {
+    const counter = classify(DERIVED_CELL_UNFOLDABLE, "DerivedCellUnfoldable");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("derived-cell-initial-not-foldable")).toBe(true);
+    expect(
+      DERIVED_CELL_FOLD_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["derived-cell-initial-foldable"]);
+  });
+});
+
+const DERIVED_CELL_STABLE_CLAUSES: ShapeClause[] = [
+  {
+    id: "derived-cell-input-mount-stable",
+    holds: (analysis) =>
+      analysis.status === "provable" || !codes(analysis).has("derived-cell-input-not-mount-stable"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function derivedCellInputRule(): ShapeRuleRegistration {
+  return {
+    id: "derived-cell-input-mount-stable",
+    clauses: DERIVED_CELL_STABLE_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: DERIVED_CELL_UNSTABLE, component: "DerivedCellUnstable" },
+    secondInstantiation: {
+      path: DERIVED_CELL_HOSTS,
+      component: "DerivedCellUnseen",
+      render: DerivedCellUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — derived-cell-input-mount-stable", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([derivedCellInputRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the handler-wired host", () => {
+    const lying: ShapeRuleRegistration = { ...derivedCellInputRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("derived-cell-input-mount-stable");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(DERIVED_CELL_HOSTS, "DerivedCellHost");
+    const lying: ShapeRuleRegistration = {
+      ...derivedCellInputRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<hr class="seen">'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("derived-cell-input-mount-stable");
+  });
+
+  it("the counter-instantiation fails exactly the derived-cell-input-mount-stable clause", () => {
+    const counter = classify(DERIVED_CELL_UNSTABLE, "DerivedCellUnstable");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("derived-cell-input-not-mount-stable")).toBe(true);
+    expect(
+      DERIVED_CELL_STABLE_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["derived-cell-input-mount-stable"]);
+  });
+});
+
+const GUARDED_HOSTS = `${SHAPES}/GuardedReturnHost.tsx`;
+const GUARDED_COUNTER = `${SHAPES}/GuardedReturnCounter.tsx`;
+
+/** Clauses of the guarded-return callback admission — first-party, no library name. */
+const GUARDED_RETURN_CLAUSES: ShapeClause[] = [
+  {
+    id: "guarded-return-body",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("callee-body-not-guarded-return"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function guardedReturnCallbackRule(): ShapeRuleRegistration {
+  return {
+    id: "guarded-return-callback",
+    clauses: GUARDED_RETURN_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "title"),
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: GUARDED_COUNTER, component: "GuardedReturnExtraStatement" },
+    secondInstantiation: {
+      path: GUARDED_HOSTS,
+      component: "GuardedReturnUnseen",
+      render: GuardedReturnUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — guarded-return-callback", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([guardedReturnCallbackRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the extra-statement host", () => {
+    const lying: ShapeRuleRegistration = { ...guardedReturnCallbackRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("guarded-return-callback");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(GUARDED_HOSTS, "GuardedReturnHost");
+    const lying: ShapeRuleRegistration = {
+      ...guardedReturnCallbackRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="guarded" title="on">seen</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("guarded-return-callback");
+  });
+
+  it("the extra-statement counter fails exactly the guarded-return-body clause", () => {
+    const counter = classify(GUARDED_COUNTER, "GuardedReturnExtraStatement");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("callee-body-not-guarded-return")).toBe(true);
+    expect(
+      GUARDED_RETURN_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guarded-return-body"]);
+  });
+
+  it("the non-literal guard-return counter fails exactly the guarded-return-body clause", () => {
+    const counter = classify(GUARDED_COUNTER, "GuardedReturnNonLiteral");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("callee-body-not-guarded-return")).toBe(true);
+    expect(
+      GUARDED_RETURN_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guarded-return-body"]);
+  });
+
+  it("the write-in-body counter fails exactly the guarded-return-body clause", () => {
+    const counter = classify(GUARDED_COUNTER, "GuardedReturnWrite");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("callee-body-not-guarded-return")).toBe(true);
+    expect(
+      GUARDED_RETURN_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guarded-return-body"]);
+  });
+});
+
+const PROJECTION_HOSTS = `${SHAPES}/ElementProjectionHost.tsx`;
+const PROJECTION_COUNTER = `${SHAPES}/ElementProjectionCounter.tsx`;
+
+const ELEMENT_PROJECTION_CLAUSES: ShapeClause[] = [
+  {
+    id: "element-projection-own-host",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("element-projection-not-own-host"),
+  },
+  {
+    id: "element-projection-pure",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("element-projection-not-pure"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function elementProjectionRule(): ShapeRuleRegistration {
+  return {
+    id: "element-projection-own-host",
+    clauses: ELEMENT_PROJECTION_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: PROJECTION_COUNTER, component: "ElementProjectionOther" },
+    secondInstantiation: {
+      path: PROJECTION_HOSTS,
+      component: "ElementProjectionUnseen",
+      render: ElementProjectionUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — element-projection-own-host", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([elementProjectionRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the other-element host", () => {
+    const lying: ShapeRuleRegistration = { ...elementProjectionRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("element-projection-own-host");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(PROJECTION_HOSTS, "ElementProjectionHost");
+    const lying: ShapeRuleRegistration = {
+      ...elementProjectionRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<button class="seen">'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("element-projection-own-host");
+  });
+
+  it("the other-element counter fails exactly the own-host clause", () => {
+    const counter = classify(PROJECTION_COUNTER, "ElementProjectionOther");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("element-projection-not-own-host")).toBe(true);
+    expect(
+      ELEMENT_PROJECTION_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["element-projection-own-host"]);
+  });
+
+  it("the non-literal method-arg counter fails exactly the pure clause", () => {
+    const counter = classify(PROJECTION_COUNTER, "ElementProjectionNonLiteral");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("element-projection-not-pure")).toBe(true);
+    expect(
+      ELEMENT_PROJECTION_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["element-projection-pure"]);
+  });
+
+  it("the handler-visible counter is refused and does not admit", () => {
+    const counter = classify(PROJECTION_COUNTER, "ElementProjectionHandler");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("handler-captures-unprovable-binding")).toBe(true);
+    expect(elementProjectionRule().admits(counter)).toBe(false);
+  });
+});
+
+const MEMBER_HOSTS = `${SHAPES}/MemberNamespaceHost.tsx`;
+const MEMBER_COUNTER = `${SHAPES}/MemberNamespaceCounter.tsx`;
+
+/** Clauses of JSXMemberExpression resolution — first-party, no library name. */
+const MEMBER_NAMESPACE_CLAUSES: ShapeClause[] = [
+  {
+    id: "member-resolves-in-analyzed-set",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-component-element"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function memberNamespaceRule(): ShapeRuleRegistration {
+  return {
+    id: "member-namespace-resolution",
+    clauses: MEMBER_NAMESPACE_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: MEMBER_COUNTER, component: "MemberUnresolvable" },
+    secondInstantiation: {
+      path: MEMBER_HOSTS,
+      component: "MemberNamespaceUnseen",
+      render: MemberNamespaceUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — member-namespace-resolution", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([memberNamespaceRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the unresolvable member", () => {
+    const lying: ShapeRuleRegistration = { ...memberNamespaceRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("member-namespace-resolution");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(MEMBER_HOSTS, "MemberNamespaceHost");
+    const lying: ShapeRuleRegistration = {
+      ...memberNamespaceRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="host"><span class="seen">ok</span><button class="bump">0</button></p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("member-namespace-resolution");
+  });
+
+  it("the unresolvable-member counter fails exactly the member-resolves clause", () => {
+    const counter = classify(MEMBER_COUNTER, "MemberUnresolvable");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-component-element")).toBe(true);
+    expect(
+      MEMBER_NAMESPACE_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["member-resolves-in-analyzed-set"]);
+  });
+
+  it("the local-object member counter fails exactly the member-resolves clause", () => {
+    const counter = classify(MEMBER_HOSTS, "MemberLocalObjectHost");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-component-element")).toBe(true);
+    expect(
+      MEMBER_NAMESPACE_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["member-resolves-in-analyzed-set"]);
+  });
+});
+
+const GUARD_THROW_HOSTS = `${SHAPES}/GuardThrowContextHost.tsx`;
+const GUARD_THROW_COUNTER = `${SHAPES}/GuardThrowContextCounter.tsx`;
+
+/** Clauses of the guard-throw context-helper grammar — first-party, no library name. */
+const GUARD_THROW_CLAUSES: ShapeClause[] = [
+  {
+    id: "guard-throw-context-body",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("no-signal-source"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function guardThrowContextRule(): ShapeRuleRegistration {
+  return {
+    id: "guard-throw-context-helper",
+    clauses: GUARD_THROW_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: GUARD_THROW_COUNTER, component: "GuardThrowExtraStatement" },
+    secondInstantiation: {
+      path: GUARD_THROW_HOSTS,
+      component: "GuardThrowContextUnseen",
+      render: GuardThrowContextUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — guard-throw-context-helper", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([guardThrowContextRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the extra-statement helper", () => {
+    const lying: ShapeRuleRegistration = { ...guardThrowContextRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("guard-throw-context-helper");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(GUARD_THROW_HOSTS, "GuardThrowContextHost");
+    const lying: ShapeRuleRegistration = {
+      ...guardThrowContextRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<p class="seen">ok</p>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("guard-throw-context-helper");
+  });
+
+  it("the extra-statement counter fails exactly the guard-throw-context-body clause", () => {
+    const counter = classify(GUARD_THROW_COUNTER, "GuardThrowExtraStatement");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("no-signal-source")).toBe(true);
+    expect(
+      GUARD_THROW_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guard-throw-context-body"]);
+  });
+
+  it("the different-binding counter fails exactly the guard-throw-context-body clause", () => {
+    const counter = classify(GUARD_THROW_COUNTER, "GuardThrowDifferentBinding");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("no-signal-source")).toBe(true);
+    expect(
+      GUARD_THROW_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guard-throw-context-body"]);
+  });
+
+  it("the non-throw guard counter fails exactly the guard-throw-context-body clause", () => {
+    const counter = classify(GUARD_THROW_COUNTER, "GuardThrowNoThrow");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("no-signal-source")).toBe(true);
+    expect(
+      GUARD_THROW_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["guard-throw-context-body"]);
+  });
+});
+
+const OBJECT_STORE_HOSTS = `${SHAPES}/ObjectStoreHost.tsx`;
+const OBJECT_STORE_COUNTER = `${SHAPES}/ObjectStoreCounter.tsx`;
+
+const OBJECT_STORE_CLAUSES: ShapeClause[] = [
+  {
+    id: "object-store-admitted",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("store-binding-not-provable"),
+  },
+  {
+    id: "no-spread",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("jsx-spread"),
+  },
+];
+
+function objectStoreRule(): ShapeRuleRegistration {
+  return {
+    id: "object-shaped-context-store",
+    clauses: OBJECT_STORE_CLAUSES,
+    admits: (analysis) => analysis.status === "provable",
+    publishedHtml: (analysis) => (analysis.status === "provable" ? analysis.html : null),
+    counterInstantiation: { path: OBJECT_STORE_COUNTER, component: "ObjectStoreBareEscape" },
+    secondInstantiation: {
+      path: OBJECT_STORE_HOSTS,
+      component: "ObjectStoreUnseen",
+      render: ObjectStoreUnseen,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — object-shaped-context-store", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([objectStoreRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the bare escape", () => {
+    const lying: ShapeRuleRegistration = { ...objectStoreRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("object-shaped-context-store");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = classify(OBJECT_STORE_HOSTS, "ObjectStoreHost");
+    const lying: ShapeRuleRegistration = {
+      ...objectStoreRule(),
+      publishedHtml: () => (first.status === "provable" ? first.html : '<button class="seen">ok</button>'),
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("object-shaped-context-store");
+  });
+
+  it("the bare-escape counter fails exactly the object-store-admitted clause", () => {
+    const counter = classify(OBJECT_STORE_COUNTER, "ObjectStoreBareEscape");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("store-binding-not-provable")).toBe(true);
+    expect(
+      OBJECT_STORE_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id),
+    ).toEqual(["object-store-admitted"]);
+  });
+});
+
+const SLOT_HOSTS = `${SHAPES}/ClaimedSlotHost.tsx`;
+
+const SLOT_VALUED_CLAUSES: ShapeClause[] = [
+  {
+    id: "store-admitted",
+    holds: (analysis) => analysis.status === "provable" || !codes(analysis).has("store-binding-not-provable"),
+  },
+  {
+    id: "slot-valued-record",
+    holds: (analysis) =>
+      analysis.status === "provable" ||
+      (analysis.status === "fallback" && !codes(analysis).has("jsx-component-element")),
+  },
+];
+
+function measureSlotPairing(renderFn: () => unknown): string {
+  return mount(renderFn).innerHTML;
+}
+
+function slotValuedRule(): ShapeRuleRegistration {
+  return {
+    id: "claimed-child-slot-valued",
+    clauses: SLOT_VALUED_CLAUSES,
+    admits: (analysis) =>
+      analysis.status === "provable" &&
+      analysis.claimedChildren.some((child) => child.identityProps?.some((prop) => prop.role === "slot-valued")),
+    publishedHtml: (analysis) => {
+      if (analysis.status !== "provable") return null;
+      return measureSlotPairing(SlotValuedUnseenLive);
+    },
+    counterInstantiation: { path: SLOT_HOSTS, component: "SlotValuedMixedFree" },
+    secondInstantiation: {
+      path: SLOT_HOSTS,
+      component: "SlotValuedHost",
+      render: SlotValuedUnseenLive,
+    },
+  };
+}
+
+describe("adversarial instantiation gate — claimed-child-slot-valued", () => {
+  it("is green when the rule is registered honestly", () => {
+    const verdict = evaluateAdversarialGate([slotValuedRule()]);
+    expect(verdict.status).toBe("green");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("counter-instantiation fires red if the rule admits the mixed-free host", () => {
+    const lying: ShapeRuleRegistration = { ...slotValuedRule(), admits: () => true };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "counter-instantiation")?.rule).toBe("claimed-child-slot-valued");
+  });
+
+  it("second-instantiation fires red if the rule republishes the first instantiation's bytes", () => {
+    const first = measureSlotPairing(SlotValuedSeenLive);
+    const lying: ShapeRuleRegistration = {
+      ...slotValuedRule(),
+      publishedHtml: () => first,
+    };
+    const verdict = evaluateAdversarialGate([lying]);
+    expect(verdict.status).toBe("red");
+    expect(named(verdict, "second-instantiation")?.rule).toBe("claimed-child-slot-valued");
+  });
+
+  it("the mixed-free counter fails exactly the slot-valued-record clause", () => {
+    const counter = classify(SLOT_HOSTS, "SlotValuedMixedFree");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter).has("jsx-component-element")).toBe(true);
+    expect(SLOT_VALUED_CLAUSES.filter((clause) => !clause.holds(counter)).map((clause) => clause.id)).toEqual([
+      "slot-valued-record",
+    ]);
   });
 });

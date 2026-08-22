@@ -93,11 +93,11 @@ const DEMO_MOUNTS: MountDeclaration[] = [
  * including a tree with the addressed child's directory silently gone.
  */
 const EXPECTED_FILES = [
-  'ComposedCounter.ComposedInner/handlers/s0.js',
-  'ComposedCounter.ComposedInner/manifest.json',
-  'ComposedCounter.ComposedInner/structure.js',
-  'ComposedCounter.ComposedInner/template.js',
-  'ComposedCounter.ComposedInner/wiring.js',
+  'ComposedCounter.ComposedInner~65b38574/handlers/s0.js',
+  'ComposedCounter.ComposedInner~65b38574/manifest.json',
+  'ComposedCounter.ComposedInner~65b38574/structure.js',
+  'ComposedCounter.ComposedInner~65b38574/template.js',
+  'ComposedCounter.ComposedInner~65b38574/wiring.js',
   'ComposedCounter.ComposedOuter/handlers/s0.js',
   'ComposedCounter.ComposedOuter/manifest.json',
   'ComposedCounter.ComposedOuter/structure.js',
@@ -136,6 +136,33 @@ const EXPECTED_FILES = [
   'app.Header/structure.js',
   'app.Header/template.js',
   'app.Header/wiring.js',
+];
+
+/**
+ * Files the reference tree carries that the seven mounts never emit. Read off
+ * the tree and WRITTEN DOWN — T041 added `QhqEt4aD.SeparatorRoot/` and T055
+ * added `DvspU6cJ.ButtonRoot/` to `demo/artifacts/`, and this test's mounts do
+ * not produce them. Used only by the reference-side equality; the emitted-side
+ * list and the byte-parity loop stay the forty-three files above.
+ */
+const REFERENCE_ONLY_FILES = [
+  'QhqEt4aD.SeparatorRoot/manifest.json',
+  'QhqEt4aD.SeparatorRoot/structure.js',
+  'QhqEt4aD.SeparatorRoot/template.js',
+  'QhqEt4aD.SeparatorRoot/wiring.js',
+  'DvspU6cJ.ButtonRoot/manifest.json',
+  'DvspU6cJ.ButtonRoot/structure.js',
+  'DvspU6cJ.ButtonRoot/template.js',
+  'DvspU6cJ.ButtonRoot/wiring.js',
+  'C9YDO9vc.DialogTrigger/manifest.json',
+  'C9YDO9vc.DialogTrigger/structure.js',
+  'C9YDO9vc.DialogTrigger/template.js',
+  'C9YDO9vc.DialogTrigger/wiring.js',
+  'DvspU6cJ.ButtonRoot~2689dc62/handlers/s0.js',
+  'DvspU6cJ.ButtonRoot~2689dc62/manifest.json',
+  'DvspU6cJ.ButtonRoot~2689dc62/structure.js',
+  'DvspU6cJ.ButtonRoot~2689dc62/template.js',
+  'DvspU6cJ.ButtonRoot~2689dc62/wiring.js',
 ];
 
 /**
@@ -183,8 +210,11 @@ describe('artifact byte parity with the emit script this stage replaces', () => 
   it('emits exactly the files the reference tree carries', () => {
     expect(listFiles(artifactDir)).toEqual(EXPECTED_FILES);
     // The reference side is untouched by this test and must stay the corpus it
-    // is being compared against.
-    expect(listFiles(REFERENCE_ARTIFACTS)).toEqual(EXPECTED_FILES);
+    // is being compared against. The union admits the T041 SeparatorRoot
+    // files the seven mounts never emit; EXPECTED_FILES itself is unchanged.
+    expect(listFiles(REFERENCE_ARTIFACTS)).toEqual(
+      [...EXPECTED_FILES, ...REFERENCE_ONLY_FILES].sort(),
+    );
   });
 
   it.each(EXPECTED_FILES)('%s is byte-identical to the reference artifact', (file) => {
@@ -218,7 +248,7 @@ describe('artifact byte parity with the emit script this stage replaces', () => 
       DEMO_MOUNTS.map(() => 'provable'),
     );
     expect(report.derived.map((entry) => entry.child.artifact)).toEqual([
-      'ComposedCounter.ComposedInner',
+      'ComposedCounter.ComposedInner~65b38574',
     ]);
   });
 });
@@ -293,7 +323,7 @@ describe('a mount that had to be provable and was not', () => {
 describe('the children a declared mount addresses', () => {
   const artifactDir = join(VERIFY_OUT, 'addressed');
   const PARENT = 'ComposedCounter.ComposedOuter';
-  const CHILD = 'ComposedCounter.ComposedInner';
+  const CHILD = 'ComposedCounter.ComposedInner~65b38574';
 
   const composed: MountDeclaration[] = [
     { component: 'ComposedOuter', source: 'app/src/fixtures/ComposedCounter.tsx' },
@@ -600,5 +630,47 @@ describe('artifact directories no declared mount claims', () => {
 
     expect(report.pruned).toEqual([]);
     expect(existsSync(join(artifactDir, 'RemovedFromTheList'))).toBe(true);
+  });
+});
+
+describe('a record-bearing claimed child next to a record-free declaration of the same name', () => {
+  const artifactDir = join(VERIFY_OUT, 'claimed-identity');
+
+  it('emits the claimed child under a directory distinct from the declaration', () => {
+    rmSync(artifactDir, { recursive: true, force: true });
+    const options = resolveOptions({
+      root: REPO_ROOT,
+      artifactDir,
+      mounts: [
+        {
+          component: 'DialogTrigger',
+          source: 'demo/node_modules/@kobalte/core/dist/dialog/C9YDO9vc.jsx',
+        },
+        {
+          component: 'ButtonRoot',
+          source: 'demo/node_modules/@kobalte/core/dist/button/DvspU6cJ.jsx',
+        },
+      ],
+    });
+    const report = runAnalyzeStage(options, { log: () => {} });
+
+    const declared = report.outcomes.find((outcome) => outcome.mount.component === 'ButtonRoot');
+    expect(declared?.mount.artifact).toBe('DvspU6cJ.ButtonRoot');
+    expect(declared?.analysis.status).toBe('provable');
+
+    expect(report.derived).toHaveLength(1);
+    const claimed = report.derived[0]!;
+    expect(claimed.child.component).toBe('ButtonRoot');
+    expect(claimed.child.artifact).not.toBe('DvspU6cJ.ButtonRoot');
+    expect(claimed.child.artifact).toMatch(/^DvspU6cJ\.ButtonRoot~/);
+    expect(existsSync(join(artifactDir, claimed.child.artifact, 'structure.js'))).toBe(true);
+    expect(existsSync(join(artifactDir, 'DvspU6cJ.ButtonRoot', 'structure.js'))).toBe(true);
+    const declaredHtml = readFileSync(join(artifactDir, 'DvspU6cJ.ButtonRoot', 'template.js'), 'utf8');
+    const claimedManifest = JSON.parse(
+      readFileSync(join(artifactDir, claimed.parent, 'manifest.json'), 'utf8'),
+    ) as { claimedChildren?: Array<{ artifact: string; recordedProps?: unknown[] }> };
+    expect(declaredHtml).not.toContain('aria-haspopup');
+    expect(claimedManifest.claimedChildren?.[0]?.artifact).toBe(claimed.child.artifact);
+    expect(claimed.child.recordedProps).toEqual([{ name: 'aria-haspopup', value: 'dialog' }]);
   });
 });

@@ -115,7 +115,7 @@ vi.mock("../artifacts/PropsPair.PropsPairParent/handlers/s0.js", handlerHook("Pr
 // keeps its own cell and its own wiring, and the only thing it does not have is
 // a line in `FIXTURES`.
 vi.mock("../artifacts/ComposedCounter.ComposedOuter/handlers/s0.js", handlerHook("ComposedOuter/s0"));
-vi.mock("../artifacts/ComposedCounter.ComposedInner/handlers/s0.js", handlerHook("ComposedInner/s0"));
+vi.mock("../artifacts/ComposedCounter.ComposedInner~65b38574/handlers/s0.js", handlerHook("ComposedInner/s0"));
 vi.mock("../artifacts/KeyedRoster.RosterList/handlers/s0.js", handlerHook("RosterList/s0"));
 
 /** Every handler module the build emitted for this page, across all SEVEN

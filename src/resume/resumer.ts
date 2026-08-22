@@ -23,10 +23,10 @@
  * inside the queue in front of `bind()`, so a page carrying no list never fetches
  * a byte of it.
  *
- * Identity-shaped props are the same shape of decision: `slotsFor` skips them,
- * and `bind()` takes the same `import()` of `regions.ts` the list path already
- * names. A page whose artifacts name no identity slot and no list — todos is
- * one — never fetches a byte of that module.
+ * Identity-shaped props resolve in the same `slotsFor` walk cell and store slots
+ * already take. Handler identity slots still also ride `regions.ts#fill` so a
+ * page whose artifacts name no identity slot and no list — todos is one — never
+ * fetches a byte of that module.
  */
 
 import { cellKernel, cellWrite, type CellBackend, type Setter } from "./cells.ts";
@@ -37,8 +37,10 @@ import {
   isCellSlot,
   isIdentitySlot,
   isRegionItemSlot,
+  isStoreReadSlot,
   type Bundle,
   type CaptureSlotSpec,
+  type IdentityCaptureSlotSpec,
   type KeyedRegionSpec,
   type Slots,
 } from "./registry.ts";
@@ -151,55 +153,20 @@ export interface LiveWiring {
   item?: ItemContext;
 }
 
-/** What a slot with no fixed path compares against, so the comparison below
- * needs no arm for the arms that carry none. */
-const NO_PATH: (string | number)[] = [];
-
-function sameSlot(a: CaptureSlotSpec, b: CaptureSlotSpec): boolean {
-  if (a.name !== b.name) return false;
-  if (isCellSlot(a) !== isCellSlot(b)) return false;
-
-  if (isCellSlot(a)) {
-    const other = b as typeof a;
-    return a.cell === other.cell && a.access === other.access;
-  }
-
-  // The remaining arms are identities, and are compared as identities: same
-  // kind, same store, same fixed path in order, same region. Each arm states the
-  // fields it has — an item slot IS its region and names no store, an action IS
-  // its store and path — so one comparison covers them without this file
-  // knowing which of them a page happens to carry.
-  const x = a as { kind: string; store?: string; path?: (string | number)[]; region?: string };
-  const y = b as typeof x;
-  const path = x.path ?? NO_PATH;
-  const other = y.path ?? NO_PATH;
-  return (
-    x.kind === y.kind &&
-    x.store === y.store &&
-    x.region === y.region &&
-    path.length === other.length &&
-    path.every((step, i) => step === other[i])
-  );
-}
-
 function sameCaptures(a: CaptureSlotSpec[], b: CaptureSlotSpec[]): boolean {
-  return a.length === b.length && a.every((slot, i) => sameSlot(slot, b[i]));
-}
-
-/**
- * Solid's ref application for one forwarded path: a function is called with
- * the element; any other object is assigned (`.value`). Nullish is a no-op
- * — a caller that passed no ref is not a missing join.
- */
-function applySolidRef(target: unknown, element: Element): void {
-  if (target == null) return;
-  if (typeof target === "function") {
-    (target as (node: Element) => void)(element);
-    return;
-  }
-  if (typeof target === "object") {
-    (target as { value: unknown }).value = element;
-  }
+  return (
+    a.length === b.length &&
+    a.every((slot, i) => {
+      const other = b[i];
+      if (slot.name !== other.name || isCellSlot(slot) !== isCellSlot(other)) return false;
+      if (isCellSlot(slot)) return slot.cell === (other as typeof slot).cell && slot.access === (other as typeof slot).access;
+      const x = slot as { kind: string; store?: string; path?: (string | number)[]; region?: string };
+      const y = other as typeof x;
+      const path = x.path || [];
+      const next = y.path || [];
+      return x.kind === y.kind && x.store === y.store && x.region === y.region && path.length === next.length && path.every((step, j) => step === next[j]);
+    })
+  );
 }
 
 /** Assigns a DOM-state property, and says whether it moved. `checked` is the
@@ -207,26 +174,33 @@ function applySolidRef(target: unknown, element: Element): void {
  * `setAttribute` cannot change it. */
 function setProperty(element: Element, name: string, value: unknown): boolean {
   const target = element as unknown as Record<string, unknown>;
-  if (Object.is(target[name], value)) return false;
-  target[name] = value;
-  return true;
+  return !Object.is(target[name], value) && ((target[name] = value), true);
+}
+
+/** Solid ref semantics: call a function, or write `.value` on an object. */
+function writeRef(target: unknown, element: Element): boolean {
+  if (typeof target === "function") return (target as (node: Element) => void)(element), true;
+  if (target != null && typeof target === "object") return ((target as { value: unknown }).value = element), true;
+  return false;
 }
 
 export function resumeBundle(container: Element, bundle: Bundle, options: ResumeOptions = {}): ResumedApp {
   const component = bundle.component;
   const template = bundle.template;
+  const identities = options.identities;
+  const stores = options.stores;
+
+  function fail(msg: string): never {
+    throw new Error(`resume: ${component} ${msg}`);
+  }
 
   if (template && options.verifyTemplate !== false && container.innerHTML !== template.html) {
-    throw new Error(
-      `resume: the markup in this container is not ${component}'s template, so its locators would address the wrong nodes`,
-    );
+    fail(`not ${component}'s template`);
   }
 
   // Every template artifact roots at "/": the container's only element child.
   const root = (template?.root ?? "/") === "/" ? container.firstElementChild : null;
-  if (!root) {
-    throw new Error(`resume: ${component} has no root element in this container`);
-  }
+  if (!root) fail("has no root");
 
   const { createSignal, flush, untrack } = options.cells ?? cellKernel;
 
@@ -264,13 +238,16 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
   const regionsArrive = (): Promise<RegionResolver> =>
     (resolving ??= regionsModule().then((module) => (regions = module.installRegions(containers, slotsFor))));
 
+  const liveIdentity = (slot: IdentityCaptureSlotSpec) =>
+    identities ? identities.resolve(container, slot.source) : fail(`needs an identity registry for slot ${slot.name}`);
+
+  const cellOf = (id: string, name: string) => cells.get(id) || fail(`has no cell ${id} for slot ${name}`);
+
   const slotsFor = (captures: CaptureSlotSpec[], item?: ItemContext): Slots => {
     const slots: Slots = {};
     for (const slot of captures) {
       if (isCellSlot(slot)) {
-        const cell = cells.get(slot.cell);
-        if (!cell) throw new Error(`resume: ${component} has no cell ${slot.cell} for slot ${slot.name}`);
-        // Read slots get the accessor, write slots the setter, of the SAME cell.
+        const cell = cellOf(slot.cell, slot.name);
         slots[slot.name] = slot.access === "write" ? cell.set : cell.get;
         continue;
       }
@@ -280,102 +257,27 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
         // its region, because outside one there is no key and therefore no item
         // — and outside one the resolver was never asked for either.
         if (!regions || !item || item.region !== slot.region) {
-          throw new Error(`resume: slot ${slot.name} is an item of region ${slot.region}`);
+          fail(`slot ${slot.name} is an item of region ${slot.region}`);
         }
         slots[slot.name] = regions.itemFor(item);
         continue;
       }
 
-      // Store arms only. Identity slots are `regions.ts#fill` — the same
-      // `import()` the list path already names — so this function never
-      // names a second lazy module.
+      if (isIdentitySlot(slot)) {
+        slots[slot.name] = liveIdentity(slot);
+        continue;
+      }
+
+      // Store arms only. Handler identity slots still also ride
+      // `regions.ts#fill` — the same `import()` the list path already names —
+      // so a page without identity slots or lists never fetches that module.
       if ((slot as { store?: string }).store) {
-        if (!options.stores) {
-          throw new Error(`resume: ${component} needs a store registry for slot ${slot.name}`);
-        }
-        slots[slot.name] = isActionSlot(slot)
-          ? options.stores.action(
-              (slot as { store: string; path: (string | number)[] }).store,
-              (slot as { path: (string | number)[] }).path,
-            )
-          : options.stores.read(
-              (slot as { store: string; path: (string | number)[] }).store,
-              (slot as { path: (string | number)[] }).path,
-            );
+        if (!stores) fail(`needs a store registry for slot ${slot.name}`);
+        const { store, path } = slot as { store: string; path: (string | number)[] };
+        slots[slot.name] = isActionSlot(slot) ? stores.action(store, path) : stores.read(store, path);
       }
     }
     return slots;
-  };
-
-  const bindings: LiveBinding[] = bundle.bindings.map((spec) => ({ spec, element: locate(root, spec.locator) }));
-
-  // Array-ref replay. Must run before any effect that would read the ref
-  // cell — createTagName's effect is the case that made a replay-free
-  // measured multi-ref unsound. Locate the element, write it into each
-  // cell-write target, apply Solid ref semantics to each forwarded path,
-  // then flush so a subsequent read sees the element.
-  for (const binding of bindings) {
-    const spec = binding.spec;
-    if (spec.kind !== "attribute" || spec.attribute !== "ref") continue;
-    const element = binding.element;
-    for (const slot of spec.captures) {
-      if (isCellSlot(slot) && slot.access === "write") {
-        const cell = cells.get(slot.cell);
-        if (!cell) throw new Error(`resume: ${component} has no cell ${slot.cell} for ref wiring`);
-        cellWrite(cell.set, element);
-        continue;
-      }
-      if (isIdentitySlot(slot)) {
-        if (!options.identities) {
-          throw new Error(`resume: ${component} needs an identity registry for ref slot ${slot.name}`);
-        }
-        applySolidRef(options.identities.resolve(container, slot.source), element);
-      }
-    }
-  }
-  flush();
-
-  // The one thing served markup cannot say. A property-backed attribute is DOM
-  // state rather than bytes — `input.checked` is not the `checked` attribute —
-  // so the value the build folded is written here, before any behaviour exists
-  // to observe the difference. A measured one carries no `initialValue` and is
-  // left to the capture that owes it. No derivation runs: this is the folded
-  // answer, not a recomputation, so nothing here needs a live store.
-  for (const binding of bindings) {
-    const spec = binding.spec;
-    if (spec.kind === "attribute" && spec.attribute === "ref") continue;
-    if (spec.kind === "attribute" && spec.property === true && spec.initialValue !== undefined) {
-      setProperty(binding.element, spec.attribute, spec.initialValue);
-    }
-  }
-  const records: LiveWiring[] = bundle.wiring.map((spec) => ({ spec, element: locate(root, spec.locator), bound: null }));
-
-  const stats: ResumeStats = { handlerLoads: 0, dispatches: 0, patches: 0 };
-
-  const snapshot = () => {
-    const values = new Map<string, unknown>();
-    for (const [id, cell] of cells) values.set(id, untrack(cell.get));
-    return values;
-  };
-
-  const patchChanged = (before: Map<string, unknown>) => {
-    // Solid 2 batches writes: a setter is invisible to a reader until the graph
-    // settles. Handlers were written against that, so the kernel settles before
-    // any diff — `test/cells.test.ts` and both `resume-suite` runs are evidence.
-    flush();
-
-    const changed = new Set<string>();
-    for (const [id, cell] of cells) {
-      if (!Object.is(untrack(cell.get), before.get(id))) changed.add(id);
-    }
-    if (changed.size === 0) return;
-
-    for (const binding of bindings) {
-      // A cell slot is the one that names a cell; the identity arms name a store
-      // or a region and have no value for a diff to have moved.
-      if (!binding.spec.captures.some((slot) => isCellSlot(slot) && changed.has(slot.cell))) continue;
-      if (apply(binding)) stats.patches++;
-    }
   };
 
   /**
@@ -398,22 +300,23 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
     if (spec.kind === "class") {
       let moved = false;
       for (const entry of spec.classes) {
-        const on = Boolean(entry.compute(slots));
-        if (element.classList.contains(entry.name) === on) continue;
-        element.classList.toggle(entry.name, on);
-        moved = true;
+        const on = !!entry.compute(slots);
+        if (element.classList.contains(entry.name) !== on) {
+          element.classList.toggle(entry.name, on);
+          moved = true;
+        }
       }
       return moved;
     }
 
+    if (spec.kind === "spread" || (spec.kind === "attribute" && spec.attribute === "ref")) return false;
+
     if (spec.kind === "attribute") {
-      if (spec.attribute === "ref") return false;
       const value = spec.compute(slots);
       if (spec.property) return setProperty(element, spec.attribute, value);
       const next = value == null || value === false ? null : value === true ? "" : String(value);
       if (element.getAttribute(spec.attribute) === next) return false;
-      if (next === null) element.removeAttribute(spec.attribute);
-      else element.setAttribute(spec.attribute, next);
+      next === null ? element.removeAttribute(spec.attribute) : element.setAttribute(spec.attribute, next);
       return true;
     }
 
@@ -423,43 +326,156 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
     return true;
   };
 
+  const bindings: LiveBinding[] = bundle.bindings.map((spec) => ({ spec, element: locate(root, spec.locator) }));
+
+  // Array-ref replay. Must run before any effect that would read the ref
+  // cell — createTagName's effect is the case that made a replay-free
+  // measured multi-ref unsound. Locate the element, write it into each
+  // cell-write target, apply Solid ref semantics to each forwarded path,
+  // then flush so a subsequent read sees the element.
+  for (const { spec, element } of bindings) {
+    if (spec.kind !== "attribute" || spec.attribute !== "ref") continue;
+    for (const slot of spec.captures) {
+      if (isCellSlot(slot) && slot.access === "write") {
+        cellWrite(cellOf(slot.cell, slot.name).set, element);
+        continue;
+      }
+      if (isStoreReadSlot(slot) || isActionSlot(slot)) {
+        const path = `[${slot.path.map((step) => (typeof step === "number" ? String(step) : JSON.stringify(step))).join(", ")}]`;
+        const replay = () => {
+          const member = stores!.read(slot.store, slot.path);
+          if (!writeRef(member, element)) {
+            throw new Error(
+              `resume: store ${JSON.stringify(slot.store)} path ${path} is not a ref target (got ${typeof member})`,
+            );
+          }
+        };
+        if (stores?.has(slot.store)) replay();
+        else if (!stores?.park(slot.store, replay)) {
+          throw new Error(
+            `resume: no live store is registered as ${JSON.stringify(slot.store)}, so the ref at ${path} cannot be replayed`,
+          );
+        }
+        continue;
+      }
+      if (isIdentitySlot(slot)) writeRef(liveIdentity(slot), element);
+    }
+  }
+  // Own-host projections on the already-held root, same batch as ref writes.
+  for (const spec of bundle.cells) {
+    const proj = spec.projection;
+    const cell = proj && cells.get(spec.id);
+    if (!proj || !cell) continue;
+    let value: unknown = root;
+    for (const step of proj.steps) {
+      if (value == null) break;
+      value =
+        step.kind === "property"
+          ? (value as Record<string, unknown>)[step.name]
+          : step.kind === "getAttribute"
+            ? (value as Element).getAttribute(step.name)
+            : (value as Record<string, () => unknown>)[step.name]();
+    }
+    cellWrite(cell.set, value == null ? spec.initial : value);
+  }
+  flush();
+
+  // Measured identity rest-spread, then property initials + measured restore.
+  // Spreads finish before any restore: a rest object may name the same key a
+  // later compute writes, and the compute wins. Ref replay + flush already ran.
+  for (const { spec, element } of bindings) {
+    if (spec.kind !== "spread") continue;
+    for (const slot of spec.captures) {
+      if (!isIdentitySlot(slot)) continue;
+      const rest = liveIdentity(slot);
+      if (rest != null && typeof rest === "object") Object.assign(element, rest);
+    }
+  }
+
+  // Property-backed folded values, then measured attributes (initialValue null)
+  // via equality-guarded apply. One walk: the two arms are disjoint except a
+  // measured property, which still writes the folded null then the compute.
+  for (const binding of bindings) {
+    const spec = binding.spec;
+    if (spec.kind !== "attribute" || spec.attribute === "ref") continue;
+    if (spec.property === true && spec.initialValue !== undefined) {
+      setProperty(binding.element, spec.attribute, spec.initialValue);
+    }
+    if (spec.initialValue == null && typeof spec.compute === "function") {
+      const miss = spec.captures.filter(isStoreReadSlot).filter((slot) => !stores?.has(slot.store));
+      if (
+        miss.length &&
+        miss.every((slot) => stores?.park(slot.store, () => miss.every((s) => stores!.has(s.store)) && apply(binding)))
+      ) {
+        continue;
+      }
+      apply(binding);
+    }
+  }
+
+  const records: LiveWiring[] = bundle.wiring.map((spec) => ({ spec, element: locate(root, spec.locator), bound: null }));
+
+  const stats: ResumeStats = { handlerLoads: 0, dispatches: 0, patches: 0 };
+
+  const patchChanged = (before: Map<string, unknown>) => {
+    // Solid 2 batches writes: a setter is invisible to a reader until the graph
+    // settles. Handlers were written against that, so the kernel settles before
+    // any diff — `test/cells.test.ts` and both `resume-suite` runs are evidence.
+    flush();
+
+    const changed = new Set<string>();
+    for (const [id, cell] of cells) {
+      if (!Object.is(untrack(cell.get), before.get(id))) changed.add(id);
+    }
+
+    // Store-read arm: a live-provider mutation changes no kernel cell, so the
+    // empty-diff return below must not skip these. `slotsFor` walks `stores.read`
+    // fresh; `apply` is already equality-guarded, so `stats.patches` stays honest.
+    for (const binding of bindings) {
+      if (!binding.spec.captures.some(isStoreReadSlot)) continue;
+      if (apply(binding)) stats.patches++;
+    }
+
+    if (changed.size === 0) return;
+
+    for (const binding of bindings) {
+      // A cell slot is the one that names a cell; the identity arms name a store
+      // or a region and have no value for a diff to have moved.
+      if (!binding.spec.captures.some((slot) => isCellSlot(slot) && changed.has(slot.cell))) continue;
+      if (apply(binding)) stats.patches++;
+    }
+  };
+
   /**
    * The wait an action slot imposes when its store is not live yet, or `null`.
    * Asking is also telling: `whenProvided` fires `onMissing`, which is how a page
    * keeping the store's code behind a deferred import learns a resumed dispatch
    * wants it. No listener means rejection, so an unprovidable store stays loud.
    */
-  const pendingStores = (record: LiveWiring): Promise<unknown> | null => {
-    const stores = options.stores;
-    if (!stores) return null; // `slotsFor` reports the missing registry itself.
-
-    const named = new Set(record.spec.captures.filter(isActionSlot).map((slot) => slot.store));
-    // A dispatch from inside a region needs more than the actions its handler
-    // names, and which stores those are is the region's own question: see
-    // `regions.ts`. By the time a region record exists, so does the resolver.
-    if (record.item && regions) for (const id of regions.stores(record)) named.add(id);
-
-    const missing = [...named].filter((id) => !stores.has(id));
-    if (missing.length === 0) return null;
-
-    const provision = Promise.all(missing.map((id) => stores.whenProvided(id)));
-    // Handled here so a rejection reached late is never an unhandled one.
-    void provision.catch(() => {});
-    return provision;
-  };
-
   const bind = async (record: LiveWiring): Promise<(event: Event) => void> => {
     if (record.bound) return record.bound; // already imported: no churn.
 
     // Asked for before the import is awaited, so store and handler travel
-    // together rather than one after the other.
-    const provision = pendingStores(record);
+    // together rather than one after the other. `slotsFor` reports a missing
+    // registry itself; a region dispatch may need stores the handler does not name.
+    let provision: Promise<unknown> | null = null;
+    if (stores) {
+      const named = new Set(
+        record.spec.captures.filter((slot) => isActionSlot(slot) || isStoreReadSlot(slot)).map((slot) => slot.store),
+      );
+      if (record.item && regions) for (const id of regions.stores(record)) named.add(id);
+      const missing = [...named].filter((id) => !stores.has(id));
+      if (missing.length) {
+        provision = Promise.all(missing.map((id) => stores.whenProvided(id)));
+        void provision.catch(() => {});
+      }
+    }
 
     stats.handlerLoads++;
     const module = await bundle.loadHandler(record.spec.module); // the lazy import.
 
     if (!sameCaptures(module.captures, record.spec.captures)) {
-      throw new Error(`resume: handler ${record.spec.handler} declares capture slots the wiring record does not`);
+      fail(`handler ${record.spec.handler} capture slots the wiring record does not`);
     }
 
     // The await sits IN FRONT of slot resolution, never around what it resolves:
@@ -478,7 +494,8 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
 
   const dispatch = async (record: LiveWiring, event: Event) => {
     const handler = await bind(record);
-    const before = snapshot();
+    const before = new Map<string, unknown>();
+    for (const [id, cell] of cells) before.set(id, untrack(cell.get));
 
     // `currentTarget`, restored — what Solid's delegation does, for the same
     // reason. A handler expects the element it was written on (`Header` reads and
@@ -487,6 +504,12 @@ export function resumeBundle(container: Element, bundle: Bundle, options: Resume
     Object.defineProperty(event, "currentTarget", { configurable: true, get: () => record.element });
 
     handler(event);
+    // The live provider is the page's own Solid graph; `flush()` settles the
+    // kernel, not that graph. One microtask inside this FIFO is the whole
+    // wait if the write is not visible in this turn — never a timer or retry.
+    if (bindings.some((binding) => binding.spec.captures.some(isStoreReadSlot))) {
+      await Promise.resolve();
+    }
     patchChanged(before);
   };
 

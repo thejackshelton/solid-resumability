@@ -52,9 +52,9 @@
   },
   "totals": {
     "components": 12,
-    "provable": 0,
-    "fallback": 12,
-    "provableFraction": "0.0%",
+    "provable": 3,
+    "fallback": 9,
+    "provableFraction": "25.0%",
     "sourceFiles": 12,
     "distFiles": 6,
     "armsAgreeOnStatus": true,
@@ -62,21 +62,15 @@
   },
   "ranked": [
     {
-      "code": "jsx-component-element",
-      "components": 8,
-      "occurrences": 14,
-      "onlyBlockerFor": 0
-    },
-    {
       "code": "signal-escapes-unanalyzable-use",
       "components": 7,
       "occurrences": 24,
       "onlyBlockerFor": 0
     },
     {
-      "code": "jsx-spread",
-      "components": 4,
-      "occurrences": 6,
+      "code": "jsx-component-element",
+      "components": 7,
+      "occurrences": 13,
       "onlyBlockerFor": 0
     },
     {
@@ -86,21 +80,9 @@
       "onlyBlockerFor": 0
     },
     {
-      "code": "jsx-dynamic-attribute",
-      "components": 3,
-      "occurrences": 20,
-      "onlyBlockerFor": 0
-    },
-    {
       "code": "signal-escapes-to-opaque-callee",
       "components": 3,
       "occurrences": 5,
-      "onlyBlockerFor": 0
-    },
-    {
-      "code": "no-signal-source",
-      "components": 3,
-      "occurrences": 3,
       "onlyBlockerFor": 0
     },
     {
@@ -112,6 +94,24 @@
     {
       "code": "jsx-dynamic-child-not-derivable",
       "components": 2,
+      "occurrences": 2,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "store-binding-not-provable",
+      "components": 2,
+      "occurrences": 2,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "jsx-dynamic-attribute",
+      "components": 1,
+      "occurrences": 10,
+      "onlyBlockerFor": 0
+    },
+    {
+      "code": "jsx-spread",
+      "components": 1,
       "occurrences": 2,
       "onlyBlockerFor": 0
     },
@@ -158,32 +158,22 @@
       "function": "SeparatorRoot",
       "alias": "Root",
       "publicPath": "@kobalte/core/separator",
-      "verdict": "fallback",
+      "verdict": "provable",
       "authoredSource": "packages/core/src/separator/separator-root.tsx",
       "chunk": "dist/separator/QhqEt4aD.jsx",
       "exported": true,
       "arms": {
         "source": {
-          "status": "fallback",
+          "status": "provable",
           "module": "packages/core/src/separator/separator-root.tsx",
           "linkedModules": 24,
-          "codes": [
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-spread"
-          ]
+          "codes": []
         },
         "dist": {
-          "status": "fallback",
+          "status": "provable",
           "module": "dist/separator/QhqEt4aD.jsx",
           "linkedModules": 5,
-          "codes": [
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-spread"
-          ]
+          "codes": []
         }
       },
       "delta": {
@@ -192,114 +182,29 @@
         "distOnly": [],
         "counts": []
       },
-      "reasons": [
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/separator/separator-root.tsx:64:4",
-          "line": 64,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "role={tagName() !== \"hr\" ? \"separator\" : undefined}",
-          "expressionBytes": 51,
-          "message": "Attribute `role` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`SeparatorRoot` was refused with `jsx-dynamic-attribute` at `role={tagName() !== \"hr\" ? \"separator\" : undefined}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/separator/separator-root.tsx:65:4",
-          "line": 65,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "aria-orientation={ mergedProps.orientation === \"vertical\" ? \"vertical\" : undefined }",
-          "expressionBytes": 91,
-          "message": "Attribute `aria-orientation` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`SeparatorRoot` was refused with `jsx-dynamic-attribute` at `aria-orientation={ mergedProps.orientation === \"vertical\" ? \"vertical\" : undefined }`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/separator/separator-root.tsx:68:4",
-          "line": 68,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "data-orientation={mergedProps.orientation}",
-          "expressionBytes": 42,
-          "message": "Attribute `data-orientation` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`SeparatorRoot` was refused with `jsx-dynamic-attribute` at `data-orientation={mergedProps.orientation}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-spread",
-          "loc": "packages/core/src/separator/separator-root.tsx:69:4",
-          "line": 69,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "{...others}",
-          "expressionBytes": 11,
-          "message": "Spread attributes hide the element's real props.",
-          "detail": null,
-          "shape": "`SeparatorRoot` was refused with `jsx-spread` at `{...others}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        }
-      ]
+      "reasons": []
     },
     {
       "entrypoint": "button",
       "function": "ButtonRoot",
       "alias": "Root",
       "publicPath": "@kobalte/core/button",
-      "verdict": "fallback",
+      "verdict": "provable",
       "authoredSource": "packages/core/src/button/button-root.tsx",
       "chunk": "dist/button/DvspU6cJ.jsx",
       "exported": true,
       "arms": {
         "source": {
-          "status": "fallback",
+          "status": "provable",
           "module": "packages/core/src/button/button-root.tsx",
           "linkedModules": 25,
-          "codes": [
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-spread"
-          ]
+          "codes": []
         },
         "dist": {
-          "status": "fallback",
+          "status": "provable",
           "module": "dist/button/DvspU6cJ.jsx",
           "linkedModules": 5,
-          "codes": [
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-spread"
-          ]
+          "codes": []
         }
       },
       "delta": {
@@ -308,127 +213,7 @@
         "distOnly": [],
         "counts": []
       },
-      "reasons": [
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:86:4",
-          "line": 86,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "type={isNativeButton() || isNativeInput() ? mergedProps.type : undefined}",
-          "expressionBytes": 73,
-          "message": "Attribute `type` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `type={isNativeButton() || isNativeInput() ? mergedProps.type : undefined}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:87:4",
-          "line": 87,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "role={!isNativeButton() && !isNativeLink() ? \"button\" : undefined}",
-          "expressionBytes": 66,
-          "message": "Attribute `role` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `role={!isNativeButton() && !isNativeLink() ? \"button\" : undefined}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:88:4",
-          "line": 88,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "tabindex={ !isNativeButton() && !isNativeLink() && !mergedProps.disabled ? 0 : undefined }",
-          "expressionBytes": 107,
-          "message": "Attribute `tabindex` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `tabindex={ !isNativeButton() && !isNativeLink() && !mergedProps.disabled ? 0 : undefined }`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:93:4",
-          "line": 93,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "disabled={ isNativeButton() || isNativeInput() ? mergedProps.disabled : undefined }",
-          "expressionBytes": 90,
-          "message": "Attribute `disabled` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `disabled={ isNativeButton() || isNativeInput() ? mergedProps.disabled : undefined }`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:96:4",
-          "line": 96,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? \"true\" : undefined }",
-          "expressionBytes": 117,
-          "message": "Attribute `aria-disabled` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `aria-disabled={ !isNativeButton() && !isNativeInput() && mergedProps.disabled ? \"true\" : undefined }`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/button/button-root.tsx:101:4",
-          "line": 101,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "data-disabled={mergedProps.disabled ? \"\" : undefined}",
-          "expressionBytes": 53,
-          "message": "Attribute `data-disabled` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-dynamic-attribute` at `data-disabled={mergedProps.disabled ? \"\" : undefined}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-spread",
-          "loc": "packages/core/src/button/button-root.tsx:102:4",
-          "line": 102,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "{...others}",
-          "expressionBytes": 11,
-          "message": "Spread attributes hide the element's real props.",
-          "detail": null,
-          "shape": "`ButtonRoot` was refused with `jsx-spread` at `{...others}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        }
-      ]
+      "reasons": []
     },
     {
       "entrypoint": "checkbox",
@@ -688,9 +473,7 @@
             "handler-not-inline",
             "handler-not-inline",
             "jsx-spread",
-            "jsx-spread",
-            "jsx-spread",
-            "no-signal-source"
+            "jsx-spread"
           ]
         },
         "dist": {
@@ -701,9 +484,7 @@
             "handler-not-inline",
             "handler-not-inline",
             "jsx-spread",
-            "jsx-spread",
-            "jsx-spread",
-            "no-signal-source"
+            "jsx-spread"
           ]
         }
       },
@@ -714,23 +495,6 @@
         "counts": []
       },
       "reasons": [
-        {
-          "code": "no-signal-source",
-          "loc": "packages/core/src/checkbox/checkbox-control.tsx:41:8",
-          "line": 41,
-          "column": 8,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "function CheckboxControl<T extends ValidComponent = \"div\">( props: PolymorphicProps<T, CheckboxControlProps<T>>, ) { const formControlContext = useFormControlContext(); const context = useCheckboxContext(); const mergedP …",
-          "expressionBytes": 1005,
-          "message": "The component declares no source cell to resume.",
-          "detail": null,
-          "shape": "`CheckboxControl` declares no `createSignal` of its own: it is a leaf that reads `useFormControlContext` and `useCheckboxContext` and renders from what it finds there, so there is no source cell for a resumed page to restore.",
-          "wouldChange": {
-            "kobalte": "Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none."
-          }
-        },
         {
           "code": "handler-not-inline",
           "loc": "packages/core/src/checkbox/checkbox-control.tsx:75:4",
@@ -800,23 +564,6 @@
           "message": "Spread attributes hide the element's real props.",
           "detail": null,
           "shape": "`CheckboxControl` was refused with `jsx-spread` at `{...context.dataset()}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-spread",
-          "loc": "packages/core/src/checkbox/checkbox-control.tsx:79:4",
-          "line": 79,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "{...others}",
-          "expressionBytes": 11,
-          "message": "Spread attributes hide the element's real props.",
-          "detail": null,
-          "shape": "`CheckboxControl` was refused with `jsx-spread` at `{...others}`.",
           "wouldChange": {
             "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
             "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
@@ -1267,28 +1014,22 @@
       "function": "DialogTrigger",
       "alias": "Trigger",
       "publicPath": "@kobalte/core/dialog",
-      "verdict": "fallback",
+      "verdict": "provable",
       "authoredSource": "packages/core/src/dialog/dialog-trigger.tsx",
       "chunk": "dist/dialog/C9YDO9vc.jsx",
       "exported": true,
       "arms": {
         "source": {
-          "status": "fallback",
+          "status": "provable",
           "module": "packages/core/src/dialog/dialog-trigger.tsx",
           "linkedModules": 40,
-          "codes": [
-            "jsx-component-element",
-            "no-signal-source"
-          ]
+          "codes": []
         },
         "dist": {
-          "status": "fallback",
+          "status": "provable",
           "module": "dist/dialog/C9YDO9vc.jsx",
           "linkedModules": 10,
-          "codes": [
-            "jsx-component-element",
-            "no-signal-source"
-          ]
+          "codes": []
         }
       },
       "delta": {
@@ -1297,42 +1038,7 @@
         "distOnly": [],
         "counts": []
       },
-      "reasons": [
-        {
-          "code": "no-signal-source",
-          "loc": "packages/core/src/dialog/dialog-trigger.tsx:41:8",
-          "line": 41,
-          "column": 8,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "function DialogTrigger<T extends ValidComponent = \"button\">( props: PolymorphicProps<T, DialogTriggerProps<T>>, ) { const context = useDialogContext(); const p = props as DialogTriggerProps; const others = omit(p, \"ref\", …",
-          "expressionBytes": 829,
-          "message": "The component declares no source cell to resume.",
-          "detail": null,
-          "shape": "`DialogTrigger` declares no `createSignal` of its own: it is a leaf that reads `useDialogContext` and renders from what it finds there, so there is no source cell for a resumed page to restore.",
-          "wouldChange": {
-            "kobalte": "Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none."
-          }
-        },
-        {
-          "code": "jsx-component-element",
-          "loc": "packages/core/src/dialog/dialog-trigger.tsx:55:3",
-          "line": 55,
-          "column": 3,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "<Button.Root< Component< Omit<DialogTriggerRenderProps, keyof Button.ButtonRootRenderProps> > > ref={[context.setTriggerRef, p.ref]} aria-haspopup=\"dialog\" aria-expanded={context.isOpen() ? \"true\" : \"false\"} aria-control …",
-          "expressionBytes": 444,
-          "message": "The markup contains a nested component; only intrinsic elements can be templated statically.",
-          "detail": null,
-          "shape": "`DialogTrigger`'s markup routes through `<Button.Root>`, a Kobalte compound part reached through a `JSXMemberExpression` — the module it comes from IS in the analyzed set here, so the member-expression form alone is what the splice cannot address; only intrinsic elements template statically, so the pass stops at this element.",
-          "wouldChange": {
-            "kobalte": "Import the part as a plain binding rather than reaching it through a namespace object (`Button.Root` -> `Root`). That alone does not make it templatable — it is still a component element — but it is the change that takes the member-expression form out of the way.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — admit a `JSXMemberExpression` in `tryInlineComponent`, which today requires a `JSXIdentifier` whose `definition()` lies inside the analyzed set."
-          }
-        }
-      ]
+      "reasons": []
     },
     {
       "entrypoint": "dialog",
@@ -1352,7 +1058,8 @@
             "jsx-component-element",
             "show-branch-not-static-at-capture",
             "signal-escapes-unanalyzable-use",
-            "signal-escapes-unanalyzable-use"
+            "signal-escapes-unanalyzable-use",
+            "store-binding-not-provable"
           ]
         },
         "dist": {
@@ -1363,7 +1070,8 @@
             "jsx-component-element",
             "show-branch-not-static-at-capture",
             "signal-escapes-unanalyzable-use",
-            "signal-escapes-unanalyzable-use"
+            "signal-escapes-unanalyzable-use",
+            "store-binding-not-provable"
           ]
         }
       },
@@ -1374,6 +1082,25 @@
         "counts": []
       },
       "reasons": [
+        {
+          "code": "store-binding-not-provable",
+          "loc": "packages/core/src/dialog/dialog-content.tsx:240:24",
+          "line": 240,
+          "column": 24,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "context",
+          "expressionBytes": 7,
+          "message": "`context` is used somewhere other than a read-through call, an event-prop member, or a ref-array member.",
+          "detail": {
+            "reason": "whole-bind-escapes"
+          },
+          "shape": "`DialogContent` was refused with `store-binding-not-provable` at `context`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
         {
           "code": "show-branch-not-static-at-capture",
           "loc": "packages/core/src/dialog/dialog-content.tsx:224:9",
@@ -1466,7 +1193,6 @@
           "linkedModules": 40,
           "codes": [
             "jsx-component-element",
-            "no-signal-source",
             "show-branch-not-static-at-capture"
           ]
         },
@@ -1476,7 +1202,6 @@
           "linkedModules": 10,
           "codes": [
             "jsx-component-element",
-            "no-signal-source",
             "show-branch-not-static-at-capture"
           ]
         }
@@ -1489,23 +1214,6 @@
       },
       "reasons": [
         {
-          "code": "no-signal-source",
-          "loc": "packages/core/src/dialog/dialog-portal.tsx:11:8",
-          "line": 11,
-          "column": 8,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "function DialogPortal(props: DialogPortalProps) { const context = useDialogContext(); return ( <Show when={context.contentPresent() || context.overlayPresent()}> <Portal {...props} /> </Show> ); }",
-          "expressionBytes": 207,
-          "message": "The component declares no source cell to resume.",
-          "detail": null,
-          "shape": "`DialogPortal` declares no `createSignal` of its own: it is a leaf that reads `useDialogContext` and renders from what it finds there, so there is no source cell for a resumed page to restore.",
-          "wouldChange": {
-            "kobalte": "Nothing local. A context-consuming leaf holds no state by construction — the cell this part would resume is declared by the provider above it, which this profile classifies separately.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes — resolve a consumer's cells through the provider that supplies its context, so a stateless leaf inherits the provider's source cells instead of refusing for having none."
-          }
-        },
-        {
           "code": "show-branch-not-static-at-capture",
           "loc": "packages/core/src/dialog/dialog-portal.tsx:15:9",
           "line": 15,
@@ -1514,7 +1222,7 @@
           "alsoInDist": true,
           "expression": "when={context.contentPresent() || context.overlayPresent()}",
           "expressionBytes": 59,
-          "message": "A `<Show>` guard has to be a derivation this pass can fold or measure. This one is neither, so which of the two branches the served markup carries cannot be settled before the page runs — and a region whose state the build does not know is a region the resume path would have to render.",
+          "message": "A `<Show>` guard that is a read-through call of a whole-bound context has no build-time branch, and recording the region absent would skip markup this pass still has to see.",
           "detail": null,
           "shape": "The `<Show>` guard is `when={context.contentPresent() || context.overlayPresent()}` — a presence accessor Kobalte derives from its disclosure state and reads back off context. The build can neither fold it nor measure it, so which branch the served markup carries is not settled before the page runs.",
           "wouldChange": {
@@ -1792,8 +1500,6 @@
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-spread",
             "signal-escapes-to-opaque-callee",
             "signal-escapes-unanalyzable-use"
           ]
@@ -1819,8 +1525,6 @@
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
             "jsx-dynamic-attribute",
-            "jsx-dynamic-attribute",
-            "jsx-spread",
             "signal-escapes-to-opaque-callee",
             "signal-escapes-unanalyzable-use"
           ]
@@ -1947,23 +1651,6 @@
           "message": "Attribute `data-key` is computed, so its rendered value is not static.",
           "detail": null,
           "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-key={selectableItem.dataKey()}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "loc": "packages/core/src/tabs/tabs-trigger.tsx:150:4",
-          "line": 150,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "data-orientation={context.orientation()}",
-          "expressionBytes": 40,
-          "message": "Attribute `data-orientation` is computed, so its rendered value is not static.",
-          "detail": null,
-          "shape": "`TabsTrigger` was refused with `jsx-dynamic-attribute` at `data-orientation={context.orientation()}`.",
           "wouldChange": {
             "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
             "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
@@ -2135,23 +1822,6 @@
           }
         },
         {
-          "code": "jsx-spread",
-          "loc": "packages/core/src/tabs/tabs-trigger.tsx:179:4",
-          "line": 179,
-          "column": 4,
-          "arm": "source",
-          "alsoInDist": true,
-          "expression": "{...others}",
-          "expressionBytes": 11,
-          "message": "Spread attributes hide the element's real props.",
-          "detail": null,
-          "shape": "`TabsTrigger` was refused with `jsx-spread` at `{...others}`.",
-          "wouldChange": {
-            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
-            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
-          }
-        },
-        {
           "code": "signal-escapes-unanalyzable-use",
           "loc": "packages/core/src/tabs/tabs-trigger.tsx:107:4",
           "line": 107,
@@ -2213,7 +1883,8 @@
             "jsx-component-element",
             "show-branch-not-static-at-capture",
             "signal-escapes-unanalyzable-use",
-            "signal-escapes-unanalyzable-use"
+            "signal-escapes-unanalyzable-use",
+            "store-binding-not-provable"
           ]
         },
         "dist": {
@@ -2225,7 +1896,8 @@
             "jsx-component-element",
             "show-branch-not-static-at-capture",
             "signal-escapes-unanalyzable-use",
-            "signal-escapes-unanalyzable-use"
+            "signal-escapes-unanalyzable-use",
+            "store-binding-not-provable"
           ]
         }
       },
@@ -2236,6 +1908,25 @@
         "counts": []
       },
       "reasons": [
+        {
+          "code": "store-binding-not-provable",
+          "loc": "packages/core/src/popover/popover-content.tsx:243:25",
+          "line": 243,
+          "column": 25,
+          "arm": "source",
+          "alsoInDist": true,
+          "expression": "context",
+          "expressionBytes": 7,
+          "message": "`context` is used somewhere other than a read-through call, an event-prop member, or a ref-array member.",
+          "detail": {
+            "reason": "whole-bind-escapes"
+          },
+          "shape": "`PopoverContent` was refused with `store-binding-not-provable` at `context`.",
+          "wouldChange": {
+            "kobalte": "Not characterised: this code was not observed across the twelve when the profile's prose was written.",
+            "analyzer": "NOT AUTHORIZED under zero-Solid-API-changes."
+          }
+        },
         {
           "code": "show-branch-not-static-at-capture",
           "loc": "packages/core/src/popover/popover-content.tsx:226:9",

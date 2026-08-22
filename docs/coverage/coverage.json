@@ -67,15 +67,15 @@
         "onlyBlockerFor": 0
       },
       {
-        "code": "jsx-dynamic-attribute",
+        "code": "jsx-dynamic-child-not-derivable",
         "components": 1,
         "occurrences": 2,
         "onlyBlockerFor": 0
       },
       {
-        "code": "jsx-dynamic-child-not-derivable",
+        "code": "jsx-dynamic-attribute",
         "components": 1,
-        "occurrences": 2,
+        "occurrences": 1,
         "onlyBlockerFor": 0
       },
       {
@@ -220,7 +220,7 @@
     ]
   },
   "taxonomy": {
-    "codes": 27,
+    "codes": 32,
     "observed": 16,
     "unobserved": [
       "store-binding-not-provable",
@@ -233,7 +233,12 @@
       "region-item-not-single-element",
       "region-key-not-derivable",
       "region-nested",
-      "jsx-unsupported-children"
+      "jsx-unsupported-children",
+      "derived-cell-initial-not-foldable",
+      "derived-cell-input-not-mount-stable",
+      "element-projection-not-own-host",
+      "element-projection-not-pure",
+      "callee-body-not-guarded-return"
     ],
     "observedBySegment": {
       "app": 7,
@@ -526,12 +531,6 @@
           "message": "Attribute `class` is computed, so its rendered value is not static.",
           "line": 33,
           "column": 7
-        },
-        {
-          "code": "jsx-dynamic-attribute",
-          "message": "Attribute `checked` is computed, so its rendered value is not static.",
-          "line": 46,
-          "column": 11
         },
         {
           "code": "handler-captures-unprovable-binding",

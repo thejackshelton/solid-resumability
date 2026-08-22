@@ -84,6 +84,34 @@
  * (function call vs assignment) to each forwarded path, before any effect
  * runs. A replay-free measured multi-ref is not this admission.
  *
+ * MEASURED ATTRIBUTE CARGO admits three derive shapes and one rest-spread,
+ * all structural, no user-name match. (a) A zero-argument call of a
+ * C1-summarized derived accessor is measured: the getter is not a source
+ * cell, so the attribute bakes zero bytes. A zero-argument call of a
+ * binding initialized to a framework memo whose callback `derive`s is that
+ * callback — the memo is transparent, no new cell. A memo callback that is
+ * exactly `const x = <call>(); if (x == null) return <literal>; return
+ * <pure-single-return-call>(…)` is that reconstructed derivation; a
+ * near-miss of that family refuses `callee-body-not-guarded-return`. A
+ * derived-accessor read in that binding stays measured: the deferred write
+ * is never evaluated, except an own-host element projection recorded on the
+ * cell and restored after ref replay. (b) A member read of an
+ * identity-class binding (`own-props-parameter` / `derived-rest-props-result`
+ * via `sourceBindingOf`) in a standalone frame is measured. (c) A
+ * ConditionalExpression whose test `deriveCondition`s and whose both
+ * branches `derive` is measured-propagating. `deriveCondition` walks
+ * negation, strict comparison, `==` / `!=` against literal null, and
+ * `&&` / `||` of those same shapes. A derived cell whose deferred write is
+ * a pure projection of the mount's own host (property chain and/or
+ * `getAttribute(<string literal>)`) is recorded with that projection and
+ * restored on the already-held ref before any attribute compute reads it.
+ * A projection of any other element refuses `element-projection-not-own-host`;
+ * a non-pure projection refuses `element-projection-not-pure`. A
+ * measured identity rest-spread (`{...ident}`) on an own-frame intrinsic
+ * bakes nothing; capture measures the attribute set and resume replays a
+ * spread assign. A call-valued or non-identity spread still refuses
+ * `jsx-spread`.
+ *
  * Addressing is offered in the component's OWN address space only: never
  * through a props boundary (`frame.props !== null`, exactly as inlining's one
  * hop) and never inside a keyed region, whose locators are rooted at an ITEM
@@ -98,9 +126,11 @@
  *     resolves to a module-scope const literal) nor an identity-class named
  *     attribute or identifier rest-spread (`own-props-parameter` or
  *     `derived-rest-props-result` via this pass's own `referenceOf` /
- *     `definition` machinery). Children still refuse: a mount container has no
- *     slot for them. Any other attribute refuses the address the same way as
- *     before — fall through to `jsx-component-element`, no new code.
+ *     `definition` machinery), nor a slot-valued store derivation, a proven
+ *     local-closure handler, or a ref-array of store members and identity
+ *     paths. Children still refuse: a mount container has no slot for them.
+ *     Any other attribute refuses the address the same way as before — fall
+ *     through to `jsx-component-element`, no new code.
  *   `ClaimedChildNotInAnalyzedSet` — the name does not resolve through
  *     `Symbol.definition()` to a module-scope component inside the analyzed set.
  *     This is inlining's condition (1), the same resolution, shared rather than
@@ -134,22 +164,41 @@ import {
 } from "./ast.ts";
 import { findComponent, findComponents, type ComponentSite } from "./discover.ts";
 import {
+  matchElementProjection,
+  matchGuardedReturn,
+  matchLiteralDecisionTree,
   parameterIndexOf,
   parameterIsAccessorOnly,
   parameterIsGetterOnly,
   returnedClosure,
   summarize,
   summarizeDerivedAccessor,
+  type DerivedAccessorSummary,
+  type GuardedReturnMatch,
+  type LiteralDecisionTree,
 } from "./summaries.ts";
-import { classifyStoreBinding, useContextCalls } from "./stores.ts";
-import { AMBIENT_MEMBER_CALLS, EVENT_TIME_SYNTAX, HANDLER_SYNTAX } from "./syntax.ts";
 import {
-  artifactKey,
+  classifyStoreBinding,
+  guardThrowContextCalls,
+  isWholeBindAdmittedUse,
+  isWholeBindInit,
+  isWholeBindReadThroughCall,
+  useContextCalls,
+} from "./stores.ts";
+import { AMBIENT_MEMBER_CALLS, EVENT_TIME_SYNTAX, HANDLER_SYNTAX, isTypeSyntax } from "./syntax.ts";
+import {
+  claimedArtifactKey,
+  identityRecordKey,
   isActionSlot,
+  isBindingIdentity,
   isCandidateRecordable,
   isCellSlot,
   isIdentitySlot,
+  isObjectStore,
+  isProvenHandlerIdentity,
+  isRefArrayIdentity,
   isRegionItemSlot,
+  isSlotValuedIdentity,
   isStoreReadSlot,
 } from "./types.ts";
 import type {
@@ -161,6 +210,8 @@ import type {
   BindingInfo,
   CaptureSlot,
   CellInfo,
+  ElementProjection,
+  SlotRewrite,
   ClaimedChild,
   ClassConditionInfo,
   ClassifyOptions,
@@ -168,13 +219,17 @@ import type {
   HandlerInfo,
   HandlerOrigin,
   IdentityBindingClass,
+  IdentityBindingProp,
   IdentityProp,
   InlinedChild,
   KeyedRegionInfo,
+  ProvenHandlerIdentityProp,
   Reason,
   ReasonCode,
   RecordableBindingClass,
   RecordedProp,
+  RefArrayIdentityProp,
+  RefArrayRecordElement,
   ShowRegionInfo,
   SignalCalleeIdentity,
   SignalEscapeRecord,
@@ -182,9 +237,11 @@ import type {
   SignalFamilyRecord,
   SignalInitializerRecord,
   SignalInitializerShape,
+  SlotValuedIdentityProp,
   SourceLoc,
   StaticValue,
   StoreInfo,
+  StoreReadCaptureSlot,
   StoreReadInfo,
   WiringRecord,
 } from "./types.ts";
@@ -231,6 +288,10 @@ const VOID_ELEMENTS = new Set([
  * reproducing them. */
 const COMPARISON = new Set(["===", "!==", "<", ">", "<=", ">="]);
 
+/** Boolean connectives `deriveCondition` walks. Both sides must themselves
+ * derive; a measured side keeps the operator in `source` rather than folding. */
+const LOGICAL = new Set(["&&", "||"]);
+
 /** JSX prop names that differ from the HTML attribute they produce. */
 const ATTRIBUTE_ALIASES: Record<string, string> = { className: "class", htmlFor: "for" };
 
@@ -259,19 +320,23 @@ interface Accessor {
   access: "read" | "write";
   name: string;
   /** True for a callee-local getter bound at a derived-accessor call site.
-   * Template-byte uses still refuse (the getter is not a source cell). */
+   * A zero-argument call of that getter is a measured derivation: no source
+   * cell, so a template-byte use bakes nothing. */
   derived?: boolean;
 }
 
 /** A folded text derivation. `source` goes into `structure.js`'s `compute`, so
  * it must be expressed purely in capture slots; `inlined` records whether any
  * part came from OUTSIDE the component. When nothing did, `source` is the
- * author's expression verbatim, which keeps the artifacts byte-identical. */
+ * author's expression verbatim, which keeps the artifacts byte-identical.
+ * `rewrites` are resolved-node ↔ slot pairings; the printer substitutes at
+ * exactly those nodes. */
 interface Derived {
   value: StaticValue;
   slots: CaptureSlot[];
   source: string;
   inlined: boolean;
+  rewrites: SlotRewrite[];
   /**
    * True once any part of the derivation reached through a store read, which has
    * no build-time value. `value` is then meaningless and nothing folds it: the
@@ -284,10 +349,12 @@ interface Derived {
 }
 
 /** What a summarized helper's parameter is bound to at a call site: a cell
- * accessor (usable only as `p()` / `p(x)`), or an already-folded value. */
+ * accessor (usable only as `p()` / `p(x)`), an already-folded value, or an
+ * object-literal argument whose fields were each derived. */
 type ParameterBinding =
   | { kind: "accessor"; accessor: Accessor }
-  | { kind: "value"; derived: Derived };
+  | { kind: "value"; derived: Derived }
+  | { kind: "object"; fields: Map<string, Derived> };
 
 /** What a child's `props.X` stands for once the call site proved what was
  * passed — the whole vocabulary of the props boundary, with no "object",
@@ -416,6 +483,65 @@ function isGlobalUndefined(mod: Module, node: Node): boolean {
   return (mod.referenceOf(inner)?.symbol ?? null) === null;
 }
 
+/** The identifier at the bottom of a non-computed member chain, or null. */
+function memberBase(node: Node): Node | null {
+  let current: Node | null = unwrap(node);
+  while (current != null && current.type === "MemberExpression") {
+    if (current.computed === true) return null;
+    current = unwrap(current.object);
+  }
+  return current != null && current.type === "Identifier" ? current : null;
+}
+
+function joinRewrites(...groups: Array<SlotRewrite[] | undefined>): SlotRewrite[] {
+  const out: SlotRewrite[] = [];
+  for (const group of groups) {
+    if (group !== undefined) out.push(...group);
+  }
+  return out;
+}
+
+/**
+ * Prints `root` after substituting each recorded slot name at its resolved
+ * node. Mutation is restored so the analyzed AST is unchanged. Empty
+ * `rewrites` is `printExpression` — already-closed expressions stay
+ * byte-identical.
+ */
+function printWithSlotRewrites(root: Node, rewrites: readonly SlotRewrite[]): string {
+  if (rewrites.length === 0) return printExpression(root);
+  const restores: Array<() => void> = [];
+  try {
+    for (const rewrite of rewrites) {
+      restores.push(replaceNodeWithIdentifier(rewrite.node, rewrite.name));
+    }
+    return printExpression(root);
+  } finally {
+    for (let index = restores.length - 1; index >= 0; index--) restores[index]!();
+  }
+}
+
+function replaceNodeWithIdentifier(node: object, name: string): () => void {
+  const target = node as Node;
+  const saved: Record<string, unknown> = {};
+  for (const key of Object.keys(target)) saved[key] = target[key];
+  for (const key of Object.keys(target)) delete target[key];
+  target.type = "Identifier";
+  target.name = name;
+  if (typeof saved.start === "number") target.start = saved.start;
+  if (typeof saved.end === "number") target.end = saved.end;
+  return () => {
+    for (const key of Object.keys(target)) delete target[key];
+    Object.assign(target, saved);
+  };
+}
+
+function derivedSource(
+  expression: Node,
+  parts: { inlined: boolean; source: string; rewrites: SlotRewrite[] },
+): string {
+  return parts.inlined ? parts.source : printWithSlotRewrites(expression, parts.rewrites);
+}
+
 /** A value this seat will freeze as a cell initial: a literal, `void 0`, or
  * the global `undefined`. */
 function frozenInitial(mod: Module, node: Node): { ok: true; value: StaticValue } | { ok: false } {
@@ -509,24 +635,152 @@ const ADDRESSING_STACK: string[] = [];
  * which is what leaves `<Show>` and `<For>` outside inlining and addressing
  * alike, and `componentSiteOf` insists on something `findComponents` counted —
  * so a composed child is always a component the coverage report already knows.
+ *
+ * A JSXIdentifier in a JSXMemberExpression object is not a recorded
+ * reference — `referenceOf` is null there — so that arm uses `resolve()`.
  */
 function resolveChildComponent(
   mod: Module,
   element: Node,
 ): { module: Module; site: ComponentSite } | null {
   const name = element.openingElement.name;
-  if (name.type !== "JSXIdentifier") return null;
+  if (name.type === "JSXIdentifier") {
+    const symbol = mod.referenceOf(name)?.symbol ?? null;
+    if (symbol === null) return null;
+    return siteFromSymbol(symbol);
+  }
+  if (name.type === "JSXMemberExpression") return resolveMemberComponent(mod, element, name);
+  return null;
+}
 
-  const symbol = mod.referenceOf(name)?.symbol ?? null;
-  if (symbol === null) return null;
-
+function siteFromSymbol(symbol: YukuSymbol): { module: Module; site: ComponentSite } | null {
   const definition = symbol.definition();
   if (definition == null || definition.symbol == null) return null;
-
   const site = componentSiteOf(definition.module, definition.symbol);
   if (site === null) return null;
-
   return { module: definition.module, site };
+}
+
+function isImportBinding(mod: Module, symbol: YukuSymbol): boolean {
+  return mod.imports.some((record) => record.local?.id === symbol.id);
+}
+
+function exportDefinition(
+  mod: Module,
+  name: string,
+  seen: Set<string> = new Set(),
+): { module: Module; symbol: YukuSymbol } | null {
+  if (seen.has(mod.path)) return null;
+  seen.add(mod.path);
+
+  for (const record of mod.exports) {
+    if (record.name !== name) continue;
+    if (record.local != null) {
+      const definition = record.local.definition();
+      if (definition == null || definition.symbol == null) return null;
+      return { module: definition.module, symbol: definition.symbol };
+    }
+    if (record.resolvedModule != null && record.fromName != null) {
+      return exportDefinition(record.resolvedModule, record.fromName, seen);
+    }
+  }
+
+  for (const record of mod.exports) {
+    if (!record.isStar || record.resolvedModule == null) continue;
+    const inner = exportDefinition(record.resolvedModule, name, seen);
+    if (inner !== null) return inner;
+  }
+  return null;
+}
+
+function identifierDefinition(mod: Module, node: Node): { module: Module; symbol: YukuSymbol } | null {
+  if (node == null || node.type !== "Identifier") return null;
+  const symbol = mod.referenceOf(node)?.symbol ?? null;
+  if (symbol === null) return null;
+  const definition = symbol.definition();
+  if (definition == null || definition.symbol == null) return null;
+  return { module: definition.module, symbol: definition.symbol };
+}
+
+function thunkReturnedIdentifier(fn: Node): Node | null {
+  if ((fn.params ?? []).length !== 0) return null;
+  const body = fn.body;
+  if (body == null) return null;
+  if (body.type !== "BlockStatement") return unwrap(body);
+  const statements: Node[] = body.body ?? [];
+  if (statements.length !== 1 || statements[0].type !== "ReturnStatement") return null;
+  return statements[0].argument == null ? null : unwrap(statements[0].argument);
+}
+
+function resolvePropertyValue(mod: Module, raw: Node): { module: Module; symbol: YukuSymbol } | null {
+  const value = unwrap(raw);
+  if (value == null) return null;
+  if (value.type === "Identifier") return identifierDefinition(mod, value);
+  if (value.type !== "ArrowFunctionExpression" && value.type !== "FunctionExpression") return null;
+  return identifierDefinition(mod, thunkReturnedIdentifier(value));
+}
+
+function namespaceObjectMember(
+  mod: Module,
+  symbol: YukuSymbol,
+  name: string,
+): { module: Module; symbol: YukuSymbol } | null {
+  if (symbol.declarations.length !== 1) return null;
+  const declaration: Node = symbol.declarations[0];
+  const declarator: Node = mod.parentOf(declaration);
+  if (declarator == null || declarator.type !== "VariableDeclarator") return null;
+  if (declarator.id !== declaration) return null;
+  const init = unwrap(declarator.init);
+  if (init == null) return null;
+
+  let object: Node | null = null;
+  if (init.type === "ObjectExpression") object = init;
+  else if (init.type === "CallExpression" && (init.arguments ?? []).length === 1) {
+    const argument = unwrap(init.arguments[0]);
+    if (argument != null && argument.type === "ObjectExpression") object = argument;
+  }
+  if (object == null) return null;
+
+  for (const property of object.properties ?? []) {
+    if (property == null || property.type !== "Property") continue;
+    if (property.computed === true) continue;
+    if (property.key?.type !== "Identifier" || property.key.name !== name) continue;
+    return resolvePropertyValue(mod, property.value);
+  }
+  return null;
+}
+
+function resolveMemberComponent(
+  mod: Module,
+  element: Node,
+  name: Node,
+): { module: Module; site: ComponentSite } | null {
+  const object = name.object;
+  const property = name.property;
+  if (object == null || object.type !== "JSXIdentifier") return null;
+  if (property == null || property.type !== "JSXIdentifier") return null;
+
+  const objectSymbol = mod.resolve(object.name, mod.scopeOf(element), "value");
+  if (objectSymbol === null) return null;
+
+  const definition = objectSymbol.definition();
+  if (definition == null) return null;
+
+  if (definition.symbol == null) {
+    const exported = exportDefinition(definition.module, property.name);
+    if (exported === null) return null;
+    const site = componentSiteOf(exported.module, exported.symbol);
+    if (site === null) return null;
+    return { module: exported.module, site };
+  }
+
+  if (!isImportBinding(mod, objectSymbol)) return null;
+
+  const member = namespaceObjectMember(definition.module, definition.symbol, property.name);
+  if (member === null) return null;
+  const site = componentSiteOf(member.module, member.symbol);
+  if (site === null) return null;
+  return { module: member.module, site };
 }
 
 /**
@@ -599,7 +853,25 @@ function recordsMatch(
 }
 
 function identityKey(prop: IdentityProp): string {
-  return JSON.stringify([prop.name, prop.role, prop.bindingClass, prop.source.name, prop.source.path]);
+  return identityRecordKey(prop);
+}
+
+/** Cross-artifact store id: the createContext binding's module and name.
+ * Local `sN` ids stay on the component that bound the store. Two distinct
+ * stores cannot share a (contextModule, context) pair. */
+function inheritedStoreId(store: StoreInfo): string {
+  return `${store.contextModule}#${store.context}`;
+}
+
+function retargetStore(store: StoreInfo): StoreInfo {
+  return { ...store, id: inheritedStoreId(store) };
+}
+
+function retargetCapture(slot: CaptureSlot, from: string, to: string): CaptureSlot {
+  if ((isStoreReadSlot(slot) || isActionSlot(slot)) && slot.store === from) {
+    return { ...slot, store: to };
+  }
+  return slot;
 }
 
 function identityRecordsMatch(
@@ -686,16 +958,40 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     if (list == null || list.length === 0) return null;
     return list;
   })();
-  const identityByName: Map<string, IdentityProp> | null = (() => {
+  const identityByName: Map<string, IdentityBindingProp> | null = (() => {
     if (identityRecords === null) return null;
-    const map = new Map<string, IdentityProp>();
+    const map = new Map<string, IdentityBindingProp>();
     for (const prop of identityRecords) {
       if (prop.role === "attribute") map.set(prop.name, prop);
     }
     return map.size > 0 ? map : null;
   })();
-  const identitySpread: IdentityProp | null =
-    identityRecords?.find((prop) => prop.role === "spread-of-identifier") ?? null;
+  const identitySpread: IdentityBindingProp | null =
+    identityRecords?.find((prop): prop is IdentityBindingProp => prop.role === "spread-of-identifier") ?? null;
+  const slotValuedByName: Map<string, SlotValuedIdentityProp> | null = (() => {
+    if (identityRecords === null) return null;
+    const map = new Map<string, SlotValuedIdentityProp>();
+    for (const prop of identityRecords) {
+      if (isSlotValuedIdentity(prop)) map.set(prop.name, prop);
+    }
+    return map.size > 0 ? map : null;
+  })();
+  const provenHandlerByName: Map<string, ProvenHandlerIdentityProp> | null = (() => {
+    if (identityRecords === null) return null;
+    const map = new Map<string, ProvenHandlerIdentityProp>();
+    for (const prop of identityRecords) {
+      if (isProvenHandlerIdentity(prop)) map.set(prop.name, prop);
+    }
+    return map.size > 0 ? map : null;
+  })();
+  const refArrayByName: Map<string, RefArrayIdentityProp> | null = (() => {
+    if (identityRecords === null) return null;
+    const map = new Map<string, RefArrayIdentityProp>();
+    for (const prop of identityRecords) {
+      if (isRefArrayIdentity(prop)) map.set(prop.name, prop);
+    }
+    return map.size > 0 ? map : null;
+  })();
 
   const refuse: Refuse = (code, message, node, detail) => {
     reasons.push({ code, message, loc: locOf(node), ...(detail ? { detail } : {}) });
@@ -709,12 +1005,22 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   /** symbol id -> what that binding is allowed to do. */
   const accessors = new Map<number, Accessor>();
   const cells: CellInfo[] = [];
+  /** Setter symbol of each source cell, for the derived-cell mount-stable check. */
+  const setterByCell = new Map<string, YukuSymbol>();
+  /** Derived-accessor call sites, admitted into `cells` only if captured as a read. */
+  const pendingDerived: Array<{
+    cellId: string;
+    name: string;
+    call: Node;
+    summary: DerivedAccessorSummary;
+  }> = [];
 
   /** Deferred: an accessor handed to a child as a prop has NOT escaped if the
    * child is inlined, which is only known after the markup walk. */
   const pendingAudits: Array<{ symbol: YukuSymbol; role: "read" | "write" | "opaque" }> = [];
 
   const factories = signalFactorySymbols(moduleInfo);
+  const memoFactories = frameworkExportSymbols(moduleInfo, "createMemo");
   const signalCalls = moduleInfo
     .findAll("CallExpression")
     .filter((call: Node) => contains(component.fn, call) && isFactoryCall(moduleInfo, call, factories));
@@ -807,6 +1113,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
 
     accessors.set(getter.id, { cellId, access: "read", name: getter.name });
     accessors.set(setter.id, { cellId, access: "write", name: setter.name });
+    setterByCell.set(cellId, setter);
     cells.push({ id: cellId, getter: getter.name, setter: setter.name, initial, loc: locOf(call) });
 
     pendingAudits.push({ symbol: getter, role: "read" });
@@ -836,12 +1143,14 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     const result = moduleInfo.symbolOf(pattern);
     if (result === null) continue;
 
+    const cellId = `d${derivedIndex++}`;
     accessors.set(result.id, {
-      cellId: `d${derivedIndex++}`,
+      cellId,
       access: "read",
       name: result.name,
       derived: true,
     });
+    pendingDerived.push({ cellId, name: result.name, call, summary });
     pendingAudits.push({ symbol: result, role: "read" });
   }
 
@@ -873,9 +1182,9 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   const slotReads = new Set<Node>();
 
   const contextCalls = useContextCalls(moduleInfo, component.fn);
+  const helperContextCalls = guardThrowContextCalls(moduleInfo, component.fn);
 
-  contextCalls.forEach((call: Node, index: number) => {
-    const outcome = classifyStoreBinding(moduleInfo, call, `s${index}`, locOf);
+  const admitStoreOutcome = (outcome: ReturnType<typeof classifyStoreBinding>): void => {
     if (outcome.kind === "refused") {
       // One code for the store's identity, one for the read slot in particular:
       // a binding refused for its read path is a different fix than a binding
@@ -893,14 +1202,74 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       readSlots.set(site.symbol.id, site.read);
       readSites.push(site);
     }
+  };
+
+  contextCalls.forEach((call: Node, index: number) => {
+    admitStoreOutcome(classifyStoreBinding(moduleInfo, call, `s${index}`, locOf));
   });
+
+  let helperStoreIndex = contextCalls.length;
+  for (const call of helperContextCalls) {
+    if (!isWholeBindInit(moduleInfo, call)) continue;
+    admitStoreOutcome(classifyStoreBinding(moduleInfo, call, `s${helperStoreIndex}`, locOf));
+    helperStoreIndex += 1;
+  }
+
+  if (identityRecords !== null) {
+    const inherited: StoreInfo[] = [];
+    const seen = new Set<string>();
+    const take = (store: StoreInfo): boolean => {
+      const id = store.id;
+      const existing = stores.find((candidate) => candidate.id === id) ?? inherited.find((candidate) => candidate.id === id);
+      if (existing !== undefined) {
+        if (existing.context !== store.context || existing.contextModule !== store.contextModule) {
+          refuse(
+            "store-binding-not-provable",
+            "A claimed-child store id already names a different store in this component.",
+            component.fn,
+            { reason: "claimed-store-id-collision", store: id },
+          );
+          return false;
+        }
+        return true;
+      }
+      if (seen.has(id)) return true;
+      seen.add(id);
+      inherited.push(store);
+      return true;
+    };
+    for (const prop of identityRecords) {
+      if (isSlotValuedIdentity(prop) && !take(prop.store)) break;
+      if (isProvenHandlerIdentity(prop)) {
+        let collided = false;
+        for (const store of prop.stores) {
+          if (!take(store)) {
+            collided = true;
+            break;
+          }
+        }
+        if (collided) break;
+      }
+      if (isRefArrayIdentity(prop)) {
+        let collided = false;
+        for (const element of prop.elements) {
+          if (element.kind === "store" && !take(element.storeInfo)) {
+            collided = true;
+            break;
+          }
+        }
+        if (collided) break;
+      }
+    }
+    stores.push(...inherited);
+  }
 
   // "Has a source cell at all" is about the PRESENCE of a factory call, so this
   // keys on `signalCalls` rather than `reasons.length === 0`: unmaskable, and no
   // double-report of a signal found but refused. A `useContext` counts as a
   // declared source either way — `store-binding-not-provable` already says the
   // source could not be named.
-  if (signalCalls.length === 0 && contextCalls.length === 0) {
+  if (signalCalls.length === 0 && contextCalls.length === 0 && helperContextCalls.length === 0) {
     refuse("no-signal-source", "The component declares no source cell to resume.", component.fn);
   }
 
@@ -1213,6 +1582,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       source: JSON.stringify(value),
       inlined: false,
       measured: false,
+      rewrites: [],
     };
   }
 
@@ -1221,7 +1591,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
    * runtime state, never a frozen value. A spread identity covers every
    * member; a named identity covers only that name.
    */
-  function identityOf(node: Node): { prop: IdentityProp; member: string } | null {
+  function identityOf(node: Node): { prop: IdentityBindingProp; member: string } | null {
     if ((identityByName === null && identitySpread === null) || ownPropsSymbol === null) return null;
     const expression = unwrap(node);
     if (expression == null || expression.type !== "MemberExpression") return null;
@@ -1238,12 +1608,28 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     return null;
   }
 
-  function identitySlotOf(identity: { prop: IdentityProp; member: string }): CaptureSlot {
+  function identitySlotOf(identity: { prop: IdentityBindingProp; member: string }): CaptureSlot {
     return {
       name: identity.member,
       kind: "identity",
       bindingClass: identity.prop.bindingClass,
       source: identity.prop.source,
+    };
+  }
+
+  /**
+   * A member read of an identity-class binding in this component's own
+   * frame, with no parent-handed identity record. Measured: the member is
+   * runtime cargo, never a frozen value.
+   */
+  function standaloneIdentityMember(node: Node): CaptureSlot | null {
+    const source = sourceBindingOf(node);
+    if (source === null || source.path.length === 0) return null;
+    return {
+      name: String(source.path[source.path.length - 1]),
+      kind: "identity",
+      bindingClass: source.class,
+      source: { name: source.name, path: source.path },
     };
   }
 
@@ -1561,6 +1947,11 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       onKind?.(attributeKindOf(attribute));
 
       if (attribute.type === "JSXSpreadAttribute") {
+        const spread = collectMeasuredRestSpread(frame, attribute, locator);
+        if (spread !== null) {
+          open += spread;
+          continue;
+        }
         frame.refuse("jsx-spread", "Spread attributes hide the element's real props.", attribute);
         continue;
       }
@@ -1805,9 +2196,50 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         }
       }
 
+      if (
+        element.type === "MemberExpression" &&
+        element.computed !== true &&
+        element.property?.type === "Identifier"
+      ) {
+        const object = unwrap(element.object);
+        if (object != null && object.type === "Identifier") {
+          const symbol = frame.mod.referenceOf(object)?.symbol ?? null;
+          const read = symbol === null ? undefined : readSlots.get(symbol.id);
+          if (read !== undefined && read.path.length === 0) {
+            const key: string = element.property.name;
+            const store = stores.find((candidate) => candidate.id === read.store);
+            if (store !== undefined && isObjectStore(store) && store.keys.includes(key)) {
+              slots.push({ name: key, kind: "store-read", store: read.store, path: [key] });
+              continue;
+            }
+          }
+        }
+      }
+
       const source = sourceBindingOf(element);
       if (source === null || source.path.length === 0) return null;
       const member = String(source.path[source.path.length - 1]);
+      const recordedRef = refArrayByName?.get(member);
+      if (recordedRef !== undefined) {
+        for (const entry of recordedRef.elements) {
+          if (entry.kind === "store") {
+            slots.push({
+              name: String(entry.path[entry.path.length - 1] ?? entry.store),
+              kind: "store-read",
+              store: entry.store,
+              path: entry.path,
+            });
+            continue;
+          }
+          slots.push({
+            name: String(entry.source.path[entry.source.path.length - 1] ?? entry.source.name),
+            kind: "identity",
+            bindingClass: entry.bindingClass,
+            source: entry.source,
+          });
+        }
+        continue;
+      }
       slots.push({
         name: member,
         kind: "identity",
@@ -1831,6 +2263,65 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       origin: "component",
       loc: frame.locOf(attribute),
     });
+
+    return "";
+  }
+
+  /**
+   * An own-frame identifier rest-spread of an identity-class binding.
+   * Bakes nothing: capture measures the attribute set, resume replays a
+   * spread assign. Call-valued and non-identity spreads stay refused.
+   */
+  function collectMeasuredRestSpread(frame: Frame, attribute: Node, locator: string): string | null {
+    if (frame.props !== null) return null;
+    const argument = unwrap(attribute.argument);
+    if (argument == null || argument.type !== "Identifier") return null;
+    const source = sourceBindingOf(argument);
+    if (source === null) return null;
+
+    sink.bindings.push({
+      id: `${sink.prefix}b${sink.bindings.length}`,
+      kind: "spread",
+      locator,
+      captures: sortedSlots([
+        {
+          name: argument.name,
+          kind: "identity",
+          bindingClass: source.class,
+          source: { name: source.name, path: source.path },
+        },
+      ]),
+      expression: argument.name,
+      initialFrom: "capture",
+      origin: "component",
+      loc: frame.locOf(attribute),
+    });
+
+    if (identityRecords !== null) {
+      for (const prop of identityRecords) {
+        if (isSlotValuedIdentity(prop)) {
+          sink.bindings.push({
+            id: `${sink.prefix}b${sink.bindings.length}`,
+            kind: "attribute",
+            locator,
+            attribute: prop.name,
+            property: false,
+            captures: sortedSlots(prop.captures),
+            expression: prop.expression,
+            initialValue: null,
+            initialValueFrom: "capture",
+            origin: "component",
+            loc: frame.locOf(attribute),
+          });
+        }
+        if (isProvenHandlerIdentity(prop)) {
+          const event = EVENT_PROP.exec(prop.name);
+          if (event !== null) {
+            pushHandler(event[1].toLowerCase(), locator, prop.source, prop.captures, frame.locOf(attribute), "component");
+          }
+        }
+      }
+    }
 
     return "";
   }
@@ -1860,8 +2351,9 @@ export function classifySite(module: Module, component: ComponentSite, options?:
 
     const derived = deriveCondition(frame, expression);
     if (derived === null) return null;
-    // Identity cargo in an attribute position reaches template bytes.
-    if (derived.slots.some(isIdentitySlot)) return null;
+    // A non-measured identity would reach template bytes. Measured identity
+    // bakes nothing: capture fills the hole.
+    if (derived.slots.some(isIdentitySlot) && !derived.measured) return null;
 
     const name = ATTRIBUTE_ALIASES[propName] ?? propName;
     const property = STATE_PROPERTIES[tag]?.has(propName) === true;
@@ -1879,6 +2371,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       initialValueFrom: derived.measured ? "capture" : "derivation",
       origin: derived.inlined ? "helper" : "component",
       loc: frame.locOf(attribute),
+      slotRewrites: derived.rewrites,
     });
 
     if (property || derived.measured) return "";
@@ -1914,6 +2407,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     const statics: string[] = [];
     const conditions: ClassConditionInfo[] = [];
     const slots = new Map<string, CaptureSlot>();
+    const rewrites: SlotRewrite[] = [];
     let measured = false;
     let inlined = false;
 
@@ -1963,6 +2457,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         measured = measured || condition.measured;
         inlined = inlined || condition.inlined;
         for (const slot of condition.slots) slots.set(slot.name, slot);
+        rewrites.push(...condition.rewrites);
         conditions.push({
           name,
           expression: condition.source,
@@ -1988,6 +2483,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         captures: sortedSlots([...slots.values()]),
         origin: inlined ? "helper" : "component",
         loc: frame.locOf(attribute),
+        slotRewrites: rewrites,
       });
     }
 
@@ -2002,47 +2498,112 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   }
 
   /**
-   * The derivation walk plus the two boolean shapes an attribute or a class
-   * condition needs: negation, and a strict comparison. Deliberately NOT part of
-   * `derive` itself — a text child that compares two values is a different
-   * question, asked in a different slice, and widening the walk here would answer
-   * it by accident.
+   * The derivation walk plus the boolean shapes an attribute or a class
+   * condition needs: negation, a strict comparison, and `&&` / `||` of
+   * those same shapes. Deliberately NOT part of `derive` itself — a text
+   * child that compares two values is a different question, asked in a
+   * different slice, and widening the walk here would answer it by accident.
    */
-  function deriveCondition(frame: Frame, node: Node): Derived | null {
+  function deriveCondition(
+    frame: Frame,
+    node: Node,
+    env: Map<number, ParameterBinding> | null = null,
+    mod: Module = frame.mod,
+  ): Derived | null {
     const expression = unwrap(node);
     if (expression == null) return null;
 
     if (expression.type === "UnaryExpression" && expression.operator === "!") {
-      const argument = deriveCondition(frame, expression.argument);
+      const argument = deriveCondition(frame, expression.argument, env, mod);
       if (argument === null) return null;
+      const rewrites = argument.rewrites;
       return {
         value: argument.measured ? false : !argument.value,
         measured: argument.measured,
         slots: argument.slots,
         // Parenthesized when reassembled, for the reason arithmetic is.
-        source: argument.inlined ? `!(${argument.source})` : printExpression(expression),
+        source: derivedSource(expression, {
+          inlined: argument.inlined,
+          source: `!(${argument.source})`,
+          rewrites,
+        }),
         inlined: argument.inlined,
+        rewrites,
+      };
+    }
+
+    if (expression.type === "LogicalExpression" && LOGICAL.has(expression.operator)) {
+      const left = deriveCondition(frame, expression.left, env, mod);
+      const right = deriveCondition(frame, expression.right, env, mod);
+      if (left === null || right === null) return null;
+      const measured = left.measured || right.measured;
+      const inlined = left.inlined || right.inlined;
+      const rewrites = joinRewrites(left.rewrites, right.rewrites);
+      return {
+        value: measured
+          ? false
+          : expression.operator === "&&"
+            ? left.value && right.value
+            : left.value || right.value,
+        measured,
+        slots: [...left.slots, ...right.slots],
+        source: derivedSource(expression, {
+          inlined,
+          source: `(${left.source} ${expression.operator} ${right.source})`,
+          rewrites,
+        }),
+        inlined,
+        rewrites,
       };
     }
 
     if (expression.type === "BinaryExpression" && COMPARISON.has(expression.operator)) {
-      const left = deriveCondition(frame, expression.left);
-      const right = deriveCondition(frame, expression.right);
+      const left = deriveCondition(frame, expression.left, env, mod);
+      const right = deriveCondition(frame, expression.right, env, mod);
       if (left === null || right === null) return null;
       const measured = left.measured || right.measured;
       const inlined = left.inlined || right.inlined;
+      const rewrites = joinRewrites(left.rewrites, right.rewrites);
       return {
         value: measured ? false : compare(expression.operator, left.value, right.value),
         measured,
         slots: [...left.slots, ...right.slots],
-        source: inlined
-          ? `(${left.source} ${expression.operator} ${right.source})`
-          : printExpression(expression),
+        source: derivedSource(expression, {
+          inlined,
+          source: `(${left.source} ${expression.operator} ${right.source})`,
+          rewrites,
+        }),
         inlined,
+        rewrites,
       };
     }
 
-    return deriveText(frame, expression);
+    if (
+      expression.type === "BinaryExpression" &&
+      (expression.operator === "==" || expression.operator === "!=") &&
+      nullLiteralSide(expression) !== null
+    ) {
+      const left = deriveCondition(frame, expression.left, env, mod);
+      const right = deriveCondition(frame, expression.right, env, mod);
+      if (left === null || right === null) return null;
+      const measured = left.measured || right.measured;
+      const inlined = left.inlined || right.inlined;
+      const rewrites = joinRewrites(left.rewrites, right.rewrites);
+      return {
+        value: measured ? false : compare(expression.operator, left.value, right.value),
+        measured,
+        slots: [...left.slots, ...right.slots],
+        source: derivedSource(expression, {
+          inlined,
+          source: `(${left.source} ${expression.operator} ${right.source})`,
+          rewrites,
+        }),
+        inlined,
+        rewrites,
+      };
+    }
+
+    return derive(mod, expression, env, frame);
   }
 
   // -------------------------------------------------------- two-state regions
@@ -2122,6 +2683,16 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           "page writes. A region is a guard rather than a toggle: an absent one has no DOM and " +
           "nothing here builds it, so a guard this page can flip for itself is refused instead " +
           "of being quietly pinned to whatever it said at build time.",
+      );
+    }
+
+    // A whole-bind read-through call is a method on the provider value, not a
+    // data-slot projection. Recording the region absent would skip the child
+    // and hide every refusal under it.
+    if (derived.slots.some((slot) => isStoreReadSlot(slot) && slot.path.length === 0)) {
+      return refuseGuard(
+        "A `<Show>` guard that is a read-through call of a whole-bound context has no build-time " +
+          "branch, and recording the region absent would skip markup this pass still has to see.",
       );
     }
 
@@ -2447,7 +3018,8 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     reach(frame, container);
     const expression = unwrap(container.expression);
     if (expression == null || expression.type === "JSXEmptyExpression") return;
-    if (deriveText(frame, expression) !== null) return;
+    const derived = deriveText(frame, expression);
+    if (derived !== null && !(derived.slots.some(isIdentitySlot) && identityRecords === null)) return;
     frame.refuse(
       "jsx-dynamic-child-not-derivable",
       "This text child is not derivable from cell values and literals alone.",
@@ -2463,7 +3035,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     if (expression == null || expression.type === "JSXEmptyExpression") return "";
 
     const derived = deriveText(frame, expression);
-    if (derived === null) {
+    if (derived === null || (derived.slots.some(isIdentitySlot) && identityRecords === null)) {
       frame.refuse(
         "jsx-dynamic-child-not-derivable",
         "This text child is not derivable from cell values and literals alone.",
@@ -2492,9 +3064,235 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       origin: derived.inlined ? "helper" : "component",
       // A binding lifted out of another module reports a location in THAT source.
       loc: frame.locOf(container),
+      slotRewrites: derived.rewrites,
     });
 
     return escapeText(initialText);
+  }
+
+  /**
+   * The zero-parameter framework-memo callback bound to `callee`, or null.
+   * The memo itself is not a cell: see-through substitutes the callback
+   * at each zero-argument call.
+   */
+  function memoCallbackNode(mod: Module, callee: Node): Node | null {
+    if (callee.type !== "Identifier") return null;
+    const symbol = mod.referenceOf(callee)?.symbol ?? null;
+    if (symbol === null || symbol.declarations.length !== 1) return null;
+    const declaration: Node = symbol.declarations[0];
+    const parent: Node = mod.parentOf(declaration);
+    if (parent == null || parent.type !== "VariableDeclarator" || parent.id !== declaration) {
+      return null;
+    }
+    const init = unwrap(parent.init);
+    if (init == null || init.type !== "CallExpression") return null;
+    const initCallee = unwrap(init.callee);
+    if (initCallee == null || initCallee.type !== "Identifier") return null;
+    const initSymbol = mod.referenceOf(initCallee)?.symbol ?? null;
+    if (initSymbol === null || !memoFactories.has(initSymbol.id)) return null;
+    if (init.arguments.length < 1) return null;
+    const callback = unwrap(init.arguments[0]);
+    if (
+      callback == null ||
+      (callback.type !== "ArrowFunctionExpression" && callback.type !== "FunctionExpression")
+    ) {
+      return null;
+    }
+    if ((callback.params?.length ?? 0) !== 0) return null;
+    return callback.body == null ? null : callback;
+  }
+
+  function singleReturnArgument(callback: Node): Node | null {
+    if (callback.body == null) return null;
+    if (callback.body.type !== "BlockStatement") return unwrap(callback.body);
+    const returns = (callback.body.body as Node[]).filter(
+      (statement: Node) => statement.type === "ReturnStatement",
+    );
+    if (returns.length !== 1 || returns[0].argument == null) return null;
+    return unwrap(returns[0].argument);
+  }
+
+  function callbackHasWrite(callback: Node): boolean {
+    let found = false;
+    moduleInfo.walk(
+      {
+        AssignmentExpression: () => {
+          found = true;
+        },
+        UpdateExpression: () => {
+          found = true;
+        },
+        CallExpression: (node: Node) => {
+          if (found) return;
+          const callee = unwrap(node.callee);
+          if (callee == null || callee.type !== "Identifier") return;
+          const symbol = moduleInfo.referenceOf(callee)?.symbol ?? null;
+          if (symbol === null) return;
+          const accessor = accessors.get(symbol.id);
+          if (accessor !== undefined && accessor.access === "write") found = true;
+        },
+      },
+      callback,
+    );
+    return found;
+  }
+
+  function bindGuardedArg(
+    frame: Frame,
+    argument: Node,
+    localSymbol: YukuSymbol | null,
+    scrutinee: Derived,
+  ): ParameterBinding | null {
+    if (argument.type === "Identifier" && localSymbol !== null) {
+      const argumentSymbol = moduleInfo.referenceOf(argument)?.symbol ?? null;
+      if (argumentSymbol !== null && argumentSymbol.id === localSymbol.id) {
+        return { kind: "value", derived: scrutinee };
+      }
+    }
+
+    if (argument.type === "ObjectExpression") {
+      const fields = new Map<string, Derived>();
+      for (const property of argument.properties ?? []) {
+        if (property.type !== "Property" || property.computed === true) return null;
+        if (property.key?.type !== "Identifier") return null;
+        const fieldNode = unwrap(property.value);
+        if (fieldNode != null && fieldNode.type === "Identifier" && localSymbol !== null) {
+          const fieldSymbol = moduleInfo.referenceOf(fieldNode)?.symbol ?? null;
+          if (fieldSymbol !== null && fieldSymbol.id === localSymbol.id) {
+            fields.set(property.key.name, scrutinee);
+            continue;
+          }
+        }
+        const field = derive(moduleInfo, property.value, null, frame);
+        if (field === null) return null;
+        fields.set(property.key.name, field);
+      }
+      return { kind: "object", fields };
+    }
+
+    const accessor = accessorOf(argument);
+    if (accessor !== null) return { kind: "accessor", accessor };
+
+    const derived = derive(moduleInfo, argument, null, frame);
+    return derived === null ? null : { kind: "value", derived };
+  }
+
+  function joinTernary(test: Derived, consequent: Derived, alternate: Derived): Derived {
+    const measured = test.measured || consequent.measured || alternate.measured;
+    const inlined = test.inlined || consequent.inlined || alternate.inlined;
+    const rewrites = joinRewrites(test.rewrites, consequent.rewrites, alternate.rewrites);
+    return {
+      value: measured ? "" : test.value ? consequent.value : alternate.value,
+      measured,
+      slots: [...test.slots, ...consequent.slots, ...alternate.slots],
+      source: `(${test.source} ? ${consequent.source} : ${alternate.source})`,
+      inlined,
+      rewrites,
+    };
+  }
+
+  function deriveDecisionTree(
+    frame: Frame,
+    tree: LiteralDecisionTree,
+    env: Map<number, ParameterBinding>,
+  ): Derived | null {
+    const inner = new Map(env);
+    for (const local of tree.locals) {
+      const init = derive(tree.module, local.init, inner, frame);
+      if (init === null) return null;
+      const symbol = tree.module.symbolOf(local.local);
+      if (symbol === null) return null;
+      inner.set(symbol.id, { kind: "value", derived: init });
+    }
+
+    let current = deriveCondition(frame, tree.otherwise, inner, tree.module);
+    if (current === null) return null;
+    for (let index = tree.branches.length - 1; index >= 0; index--) {
+      const branch = tree.branches[index];
+      const test = deriveCondition(frame, branch.test, inner, tree.module);
+      const value = deriveCondition(frame, branch.value, inner, tree.module);
+      if (test === null || value === null) return null;
+      current = joinTernary(test, value, current);
+    }
+    return current;
+  }
+
+  function deriveGuardedReturn(frame: Frame, match: Extract<GuardedReturnMatch, { kind: "exact" }>): Derived | null {
+    const guard = literalValue(match.guardLiteral);
+    if (!guard.ok) return null;
+
+    const scrutinee = derive(moduleInfo, match.call, null, frame);
+    if (scrutinee === null) return null;
+
+    const args: Node[] = match.terminal.arguments ?? [];
+    const localSymbol = moduleInfo.symbolOf(match.local);
+
+    const bindArgs = (paramSymbols: YukuSymbol[]): Map<number, ParameterBinding> | null => {
+      if (args.length !== paramSymbols.length) return null;
+      const env = new Map<number, ParameterBinding>();
+      for (let index = 0; index < args.length; index++) {
+        const argument = unwrap(args[index]);
+        if (argument == null) return null;
+        const bound = bindGuardedArg(frame, argument, localSymbol, scrutinee);
+        if (bound === null) return null;
+        env.set(paramSymbols[index].id, bound);
+      }
+      return env;
+    };
+
+    const summary = summarize(moduleInfo, match.terminal.callee);
+    let thenBranch: Derived | null = null;
+    if (summary !== null) {
+      const env = bindArgs(summary.paramSymbols);
+      if (env !== null) {
+        thenBranch = deriveCondition(frame, summary.returned, env, summary.module);
+      }
+    }
+    if (thenBranch === null) {
+      const tree = matchLiteralDecisionTree(moduleInfo, match.terminal.callee);
+      if (tree === null) {
+        return null;
+      }
+      const env = bindArgs(tree.paramSymbols);
+      if (env === null) {
+        return null;
+      }
+      thenBranch = deriveDecisionTree(frame, tree, env);
+    }
+    if (thenBranch === null) return null;
+
+    const measured = scrutinee.measured || thenBranch.measured;
+    const rewrites = joinRewrites(scrutinee.rewrites, thenBranch.rewrites);
+    return {
+      value: measured ? "" : scrutinee.value == null ? guard.value : thenBranch.value,
+      measured,
+      slots: [...scrutinee.slots, ...thenBranch.slots],
+      source: `(${scrutinee.source} == null) ? ${JSON.stringify(guard.value)} : ${thenBranch.source}`,
+      inlined: true,
+      rewrites,
+    };
+  }
+
+  function deriveMemoCallback(frame: Frame, callee: Node): Derived | null {
+    const callback = memoCallbackNode(frame.mod, callee);
+    if (callback === null) return null;
+
+    const guarded = matchGuardedReturn(frame.mod, callback);
+    if (guarded?.kind === "wider" || (guarded?.kind === "exact" && callbackHasWrite(callback))) {
+      frame.refuse(
+        "callee-body-not-guarded-return",
+        "The callback body is not the admitted guarded-return shape: one const binding of a call, a null-guard that returns a literal, and a terminal call.",
+        callback,
+      );
+      return null;
+    }
+    if (guarded?.kind === "exact") {
+      return deriveGuardedReturn(frame, guarded);
+    }
+
+    const body = singleReturnArgument(callback);
+    if (body === null) return null;
+    return deriveCondition(frame, body);
   }
 
   function deriveText(frame: Frame, node: Node): Derived | null {
@@ -2518,18 +3316,28 @@ export function classifySite(module: Module, component: ComponentSite, options?:
   ): Derived | null {
     const expression = unwrap(node);
     if (expression == null) return null;
+    if (expression.type === "ChainExpression") return derive(mod, expression.expression, env, frame);
     /** The author's own text, used whenever nothing beneath was substituted. */
     const verbatim = (): string => printExpression(expression);
 
     if (expression.type === "Literal") {
       const literal = literalValue(expression);
       return literal.ok
-        ? { value: literal.value, slots: [], source: verbatim(), inlined: false, measured: false }
+        ? { value: literal.value, slots: [], source: verbatim(), inlined: false, measured: false, rewrites: [] }
         : null;
     }
 
+    if (isVoid0(expression)) {
+      return { value: null, slots: [], source: verbatim(), inlined: false, measured: false, rewrites: [] };
+    }
+
     // Only reachable in a helper frame: a parameter standing for a plain value.
+    // The global `undefined` is a frozen initial in every frame, same seat as
+    // the cell-initializer widening.
     if (expression.type === "Identifier") {
+      if (isGlobalUndefined(mod, expression)) {
+        return { value: null, slots: [], source: verbatim(), inlined: false, measured: false, rewrites: [] };
+      }
       if (env === null) return null;
       const symbol = mod.referenceOf(expression)?.symbol ?? null;
       const bound = symbol === null ? undefined : env.get(symbol.id);
@@ -2537,7 +3345,19 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       return { ...bound.derived, inlined: true };
     }
 
-    if (expression.type === "MemberExpression") {
+    if (expression.type === "MemberExpression" || expression.type === "OptionalMemberExpression") {
+      if (env !== null && expression.computed !== true && expression.property?.type === "Identifier") {
+        const object = unwrap(expression.object);
+        if (object != null && object.type === "Identifier") {
+          const symbol = mod.referenceOf(object)?.symbol ?? null;
+          const bound = symbol === null ? undefined : env.get(symbol.id);
+          if (bound?.kind === "object") {
+            const field = bound.fields.get(expression.property.name);
+            return field === undefined ? null : { ...field, inlined: true };
+          }
+        }
+      }
+
       // A read of the store's data: `state.todos.length`. The BASE is what was
       // proven — slot `path` of this provider's value — and the property chain
       // above it is the author's own expression, carried as source and evaluated
@@ -2549,12 +3369,14 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       const read = env === null && frame.props === null && mod === moduleInfo ? storeReadChain(expression) : null;
       if (read !== null) {
         derivedReads.add(read.base);
+        const rewrites = [{ node: read.base, name: read.info.name }];
         return {
           value: "",
           slots: [{ name: read.info.name, kind: "store-read", store: read.info.store, path: read.info.path }],
-          source: verbatim(),
+          source: printWithSlotRewrites(expression, rewrites),
           inlined: false,
           measured: true,
+          rewrites,
         };
       }
 
@@ -2565,12 +3387,15 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       const itemRead =
         env === null && frame.props === null && mod === moduleInfo ? regionItemChain(expression) : null;
       if (itemRead !== null) {
+        const base = memberBase(expression);
+        const rewrites = base != null ? [{ node: base, name: itemRead.name }] : [];
         return {
           value: "",
           slots: [itemRead],
-          source: verbatim(),
+          source: printWithSlotRewrites(expression, rewrites),
           inlined: false,
           measured: true,
+          rewrites,
         };
       }
 
@@ -2580,12 +3405,53 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         if (recorded !== null) return recorded;
         const identity = identityOf(expression);
         if (identity !== null) {
+          const slot = identitySlotOf(identity);
+          const base = memberBase(expression);
+          const rewrites = base != null ? [{ node: base, name: slot.name }] : [];
           return {
             value: "",
-            slots: [identitySlotOf(identity)],
-            source: verbatim(),
+            slots: [slot],
+            source: printWithSlotRewrites(expression, rewrites),
             inlined: false,
             measured: true,
+            rewrites,
+          };
+        }
+        if (
+          expression.type === "MemberExpression" &&
+          expression.computed !== true &&
+          expression.property?.type === "Identifier" &&
+          ownPropsSymbol !== null
+        ) {
+          const object = unwrap(expression.object);
+          if (object != null && object.type === "Identifier") {
+            const symbol = moduleInfo.referenceOf(object)?.symbol ?? null;
+            if (symbol !== null && symbol.id === ownPropsSymbol.id) {
+              const slotValued = slotValuedByName?.get(expression.property.name);
+              if (slotValued !== undefined) {
+                return {
+                  value: "",
+                  slots: slotValued.captures,
+                  source: slotValued.expression,
+                  inlined: false,
+                  measured: true,
+                  rewrites: [],
+                };
+              }
+            }
+          }
+        }
+        const standalone = standaloneIdentityMember(expression);
+        if (standalone !== null) {
+          const base = memberBase(expression);
+          const rewrites = base != null ? [{ node: base, name: standalone.name }] : [];
+          return {
+            value: "",
+            slots: [standalone],
+            source: printWithSlotRewrites(expression, rewrites),
+            inlined: false,
+            measured: true,
+            rewrites,
           };
         }
       }
@@ -2597,11 +3463,42 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       return { ...bound.derived, inlined: true };
     }
 
-    if (expression.type === "CallExpression") {
+    if (expression.type === "CallExpression" || expression.type === "OptionalCallExpression") {
       const callee = unwrap(expression.callee);
 
+      const hostRead = deriveOwnElementRead(mod, expression, env, frame);
+      if (hostRead !== null) return hostRead;
+
+      const method = derivePureMethod(mod, expression, env, frame);
+      if (method !== null) return method;
+
       // `props.count()` inside an inlined child: a read of the *parent's* cell.
-      if (callee != null && callee.type === "MemberExpression") {
+      if (callee != null && (callee.type === "MemberExpression" || callee.type === "OptionalMemberExpression")) {
+        if (
+          env === null &&
+          frame.props === null &&
+          mod === moduleInfo &&
+          callee.computed !== true &&
+          callee.property?.type === "Identifier"
+        ) {
+          const object = unwrap(callee.object);
+          if (object != null && object.type === "Identifier") {
+            const symbol = mod.referenceOf(object)?.symbol ?? null;
+            const read = symbol === null ? undefined : readSlots.get(symbol.id);
+            if (read !== undefined && read.path.length === 0) {
+              derivedReads.add(object);
+              const rewrites = [{ node: object, name: read.name }];
+              return {
+                value: "",
+                slots: [{ name: read.name, kind: "store-read", store: read.store, path: read.path }],
+                source: printWithSlotRewrites(expression, rewrites),
+                inlined: false,
+                measured: true,
+                rewrites,
+              };
+            }
+          }
+        }
         if (env !== null) return null;
         const bound = propBindingOf(frame, callee);
         if (bound === null || bound.kind !== "accessor") return null;
@@ -2617,6 +3514,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           source: `${accessor.name}()`,
           inlined: true,
           measured: false,
+          rewrites: [],
         };
       }
 
@@ -2632,7 +3530,18 @@ export function classifySite(module: Module, component: ComponentSite, options?:
             : envAccessor(env, symbol.id);
 
       if (accessor !== undefined) {
-        if (accessor.derived) return null;
+        const rewrites = [{ node: callee, name: accessor.name }];
+        if (accessor.derived) {
+          if (accessor.access !== "read" || expression.arguments.length !== 0) return null;
+          return {
+            value: "",
+            slots: [{ name: accessor.name, cell: accessor.cellId, access: "read" }],
+            source: env === null ? printWithSlotRewrites(expression, rewrites) : `${accessor.name}()`,
+            inlined: env !== null,
+            measured: true,
+            rewrites,
+          };
+        }
         if (accessor.access !== "read" || expression.arguments.length !== 0) return null;
         const cell = cells.find((candidate) => candidate.id === accessor.cellId);
         if (cell === undefined) return null;
@@ -2641,10 +3550,21 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           slots: [{ name: accessor.name, cell: cell.id, access: "read" }],
           // In a helper frame the printed callee is the HELPER's parameter name,
           // meaningless to the artifact; the slot name is what gets written.
-          source: env === null ? verbatim() : `${accessor.name}()`,
+          source: env === null ? printWithSlotRewrites(expression, rewrites) : `${accessor.name}()`,
           inlined: env !== null,
           measured: false,
+          rewrites,
         };
+      }
+
+      // A zero-argument call of a binding initialized to a framework memo
+      // whose callback derives is that callback. The memo is transparent:
+      // resume never reconstructs it, and no new cell is allocated.
+      if (env === null && frame.props === null && expression.arguments.length === 0) {
+        const derived = deriveMemoCallback(frame, callee);
+        // `inlined` forces the reconstructed source: the memo name is not a
+        // resume-time slot, so the author's call must not be printed.
+        if (derived !== null) return { ...derived, inlined: true };
       }
 
       // A summarizable pure formatter, folded against this call site's
@@ -2664,14 +3584,46 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       const value = measured ? "" : fold(expression.operator, left.value, right.value);
       if (value === undefined) return null;
       const inlined = left.inlined || right.inlined;
+      const rewrites = joinRewrites(left.rewrites, right.rewrites);
       return {
         value,
         measured,
         slots: [...left.slots, ...right.slots],
         // Parenthesized when reassembled: the parts no longer sit in the source
         // positions whose precedence made them safe.
-        source: inlined ? `(${left.source} ${expression.operator} ${right.source})` : verbatim(),
+        source: derivedSource(expression, {
+          inlined,
+          source: `(${left.source} ${expression.operator} ${right.source})`,
+          rewrites,
+        }),
         inlined,
+        rewrites,
+      };
+    }
+
+    if (isVoid0(expression)) {
+      return { value: null, slots: [], source: verbatim(), inlined: false, measured: false, rewrites: [] };
+    }
+
+    if (expression.type === "ConditionalExpression") {
+      const condition = deriveCondition(frame, expression.test, env, mod);
+      const consequent = derive(mod, expression.consequent, env, frame);
+      const alternate = derive(mod, expression.alternate, env, frame);
+      if (condition === null || consequent === null || alternate === null) return null;
+      const measured = condition.measured || consequent.measured || alternate.measured;
+      const inlined = condition.inlined || consequent.inlined || alternate.inlined;
+      const rewrites = joinRewrites(condition.rewrites, consequent.rewrites, alternate.rewrites);
+      return {
+        value: measured ? "" : condition.value ? consequent.value : alternate.value,
+        measured,
+        slots: [...condition.slots, ...consequent.slots, ...alternate.slots],
+        source: derivedSource(expression, {
+          inlined,
+          source: `(${condition.source} ? ${consequent.source} : ${alternate.source})`,
+          rewrites,
+        }),
+        inlined,
+        rewrites,
       };
     }
 
@@ -2683,8 +3635,13 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         value: argument.measured ? "" : expression.operator === "-" ? -numeric : numeric,
         measured: argument.measured,
         slots: argument.slots,
-        source: argument.inlined ? `(${expression.operator}${argument.source})` : verbatim(),
+        source: derivedSource(expression, {
+          inlined: argument.inlined,
+          source: `(${expression.operator}${argument.source})`,
+          rewrites: argument.rewrites,
+        }),
         inlined: argument.inlined,
+        rewrites: argument.rewrites,
       };
     }
 
@@ -2694,6 +3651,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       let inlined = false;
       let measured = false;
       const slots: CaptureSlot[] = [];
+      const rewrites: SlotRewrite[] = [];
 
       for (let i = 0; i < expression.quasis.length; i++) {
         const quasi = expression.quasis[i];
@@ -2707,10 +3665,18 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           inlined = inlined || part.inlined;
           measured = measured || part.measured;
           slots.push(...part.slots);
+          rewrites.push(...part.rewrites);
         }
       }
 
-      return { value: measured ? "" : value, slots, source: inlined ? `\`${rebuilt}\`` : verbatim(), inlined, measured };
+      return {
+        value: measured ? "" : value,
+        slots,
+        source: derivedSource(expression, { inlined, source: `\`${rebuilt}\``, rewrites }),
+        inlined,
+        measured,
+        rewrites,
+      };
     }
 
     return null;
@@ -2806,6 +3772,103 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     const symbol = moduleInfo.referenceOf(expression)?.symbol ?? null;
     if (symbol === null) return null;
     return accessors.get(symbol.id) ?? null;
+  }
+
+  function frozenModuleStringArray(mod: Module, node: Node): string[] | null {
+    const ident = unwrap(node);
+    if (ident == null || ident.type !== "Identifier") return null;
+    const symbol = mod.referenceOf(ident)?.symbol ?? null;
+    if (symbol === null || symbol.declarations.length !== 1) return null;
+    const declaration: Node = symbol.declarations[0];
+    const parent: Node = mod.parentOf(declaration);
+    if (parent == null || parent.type !== "VariableDeclarator" || parent.id !== declaration) return null;
+    const grand: Node = mod.parentOf(parent);
+    if (grand == null || grand.type !== "VariableDeclaration" || grand.kind !== "const") return null;
+    const init = unwrap(parent.init);
+    if (init == null || init.type !== "ArrayExpression") return null;
+    const values: string[] = [];
+    for (const element of init.elements ?? []) {
+      if (element == null) return null;
+      const literal = literalValue(unwrap(element));
+      if (!literal.ok || typeof literal.value !== "string") return null;
+      values.push(literal.value);
+    }
+    return values;
+  }
+
+  function derivePureMethod(
+    mod: Module,
+    call: Node,
+    env: Map<number, ParameterBinding> | null,
+    frame: Frame,
+  ): Derived | null {
+    const callee = unwrap(call.callee);
+    if (callee == null || (callee.type !== "MemberExpression" && callee.type !== "OptionalMemberExpression")) {
+      return null;
+    }
+    if (callee.computed === true || callee.property?.type !== "Identifier") return null;
+    const name: string = callee.property.name;
+    const args: Node[] = call.arguments ?? [];
+
+    if ((name === "toLowerCase" || name === "toUpperCase" || name === "trim") && args.length === 0) {
+      const object = derive(mod, callee.object, env, frame);
+      if (object === null) return null;
+      const text = typeof object.value === "string" ? object.value : "";
+      const next =
+        name === "toLowerCase" ? text.toLowerCase() : name === "toUpperCase" ? text.toUpperCase() : text.trim();
+      return {
+        value: object.measured ? "" : next,
+        measured: object.measured,
+        slots: object.slots,
+        source: `${object.source}.${name}()`,
+        inlined: true,
+        rewrites: object.rewrites,
+      };
+    }
+
+    if (name === "indexOf" && args.length === 1) {
+      const table = frozenModuleStringArray(mod, callee.object);
+      if (table === null) return null;
+      const needle = derive(mod, args[0], env, frame);
+      if (needle === null) return null;
+      const index = typeof needle.value === "string" ? table.indexOf(needle.value) : -1;
+      return {
+        value: needle.measured ? "" : index,
+        measured: needle.measured,
+        slots: needle.slots,
+        source: `${JSON.stringify(table)}.indexOf(${needle.source})`,
+        inlined: true,
+        rewrites: needle.rewrites,
+      };
+    }
+
+    return null;
+  }
+
+  function deriveOwnElementRead(
+    mod: Module,
+    node: Node,
+    env: Map<number, ParameterBinding> | null,
+    frame: Frame,
+  ): Derived | null {
+    if (env !== null || frame.props !== null || mod !== moduleInfo) return null;
+    const getterIds = new Set<number>();
+    for (const [id, accessor] of accessors) {
+      if (accessor.access === "read") getterIds.add(id);
+    }
+    const match = matchElementProjection(mod, node, getterIds);
+    if (match === null || match.kind !== "projection" || match.steps.length === 0) return null;
+    const accessor = accessors.get(match.getterId);
+    if (accessor === undefined || accessor.access !== "read") return null;
+    const rewrites = [{ node: match.base, name: accessor.name }];
+    return {
+      value: "",
+      slots: [{ name: accessor.name, cell: accessor.cellId, access: "read" }],
+      source: printWithSlotRewrites(node, rewrites),
+      inlined: false,
+      measured: true,
+      rewrites,
+    };
   }
 
   // ------------------------------------------------------- props see-through
@@ -3011,6 +4074,164 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     };
   }
 
+  function slotValuedAttribute(frame: Frame, attribute: Node): SlotValuedIdentityProp | null {
+    if (attribute.type === "JSXSpreadAttribute") return null;
+    if (attribute.name?.type !== "JSXIdentifier") return null;
+    if (attribute.value?.type !== "JSXExpressionContainer") return null;
+    const expression = unwrap(attribute.value.expression);
+    if (expression == null || expression.type === "JSXEmptyExpression") return null;
+
+    const derived = derive(frame.mod, expression, null, frame);
+    if (derived === null || derived.slots.length === 0) return null;
+    if (!derived.slots.every(isStoreReadSlot)) return null;
+
+    const storeIds = new Set(derived.slots.map((slot) => slot.store));
+    if (storeIds.size !== 1) return null;
+    const storeId = derived.slots[0].store;
+    const store = stores.find((candidate) => candidate.id === storeId);
+    if (store === undefined) return null;
+
+    const inherited = retargetStore(store);
+    const captures: StoreReadCaptureSlot[] = derived.slots.map((slot) => ({
+      ...slot,
+      store: inherited.id,
+    }));
+
+    return {
+      name: attribute.name.name,
+      role: "slot-valued",
+      expression: printExpression(expression),
+      captures,
+      store: inherited,
+    };
+  }
+
+  function provenHandlerAttribute(attribute: Node): ProvenHandlerIdentityProp | null {
+    if (attribute.type === "JSXSpreadAttribute") return null;
+    if (attribute.name?.type !== "JSXIdentifier") return null;
+    if (attribute.value?.type !== "JSXExpressionContainer") return null;
+    const expression = unwrap(attribute.value.expression);
+    if (expression == null || expression.type === "JSXEmptyExpression") return null;
+
+    let fn: Node | null = null;
+    if (expression.type === "ArrowFunctionExpression" || expression.type === "FunctionExpression") {
+      fn = expression;
+    } else if (expression.type === "Identifier") {
+      const symbol = moduleInfo.referenceOf(expression)?.symbol ?? null;
+      if (symbol === null) return null;
+      fn = localValueOf(symbol);
+      if (fn == null || (fn.type !== "ArrowFunctionExpression" && fn.type !== "FunctionExpression")) return null;
+    } else {
+      return null;
+    }
+
+    let rejected = false;
+    const slots = auditHandlerBody(fn, () => {
+      rejected = true;
+    }, true);
+    if (rejected) return null;
+
+    const idMap = new Map<string, string>();
+    const inheritedStores: StoreInfo[] = [];
+    for (const slot of slots) {
+      if (!isStoreReadSlot(slot) && !isActionSlot(slot)) continue;
+      if (idMap.has(slot.store)) continue;
+      const store = stores.find((candidate) => candidate.id === slot.store);
+      if (store === undefined) return null;
+      const inherited = retargetStore(store);
+      idMap.set(slot.store, inherited.id);
+      inheritedStores.push(inherited);
+    }
+
+    const captures = slots.map((slot) => {
+      if ((isStoreReadSlot(slot) || isActionSlot(slot)) && idMap.has(slot.store)) {
+        return retargetCapture(slot, slot.store, idMap.get(slot.store)!);
+      }
+      return slot;
+    });
+
+    return {
+      name: attribute.name.name,
+      role: "proven-handler",
+      handler: `s${handlers.length}`,
+      source: provenHandlerSource(fn, captures),
+      captures,
+      stores: inheritedStores,
+    };
+  }
+
+  /** Rewrites identity member reads (`p.onClick`) to the capture slot name so
+   * the emitted handler closes over `create`'s parameters, not the parent's
+   * locals. Bare imported callees are already the slot name. */
+  function provenHandlerSource(fn: Node, slots: CaptureSlot[]): string {
+    const wanted = new Map<string, string>();
+    for (const slot of slots) {
+      if (!isIdentitySlot(slot) || slot.source.path.length === 0) continue;
+      wanted.set(`${slot.source.name}:${JSON.stringify(slot.source.path)}`, slot.name);
+    }
+    if (wanted.size === 0) return printExpression(fn);
+    const rewrites: SlotRewrite[] = [];
+    moduleInfo.walk(
+      {
+        MemberExpression: (node: Node) => {
+          const source = sourceBindingOf(node);
+          if (source === null || source.path.length === 0) return;
+          const name = wanted.get(`${source.name}:${JSON.stringify(source.path)}`);
+          if (name === undefined) return;
+          rewrites.push({ node, name });
+        },
+      },
+      fn,
+    );
+    return printWithSlotRewrites(fn, rewrites);
+  }
+
+  function refArrayAttribute(attribute: Node): RefArrayIdentityProp | null {
+    if (attribute.type === "JSXSpreadAttribute") return null;
+    if (attribute.name?.type !== "JSXIdentifier" || attribute.name.name !== "ref") return null;
+    if (attribute.value?.type !== "JSXExpressionContainer") return null;
+    const expression = unwrap(attribute.value.expression);
+    if (expression == null || expression.type !== "ArrayExpression") return null;
+    if (expression.elements.length === 0) return null;
+
+    const elements: RefArrayRecordElement[] = [];
+    for (const raw of expression.elements as Node[]) {
+      if (raw == null || raw.type === "SpreadElement") return null;
+      const element = unwrap(raw);
+      if (element == null) return null;
+
+      if (
+        element.type === "MemberExpression" &&
+        element.computed !== true &&
+        element.property?.type === "Identifier"
+      ) {
+        const object = unwrap(element.object);
+        if (object != null && object.type === "Identifier") {
+          const symbol = moduleInfo.referenceOf(object)?.symbol ?? null;
+          const read = symbol === null ? undefined : readSlots.get(symbol.id);
+          if (read !== undefined && read.path.length === 0) {
+            const key: string = element.property.name;
+            const store = stores.find((candidate) => candidate.id === read.store);
+            if (store === undefined || !isObjectStore(store) || !store.keys.includes(key)) return null;
+            const inherited = retargetStore(store);
+            elements.push({ kind: "store", store: inherited.id, path: [key], storeInfo: inherited });
+            continue;
+          }
+        }
+      }
+
+      const source = sourceBindingOf(element);
+      if (source === null || source.path.length === 0) return null;
+      elements.push({
+        kind: "identity",
+        bindingClass: source.class,
+        source: { name: source.name, path: source.path },
+      });
+    }
+
+    return { name: "ref", role: "ref-array", elements };
+  }
+
   /**
    * ADDRESSES a child instead of absorbing it: returns the element-shaped hole
    * the parent's template carries, or null and leaves the element to
@@ -3042,9 +4263,11 @@ export function classifySite(module: Module, component: ComponentSite, options?:
 
     // (1) BARE — `ClaimedChildNotBare`. Children still refuse: a mount
     // container has nowhere to put them. Attributes no longer refuse the
-    // address when every one is a v1 build-constant or an identity-class
-    // named attribute / identifier rest-spread. Any other attribute falls
-    // through to `jsx-component-element`, same as today — no new code.
+    // address when every one is a v1 build-constant, an identity-class
+    // named attribute / identifier rest-spread, a slot-valued store
+    // derivation, a proven local-closure handler, or a ref-array of store
+    // members and identity paths. Any other attribute falls through to
+    // `jsx-component-element`, same as today — no new code.
     if (jsxChildren(element).length > 0) return null;
 
     const recorded: RecordedProp[] = [];
@@ -3058,6 +4281,21 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       const identity = identityAttribute(attribute);
       if (identity !== null) {
         identities.push(identity);
+        continue;
+      }
+      const slotValued = slotValuedAttribute(frame, attribute);
+      if (slotValued !== null) {
+        identities.push(slotValued);
+        continue;
+      }
+      const handler = provenHandlerAttribute(attribute);
+      if (handler !== null) {
+        identities.push(handler);
+        continue;
+      }
+      const refArray = refArrayAttribute(attribute);
+      if (refArray !== null) {
+        identities.push(refArray);
         continue;
       }
       return null;
@@ -3102,12 +4340,15 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     }
     if (childAnalysis.status !== "provable" || childAnalysis.html === "") return null;
 
-    const artifact = artifactKey(childModule.path, child.name);
+    const artifact = claimedArtifactKey(childModule.path, child.name, recorded, identities);
 
     // Artifact identity: one artifact per recorded valuation AND per identity
     // record. A second address of the same child with a different record is
-    // declined.
-    const prior = claimedChildren.find((entry) => entry.artifact === artifact);
+    // declined — compared by (module, component), not by the qualified id,
+    // so two records cannot share a directory and cannot both be claimed.
+    const prior = claimedChildren.find(
+      (entry) => entry.module === childModule.path && entry.component === child.name,
+    );
     if (
       prior !== undefined &&
       (!recordsMatch(prior.recordedProps, recorded) || !identityRecordsMatch(prior.identityProps, identities))
@@ -3147,7 +4388,14 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       if (!literal.ok) return null;
       return {
         kind: "value",
-        derived: { value: literal.value, slots: [], source: printExpression(value), inlined: true, measured: false },
+        derived: {
+          value: literal.value,
+          slots: [],
+          source: printExpression(value),
+          inlined: true,
+          measured: false,
+          rewrites: [],
+        },
       };
     }
 
@@ -3288,31 +4536,73 @@ export function classifySite(module: Module, component: ComponentSite, options?:
    */
   function actionHandler(raw: Node): { name: string; slot: CaptureSlot; loc: SourceLoc } | null {
     const inner = unwrap(raw);
-    if (inner == null || inner.type !== "Identifier") return null;
+    if (inner == null) return null;
 
-    const symbol = moduleInfo.referenceOf(inner)?.symbol ?? null;
-    if (symbol === null) return null;
+    if (inner.type === "Identifier") {
+      const symbol = moduleInfo.referenceOf(inner)?.symbol ?? null;
+      if (symbol === null) return null;
 
-    const action = actionSlots.get(symbol.id);
-    if (action === undefined) return null;
+      const action = actionSlots.get(symbol.id);
+      if (action === undefined) return null;
 
-    return {
-      name: symbol.name,
-      slot: { name: symbol.name, kind: "action", store: action.store, path: action.path },
-      loc: locOf(inner),
-    };
+      return {
+        name: symbol.name,
+        slot: { name: symbol.name, kind: "action", store: action.store, path: action.path },
+        loc: locOf(inner),
+      };
+    }
+
+    if (inner.type === "MemberExpression" && inner.computed !== true && inner.property?.type === "Identifier") {
+      const object = unwrap(inner.object);
+      if (object == null || object.type !== "Identifier") return null;
+      const symbol = moduleInfo.referenceOf(object)?.symbol ?? null;
+      if (symbol === null) return null;
+      const read = readSlots.get(symbol.id);
+      if (read === undefined || read.path.length !== 0) return null;
+      const key: string = inner.property.name;
+      const store = stores.find((candidate) => candidate.id === read.store);
+      if (store === undefined || !isObjectStore(store) || !store.keys.includes(key)) return null;
+      return {
+        name: key,
+        slot: { name: key, kind: "action", store: read.store, path: [key] },
+        loc: locOf(inner),
+      };
+    }
+
+    return null;
   }
 
   /** An identity-class event prop: `onClick={props.onClick}`. The listener
    * IS the identity slot; no body is extracted and no value is frozen. */
   function identityEventHandler(raw: Node): { name: string; slot: CaptureSlot; loc: SourceLoc } | null {
     const identity = identityOf(raw);
-    if (identity === null) return null;
-    return {
-      name: identity.member,
-      slot: identitySlotOf(identity),
-      loc: locOf(raw),
-    };
+    if (identity !== null) {
+      return {
+        name: identity.member,
+        slot: identitySlotOf(identity),
+        loc: locOf(raw),
+      };
+    }
+    const expression = unwrap(raw);
+    if (
+      expression != null &&
+      expression.type === "MemberExpression" &&
+      expression.computed !== true &&
+      expression.property?.type === "Identifier" &&
+      ownPropsSymbol !== null
+    ) {
+      const object = unwrap(expression.object);
+      if (object != null && object.type === "Identifier") {
+        const symbol = moduleInfo.referenceOf(object)?.symbol ?? null;
+        if (symbol !== null && symbol.id === ownPropsSymbol.id) {
+          const recorded = provenHandlerByName?.get(expression.property.name);
+          if (recorded !== undefined && recorded.captures.length === 1) {
+            return { name: recorded.name, slot: recorded.captures[0], loc: locOf(raw) };
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /**
@@ -3547,7 +4837,14 @@ export function classifySite(module: Module, component: ComponentSite, options?:
    * accessors and nothing else, no globals, a body inside the supported syntax.
    * `bindProp` passes a diverting `recordRefusal`, because a handler audited as a
    * CANDIDATE PROP VALUE must be admitted whole or leave no trace. */
-  function auditHandlerBody(fn: Node, recordRefusal: Refuse = refuse): CaptureSlot[] {
+  function isAnalyzedOrImportedCallee(symbol: YukuSymbol): boolean {
+    if (isImportedSymbol(symbol)) return true;
+    const definition = symbol.definition();
+    if (definition == null || definition.symbol == null) return false;
+    return functionOfSymbol(definition.module, definition.symbol) != null;
+  }
+
+  function auditHandlerBody(fn: Node, recordRefusal: Refuse = refuse, provenAddress = false): CaptureSlot[] {
     const slots: CaptureSlot[] = [];
 
     // `capturesOf` is the load-bearing query: shadowing- and alias-correct free
@@ -3568,6 +4865,13 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       // decide what a read binding may be used for.
       const read = readSlots.get(capture.symbol.id);
       if (read !== undefined) {
+        if (read.path.length === 0) {
+          if (capture.references.every((reference) => isWholeBindReadThroughCall(moduleInfo, reference.node))) {
+            slots.push({ name: capture.symbol.name, kind: "store-read", store: read.store, path: read.path });
+            for (const reference of capture.references) slotReads.add(reference.node);
+          }
+          continue;
+        }
         if (capture.references.every(isSlotMemberRead)) {
           slots.push({ name: capture.symbol.name, kind: "store-read", store: read.store, path: read.path });
           for (const reference of capture.references) slotReads.add(reference.node);
@@ -3584,6 +4888,71 @@ export function classifySite(module: Module, component: ComponentSite, options?:
       if (item !== undefined) {
         slots.push(item);
         continue;
+      }
+
+      if (provenAddress && isAnalyzedOrImportedCallee(capture.symbol)) {
+        if (
+          capture.references.every((reference) => {
+            const parent: Node = moduleInfo.parentOf(reference.node);
+            return parent != null && parent.type === "CallExpression" && parent.callee === reference.node;
+          })
+        ) {
+          // A same-module helper stays a free callee in the printed body (the
+          // first-party `relay` shape). An imported callee is not in the
+          // handler module, so it is published as an identity the page provides.
+          if (isImportedSymbol(capture.symbol)) {
+            slots.push({
+              name: capture.symbol.name,
+              kind: "identity",
+              bindingClass: "own-props-parameter",
+              source: { name: capture.symbol.name, path: [] },
+            });
+          }
+          continue;
+        }
+      }
+
+      if (provenAddress) {
+        const klass = classOfResolvedSymbol(capture.symbol);
+        if (klass === "own-props-parameter" || klass === "derived-rest-props-result") {
+          if (!capture.references.every(isSlotMemberRead)) {
+            recordRefusal(
+              "handler-captures-unprovable-binding",
+              `The handler closes over \`${capture.symbol.name}\`, which is not a provable cell accessor.`,
+              capture.references[0]?.node ?? fn,
+              { binding: capture.symbol.name, declaredInScope: capture.symbol.scope.kind },
+            );
+            continue;
+          }
+          const seen = new Set<string>();
+          let uncovered = false;
+          for (const reference of capture.references) {
+            const parent: Node = moduleInfo.parentOf(reference.node);
+            const source = parent == null ? null : sourceBindingOf(parent);
+            if (source === null || source.path.length === 0) {
+              uncovered = true;
+              break;
+            }
+            const member = String(source.path[source.path.length - 1]);
+            if (seen.has(member)) continue;
+            seen.add(member);
+            slots.push({
+              name: member,
+              kind: "identity",
+              bindingClass: source.class,
+              source: { name: source.name, path: source.path },
+            });
+          }
+          if (uncovered) {
+            recordRefusal(
+              "handler-captures-unprovable-binding",
+              `The handler closes over \`${capture.symbol.name}\`, which is not a provable cell accessor.`,
+              capture.references[0]?.node ?? fn,
+              { binding: capture.symbol.name, declaredInScope: capture.symbol.scope.kind },
+            );
+          }
+          continue;
+        }
       }
 
       if (ownPropsSymbol !== null && capture.symbol.id === ownPropsSymbol.id && identityRecords !== null) {
@@ -3649,10 +5018,15 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     moduleInfo.walk(
       {
         enter: (node: Node) => {
+          if (isTypeSyntax(node.type)) return;
           if (HANDLER_SYNTAX.has(node.type)) return;
           // S3, admission 3: event-time syntax, only where the structural check
           // holds. None of it is reachable from the derivation walk.
           if (EVENT_TIME_SYNTAX.has(node.type) && isEventTimeSyntax(fn, node)) return;
+          if (provenAddress && node.type === "MemberExpression") {
+            const source = sourceBindingOf(node);
+            if (source !== null && source.path.length > 0) return;
+          }
           recordRefusal(
             "handler-unsupported-syntax",
             `The handler contains a \`${node.type}\`, which this pass does not prove.`,
@@ -3665,6 +5039,19 @@ export function classifySite(module: Module, component: ComponentSite, options?:
             // An enumerated ambient call, or a method call on a value that only
             // exists once the event fired. Neither is ever evaluated here.
             if (isEventTimeValue(fn, node)) return;
+            if (
+              provenAddress &&
+              callee.type === "MemberExpression" &&
+              callee.computed !== true &&
+              callee.property?.type === "Identifier"
+            ) {
+              const object = unwrap(callee.object);
+              if (object != null && object.type === "Identifier") {
+                const objectSymbol = moduleInfo.referenceOf(object)?.symbol ?? null;
+                const read = objectSymbol === null ? undefined : readSlots.get(objectSymbol.id);
+                if (read !== undefined && read.path.length === 0) return;
+              }
+            }
             recordRefusal("handler-calls-non-accessor", "The handler calls a computed callee.", node);
             return;
           }
@@ -3689,6 +5076,8 @@ export function classifySite(module: Module, component: ComponentSite, options?:
           }
 
           if (contains(fn, symbol.scope.node)) return; // declared inside the handler
+
+          if (provenAddress && isAnalyzedOrImportedCallee(symbol)) return;
 
           recordRefusal(
             "handler-calls-non-accessor",
@@ -3831,6 +5220,7 @@ export function classifySite(module: Module, component: ComponentSite, options?:
     for (const reference of site.symbol.references) {
       if (reference.inTypePosition || reference.node === site.node) continue;
       if (derivedReads.has(reference.node) || slotReads.has(reference.node)) continue;
+      if (site.read.path.length === 0 && isWholeBindAdmittedUse(moduleInfo, reference.node)) continue;
       if (!mutatesThroughRead(reference.node) && !reachesEmittedOutput(reference.node)) continue;
       refuse(
         "store-read-escapes",
@@ -3838,6 +5228,443 @@ export function classifySite(module: Module, component: ComponentSite, options?:
         reference.node,
         { binding: site.read.name, store: site.read.store, path: site.read.path },
       );
+    }
+  }
+
+  // ------------------------------------------------------------------ derived cells
+  //
+  // A derived accessor is recorded in `cells` only when a binding compute
+  // captured it as a cell-read. The factory initializer must fold to a literal
+  // over the call-site arguments; every argument must be foldable-to-literal or
+  // a getter whose setter's only admitted seats are mount-time ref replay.
+
+  const capturedReads = new Set<string>();
+  const collectCellReads = (slots: CaptureSlot[]): void => {
+    for (const slot of slots) {
+      if (isCellSlot(slot) && slot.access === "read") capturedReads.add(slot.cell);
+    }
+  };
+  for (const binding of bindings) collectCellReads(binding.captures);
+  for (const region of regions) collectCellReads(region.captures);
+  for (const region of keyedRegions) {
+    collectCellReads(region.captures);
+    for (const binding of region.itemBindings) collectCellReads(binding.captures);
+  }
+
+  function topLevelReturned(fn: Node): Node | null {
+    if (fn.body == null) return null;
+    if (fn.body.type !== "BlockStatement") return unwrap(fn.body);
+    const returns = (fn.body.body as Node[]).filter((statement: Node) => statement.type === "ReturnStatement");
+    if (returns.length !== 1 || returns[0].argument == null) return null;
+    return unwrap(returns[0].argument);
+  }
+
+  function factoryInitializerOf(summary: DerivedAccessorSummary): Node | null | undefined {
+    const factories = signalFactorySymbols(summary.module);
+    for (const call of summary.module.findAll("CallExpression")) {
+      if (!contains(summary.fn, call) || !isFactoryCall(summary.module, call, factories)) continue;
+      let node: Node = call;
+      let parent: Node = summary.module.parentOf(node);
+      while (parent != null && isTransparent(parent)) {
+        node = parent;
+        parent = summary.module.parentOf(node);
+      }
+      if (parent == null || parent.type !== "VariableDeclarator" || parent.init !== node) continue;
+      const pattern = parent.id;
+      if (pattern?.type !== "ArrayPattern" || pattern.elements.length !== 2) continue;
+      const getter = summary.module.symbolOf(pattern.elements[0]);
+      if (getter === null || getter.id !== summary.returnedGetter.id) continue;
+      return call.arguments.length === 0 ? null : call.arguments[0];
+    }
+    return undefined;
+  }
+
+  type FoldBinding =
+    | { kind: "literal"; value: StaticValue }
+    | { kind: "closure"; returned: Node }
+    | { kind: "getter" };
+
+  function isLiteralReturningClosure(node: Node): boolean {
+    if (node == null) return false;
+    if (node.type !== "ArrowFunctionExpression" && node.type !== "FunctionExpression") return false;
+    if ((node.params?.length ?? 0) !== 0) return false;
+    const returned = topLevelReturned(node);
+    return returned != null && frozenInitial(moduleInfo, returned).ok;
+  }
+
+  function bindCallSiteArg(arg: Node): FoldBinding | null {
+    const inner = unwrap(arg);
+    const frozen = frozenInitial(moduleInfo, inner);
+    if (frozen.ok) return { kind: "literal", value: frozen.value };
+    if (isLiteralReturningClosure(inner)) {
+      const returned = topLevelReturned(inner);
+      return returned == null ? null : { kind: "closure", returned };
+    }
+    const accessor = accessorOf(inner);
+    if (accessor !== null && accessor.access === "read" && accessor.derived !== true) {
+      return { kind: "getter" };
+    }
+    return null;
+  }
+
+  function argFoldableToLiteral(arg: Node): boolean {
+    const inner = unwrap(arg);
+    return frozenInitial(moduleInfo, inner).ok || isLiteralReturningClosure(inner);
+  }
+
+  function setterOnlyRefReplay(cellId: string): boolean {
+    const setter = setterByCell.get(cellId);
+    if (setter === undefined) return false;
+    for (const reference of setter.references) {
+      if (reference.inTypePosition) continue;
+      if (!seenThroughArrayRef.has(reference.node)) return false;
+    }
+    return true;
+  }
+
+  function functionOfSymbol(mod: Module, symbol: YukuSymbol): Node | null {
+    if (symbol.declarations.length !== 1) return null;
+    const declaration: Node = symbol.declarations[0];
+    if (declaration == null) return null;
+    if (
+      declaration.type === "FunctionDeclaration" ||
+      declaration.type === "FunctionExpression" ||
+      declaration.type === "ArrowFunctionExpression"
+    ) {
+      return declaration;
+    }
+    const parent: Node = mod.parentOf(declaration);
+    if (parent == null) return null;
+    if (
+      (parent.type === "FunctionDeclaration" || parent.type === "FunctionExpression") &&
+      parent.id === declaration
+    ) {
+      return parent;
+    }
+    if (parent.type === "VariableDeclarator" && parent.id === declaration && parent.init != null) {
+      const init = unwrap(parent.init);
+      return init.type === "ArrowFunctionExpression" || init.type === "FunctionExpression" ? init : null;
+    }
+    return null;
+  }
+
+  function foldThroughSingleReturn(
+    mod: Module,
+    call: Node,
+    env: Map<number, FoldBinding>,
+  ): { ok: true; value: StaticValue } | { ok: false } | null {
+    const args: Node[] = call.arguments ?? [];
+    const summary = summarize(mod, call.callee);
+    if (summary !== null && args.length === summary.params.length) {
+      const innerEnv = new Map<number, FoldBinding>();
+      for (let index = 0; index < summary.params.length; index++) {
+        const folded = foldStatic(mod, args[index], env);
+        if (!folded.ok) return { ok: false };
+        innerEnv.set(summary.paramSymbols[index].id, { kind: "literal", value: folded.value });
+      }
+      return foldStatic(summary.module, summary.returned, innerEnv);
+    }
+
+    const callee = unwrap(call.callee);
+    if (callee == null || callee.type !== "Identifier") return null;
+    const symbol = mod.referenceOf(callee)?.symbol ?? null;
+    if (symbol === null) return null;
+    const definition = symbol.definition();
+    if (definition == null || definition.symbol == null) return null;
+    const fnMod = definition.module;
+    const fn = functionOfSymbol(fnMod, definition.symbol);
+    if (fn == null) return null;
+    const params: Node[] = fn.params ?? [];
+    if (params.length !== args.length) return null;
+    if (!params.every((param: Node) => param != null && param.type === "Identifier")) return null;
+    const returned = topLevelReturned(fn);
+    if (returned == null) return null;
+    const innerEnv = new Map<number, FoldBinding>();
+    for (let index = 0; index < params.length; index++) {
+      const paramSymbol = fnMod.symbolOf(params[index]);
+      if (paramSymbol === null) return null;
+      const folded = foldStatic(mod, args[index], env);
+      if (!folded.ok) return { ok: false };
+      innerEnv.set(paramSymbol.id, { kind: "literal", value: folded.value });
+    }
+    return foldStatic(fnMod, returned, innerEnv);
+  }
+
+  function foldStatic(
+    mod: Module,
+    node: Node,
+    env: Map<number, FoldBinding>,
+  ): { ok: true; value: StaticValue } | { ok: false } {
+    const inner = unwrap(node);
+    if (inner == null) return { ok: false };
+
+    const frozen = frozenInitial(mod, inner);
+    if (frozen.ok) return frozen;
+
+    if (inner.type === "ChainExpression") return foldStatic(mod, inner.expression, env);
+
+    if (inner.type === "Identifier") {
+      const symbol = mod.referenceOf(inner)?.symbol ?? null;
+      if (symbol === null) return { ok: false };
+      const bound = env.get(symbol.id);
+      return bound?.kind === "literal" ? { ok: true, value: bound.value } : { ok: false };
+    }
+
+    if (inner.type === "CallExpression" || inner.type === "OptionalCallExpression") {
+      if ((inner.arguments?.length ?? 0) === 0) {
+        const callee = unwrap(inner.callee);
+        if (callee?.type === "Identifier") {
+          const symbol = mod.referenceOf(callee)?.symbol ?? null;
+          const bound = symbol === null ? undefined : env.get(symbol.id);
+          if (bound?.kind === "closure") return foldStatic(mod, bound.returned, env);
+          if (
+            bound?.kind === "literal" &&
+            (inner.type === "OptionalCallExpression" || inner.optional === true) &&
+            bound.value === null
+          ) {
+            return { ok: true, value: null };
+          }
+          return { ok: false };
+        }
+      }
+
+      const through = foldThroughSingleReturn(mod, inner, env);
+      if (through !== null) return through;
+      return { ok: false };
+    }
+
+    if (inner.type === "UnaryExpression" && inner.operator === "typeof") {
+      const argument = foldStatic(mod, inner.argument, env);
+      if (!argument.ok) return { ok: false };
+      return { ok: true, value: argument.value === null ? "object" : typeof argument.value };
+    }
+
+    if (inner.type === "BinaryExpression" && (inner.operator === "===" || inner.operator === "!==")) {
+      const left = foldStatic(mod, inner.left, env);
+      const right = foldStatic(mod, inner.right, env);
+      if (!left.ok || !right.ok) return { ok: false };
+      const equal = left.value === right.value;
+      return { ok: true, value: inner.operator === "===" ? equal : !equal };
+    }
+
+    if (inner.type === "ConditionalExpression") {
+      const test = foldStatic(mod, inner.test, env);
+      if (!test.ok) return { ok: false };
+      return foldStatic(mod, test.value ? inner.consequent : inner.alternate, env);
+    }
+
+    return { ok: false };
+  }
+
+  function foldDerivedCellInitial(
+    pending: (typeof pendingDerived)[number],
+  ): { ok: true; value: StaticValue } | { ok: false } {
+    const initializer = factoryInitializerOf(pending.summary);
+    if (initializer === undefined) return { ok: false };
+    if (initializer === null) return { ok: true, value: null };
+
+    const args: Node[] = pending.call.arguments;
+    if (args.length !== pending.summary.params.length) return { ok: false };
+
+    const env = new Map<number, FoldBinding>();
+    for (let index = 0; index < args.length; index++) {
+      const bound = bindCallSiteArg(args[index]);
+      if (bound !== null) env.set(pending.summary.paramSymbols[index].id, bound);
+    }
+    return foldStatic(pending.summary.module, initializer, env);
+  }
+
+  function derivedCellInputsMountStable(pending: (typeof pendingDerived)[number]): boolean {
+    const args: Node[] = pending.call.arguments;
+    if (args.length !== pending.summary.params.length) return false;
+    for (const arg of args) {
+      if (argFoldableToLiteral(arg)) continue;
+      const accessor = accessorOf(unwrap(arg));
+      if (
+        accessor !== null &&
+        accessor.access === "read" &&
+        accessor.derived !== true &&
+        setterOnlyRefReplay(accessor.cellId)
+      ) {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  function writerSetsParam(mod: Module, fn: Node, setterIds: ReadonlySet<number>, param: Node): boolean {
+    const paramSymbol = mod.symbolOf(param);
+    if (paramSymbol === null) return false;
+    let writes = 0;
+    let ok = true;
+    mod.walk(
+      {
+        CallExpression: (node: Node) => {
+          if (!ok || (node.arguments?.length ?? 0) !== 1) return;
+          const callee = unwrap(node.callee);
+          if (callee == null || callee.type !== "Identifier") return;
+          const symbol = mod.referenceOf(callee)?.symbol ?? null;
+          if (symbol === null || !setterIds.has(symbol.id)) return;
+          writes++;
+          const arg = unwrap(node.arguments[0]);
+          if (arg == null || arg.type !== "Identifier") {
+            ok = false;
+            return;
+          }
+          const argSymbol = mod.referenceOf(arg)?.symbol ?? null;
+          if (argSymbol === null || argSymbol.id !== paramSymbol.id) ok = false;
+        },
+      },
+      fn,
+    );
+    return ok && writes === 1;
+  }
+
+  function deferredWriteValue(summary: DerivedAccessorSummary): Node | null {
+    const setterIds = new Set(summary.localSetters.map((setter) => setter.id));
+
+    for (const call of summary.module.findAll("CallExpression")) {
+      if (!contains(summary.fn, call) || (call.arguments?.length ?? 0) !== 2) continue;
+      const compute = unwrap(call.arguments[0]);
+      const writer = unwrap(call.arguments[1]);
+      if (!isFunctionNode(compute) || !isFunctionNode(writer)) continue;
+      if ((compute.params?.length ?? 0) !== 0) continue;
+      if ((writer.params?.length ?? 0) !== 1) continue;
+      const param = writer.params[0];
+      if (param == null || param.type !== "Identifier") continue;
+      if (!writerSetsParam(summary.module, writer, setterIds, param)) continue;
+      const returned = topLevelReturned(compute);
+      if (returned != null) return returned;
+    }
+
+    for (const call of summary.module.findAll("CallExpression")) {
+      if (!contains(summary.fn, call) || (call.arguments?.length ?? 0) !== 1) continue;
+      const callee = unwrap(call.callee);
+      if (callee == null || callee.type !== "Identifier") continue;
+      const symbol = summary.module.referenceOf(callee)?.symbol ?? null;
+      if (symbol === null || !setterIds.has(symbol.id)) continue;
+      const arg = unwrap(call.arguments[0]);
+      if (arg == null || arg.type === "Identifier") continue;
+      return arg;
+    }
+
+    return null;
+  }
+
+  function rootRefWriteCells(): Set<string> {
+    const ids = new Set<string>();
+    for (const binding of bindings) {
+      if (binding.kind !== "attribute" || binding.attribute !== "ref") continue;
+      if (binding.locator !== "/") continue;
+      for (const slot of binding.captures) {
+        if (isCellSlot(slot) && slot.access === "write") ids.add(slot.cell);
+      }
+    }
+    return ids;
+  }
+
+  function callSiteGetterCell(arg: Node): string | null {
+    const accessor = accessorOf(unwrap(arg));
+    if (accessor === null || accessor.access !== "read" || accessor.derived === true) return null;
+    return accessor.cellId;
+  }
+
+  function elementProjectionOf(
+    pending: (typeof pendingDerived)[number],
+  ): { projection: ElementProjection } | { refuse: ReasonCode; message: string } | null {
+    const written = deferredWriteValue(pending.summary);
+    if (written == null) return null;
+
+    const getterIds = new Set<number>();
+    for (let index = 0; index < pending.summary.paramSymbols.length; index++) {
+      if (parameterIsGetterOnly(pending.summary, index)) {
+        getterIds.add(pending.summary.paramSymbols[index].id);
+      }
+    }
+    if (getterIds.size === 0) return null;
+
+    const match = matchElementProjection(pending.summary.module, written, getterIds);
+    if (match === null) return null;
+    if (match.kind === "not-pure") {
+      return {
+        refuse: "element-projection-not-pure",
+        message:
+          "The derived cell's deferred write is an element projection that is not a property chain or getAttribute of a string literal.",
+      };
+    }
+    if (match.kind === "not-own-host") {
+      return {
+        refuse: "element-projection-not-own-host",
+        message: "The derived cell's deferred write projects an element other than a getter parameter of the helper.",
+      };
+    }
+    if (match.steps.length === 0) return null;
+
+    const paramIndex = pending.summary.paramSymbols.findIndex((symbol) => symbol.id === match.getterId);
+    if (paramIndex < 0) return null;
+    const hostCell = callSiteGetterCell(pending.call.arguments[paramIndex]);
+    const ownHost = rootRefWriteCells();
+    if (hostCell === null || !ownHost.has(hostCell)) {
+      return {
+        refuse: "element-projection-not-own-host",
+        message: "The derived cell's deferred write projects an element other than the mount's own host.",
+      };
+    }
+
+    return { projection: { host: hostCell, steps: match.steps } };
+  }
+
+  const projectionCells = new Set<string>();
+
+  for (const pending of pendingDerived) {
+    if (!capturedReads.has(pending.cellId)) continue;
+
+    const folded = foldDerivedCellInitial(pending);
+    if (!folded.ok) {
+      refuse(
+        "derived-cell-initial-not-foldable",
+        "The derived cell's factory initializer does not fold to a literal over the call-site arguments.",
+        pending.call,
+      );
+      continue;
+    }
+
+    if (!derivedCellInputsMountStable(pending)) {
+      refuse(
+        "derived-cell-input-not-mount-stable",
+        "A call-site argument of the derived-cell helper is neither foldable to a literal nor a getter of a component cell whose setter's only admitted seats are mount-time ref replay.",
+        pending.call,
+      );
+      continue;
+    }
+
+    const projected = elementProjectionOf(pending);
+    if (projected !== null && "refuse" in projected) {
+      refuse(projected.refuse, projected.message, pending.call);
+      continue;
+    }
+
+    if (projected !== null) projectionCells.add(pending.cellId);
+
+    cells.push({
+      id: pending.cellId,
+      getter: pending.name,
+      initial: folded.value,
+      loc: locOf(pending.call),
+      ...(projected === null ? {} : { projection: projected.projection }),
+    });
+  }
+
+  if (projectionCells.size > 0) {
+    for (const handler of handlers) {
+      if (handler.captures.some((slot) => isCellSlot(slot) && projectionCells.has(slot.cell))) {
+        refuse(
+          "element-projection-not-pure",
+          "A handler captures an element-projection cell; projection cells are binding computes only.",
+          component.fn,
+        );
+      }
     }
   }
 
@@ -4285,12 +6112,24 @@ function fold(operator: string, left: StaticValue, right: StaticValue): StaticVa
 /** The comparison half, kept apart from `fold` because it answers a different
  * question: `fold` produces a value, this produces a verdict. Strict operators
  * only, so what is folded here is what JavaScript would decide at runtime. */
+function nullLiteralSide(expression: Node): "left" | "right" | null {
+  const left = unwrap(expression.left);
+  const right = unwrap(expression.right);
+  if (left != null && left.type === "Literal" && left.value === null) return "left";
+  if (right != null && right.type === "Literal" && right.value === null) return "right";
+  return null;
+}
+
 function compare(operator: string, left: StaticValue, right: StaticValue): boolean {
   switch (operator) {
     case "===":
       return left === right;
     case "!==":
       return left !== right;
+    case "==":
+      return left == right;
+    case "!=":
+      return left != right;
     case "<":
       return (left as never) < (right as never);
     case ">":

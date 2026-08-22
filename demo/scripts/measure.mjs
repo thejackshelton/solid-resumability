@@ -65,12 +65,19 @@ const SIGNALS_BEFORE_KERNEL_GZIP = 9170;
  * The todos page's eager caps, and the one that does not hold.
  *
  * The raw cap is the gate `scripts/check-zero-eager.mjs` enforces on the built
- * entry chunk. The gzip figure beside it is the companion the deferred-group
- * design named for the same payload; it is recorded here at its measured
- * distance from the payload rather than restated to fit, because a gate that
- * moves whenever the code does is not a gate.
+ * entry chunk. This file restates the number rather than importing it because
+ * that module runs its whole gate on import; the two are kept in step by hand,
+ * and the same figure appears a third time in `verify/config.ts`
+ * (`TODOS_EAGER_JS_CAP_BYTES`), which is where the witness box reads it. All
+ * three moved together to 16,600 after T071's store-read re-apply grew the
+ * resumer (post-fix wire 16,307 B + ≥200 B, rounded up to the next 100).
+ *
+ * The gzip figure beside it is the companion the deferred-group design named
+ * for the same payload; it is recorded here at its measured distance from the
+ * payload rather than restated to fit, because a gate that moves whenever the
+ * code does is not a gate.
  */
-const TODOS_EAGER_RAW_CAP = 15000;
+const TODOS_EAGER_RAW_CAP = 16600;
 const TODOS_EAGER_GZIP_COMPANION_CAP = 4500;
 
 /**

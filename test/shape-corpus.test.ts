@@ -1,9 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { Analyzer } from "yuku-analyzer";
 
-import { analyzeFixture, classify, loadProject } from "../src/comptime/index.ts";
-import type { Analysis, ReasonCode } from "../src/comptime/types.ts";
+import { contains } from "../src/comptime/ast.ts";
+import { freeIdentifiersInCompute } from "../src/comptime/emit.ts";
+import { analyzeFixture, classify, classifyAll, loadProject, runComptime } from "../src/comptime/index.ts";
+import { REASON_CODES, isStoreReadSlot, type Analysis, type AttributeBindingInfo, type ReasonCode } from "../src/comptime/types.ts";
 
 /**
  * THE SHAPE CORPUS — the re-runnable half of `docs/kobalte/impossibility.md`.
@@ -209,6 +214,65 @@ describe("S5 — a leaf whose state arrives from a provider, and the direct cont
     expect(codes(control)).toEqual(["store-binding-not-provable"]);
     expect(codes(control)).not.toContain("no-signal-source");
   });
+
+  it("does not see through a wrapper that is not the guard-throw grammar", () => {
+    expect(codes(analysis)).toEqual(["no-signal-source"]);
+  });
+});
+
+describe("JSXMemberExpression resolution — first-party host", () => {
+  it("inlines a namespace member that resolves into the analyzed set", () => {
+    const analysis = shape("MemberNamespaceHost.tsx", "MemberNamespaceHost");
+    expect(analysis.status).toBe("provable");
+  });
+
+  it("inlines a named import of a namespace-object thunk member", () => {
+    const analysis = shape("MemberNamespaceHost.tsx", "MemberObjectHost");
+    expect(analysis.status).toBe("provable");
+  });
+
+  it("refuses a member on a local object", () => {
+    const analysis = shape("MemberNamespaceHost.tsx", "MemberLocalObjectHost");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toContain("jsx-component-element");
+  });
+
+  it("refuses an unresolvable namespace member", () => {
+    const analysis = shape("MemberNamespaceCounter.tsx", "MemberUnresolvable");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toContain("jsx-component-element");
+  });
+});
+
+describe("guard-throw context helper — first-party host", () => {
+  it("drops no-signal-source when the helper body is the admitted grammar", () => {
+    const analysis = shape("GuardThrowContextHost.tsx", "GuardThrowContextHost");
+    expect(analysis.status).toBe("provable");
+    expect(codes(analysis)).not.toContain("no-signal-source");
+  });
+
+  it("admits the void-or-null test form", () => {
+    const analysis = shape("GuardThrowContextHost.tsx", "GuardThrowContextVoidHost");
+    expect(analysis.status).toBe("provable");
+  });
+
+  it("refuses a helper with one extra statement", () => {
+    const analysis = shape("GuardThrowContextCounter.tsx", "GuardThrowExtraStatement");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toEqual(["no-signal-source"]);
+  });
+
+  it("refuses a helper that returns a different binding", () => {
+    const analysis = shape("GuardThrowContextCounter.tsx", "GuardThrowDifferentBinding");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toEqual(["no-signal-source"]);
+  });
+
+  it("refuses a helper whose guard is not a throw", () => {
+    const analysis = shape("GuardThrowContextCounter.tsx", "GuardThrowNoThrow");
+    expect(analysis.status).toBe("fallback");
+    expect(codes(analysis)).toEqual(["no-signal-source"]);
+  });
 });
 
 describe("S6 — a region guard that is someone else's accessor", () => {
@@ -283,6 +347,333 @@ describe("S7 — a component whose root is a provider element", () => {
   });
 });
 
+describe("the four-shape conjunction — folded measured intrinsic", () => {
+  const host = shape("FoldedMeasuredHost.tsx", "FoldedMeasuredHost");
+  const unseen = shape("FoldedMeasuredHost.tsx", "FoldedMeasuredUnseen");
+  const counter = shape("FoldedMeasuredCounter.tsx", "FoldedMeasuredCounter");
+
+  it("classifies the standalone host as provable, folding to a bare intrinsic", () => {
+    expect(host.status).toBe("provable");
+    if (host.status !== "provable") return;
+    expect(host.html).toBe("<hr>");
+    expect(host.reasons).toEqual([]);
+  });
+
+  it("carries all four sub-shapes on that one component", () => {
+    expect(host.status).toBe("provable");
+    if (host.status !== "provable") return;
+    expect(host.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "ref")).toBe(
+      true,
+    );
+    expect(
+      host.bindings.some(
+        (binding) =>
+          binding.kind === "attribute" &&
+          binding.attribute === "role" &&
+          binding.initialValue === null &&
+          binding.initialValueFrom === "capture",
+      ),
+    ).toBe(true);
+    expect(
+      host.bindings.some(
+        (binding) =>
+          binding.kind === "attribute" &&
+          binding.attribute === "aria-orientation" &&
+          binding.initialValue === null,
+      ),
+    ).toBe(true);
+    expect(host.bindings.some((binding) => binding.kind === "spread")).toBe(true);
+  });
+
+  it("classifies the unseen pairing the same way — both analyzeFixture arms", () => {
+    expect(unseen.status).toBe("provable");
+    if (unseen.status !== "provable") return;
+    expect(unseen.html).toBe("<hr>");
+    expect(unseen.bindings.some((binding) => binding.kind === "spread")).toBe(true);
+    expect(unseen.bindings.some((binding) => binding.kind === "attribute" && binding.attribute === "ref")).toBe(
+      true,
+    );
+  });
+
+  it("refuses the call-valued spread counter, and only that", () => {
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toEqual(["jsx-spread"]);
+  });
+});
+
+describe("compute closure — first-party host for both defect shapes", () => {
+  const analysis = shape("ComputeClosureHost.tsx", "ComputeClosureHost");
+
+  function attribute(name: string): AttributeBindingInfo {
+    if (analysis.status !== "provable") throw new Error("expected a provable host");
+    const binding = analysis.bindings.find(
+      (entry) => entry.kind === "attribute" && entry.attribute === name,
+    );
+    if (binding == null || binding.kind !== "attribute") {
+      throw new Error(`expected attribute binding ${name}`);
+    }
+    return binding;
+  }
+
+  it("classifies the host as provable", () => {
+    expect(analysis.status).toBe("provable");
+    expect(codes(analysis)).toEqual([]);
+  });
+
+  it("closes the summarized-accessor compute over its proven cell-read slot", () => {
+    const binding = attribute("data-label");
+    expect(binding.captures.some((slot) => slot.name === "label" && "cell" in slot)).toBe(true);
+    expect(freeIdentifiersInCompute(slotPattern(binding.captures), binding.expression)).toEqual([]);
+    expect(binding.expression).toContain("label()");
+  });
+
+  it("substitutes the slot name at the proven member-read base", () => {
+    const binding = attribute("data-mode");
+    expect(binding.captures).toEqual([
+      expect.objectContaining({
+        name: "mode",
+        kind: "identity",
+        source: { name: "merged", path: ["mode"] },
+      }),
+    ]);
+    expect(binding.expression).toBe("mode.mode");
+    expect(freeIdentifiersInCompute(slotPattern(binding.captures), binding.expression)).toEqual([]);
+  });
+
+  it("emits the host — the gate admits the rewritten computes", () => {
+    const outRoot = mkdtempSync(join(tmpdir(), "compute-closure-"));
+    scratchDirs.push(outRoot);
+    const result = runComptime(`${SHAPES}/ComputeClosureHost.tsx`, {
+      component: "ComputeClosureHost",
+      outRoot,
+    });
+    expect(result.analysis.status).toBe("provable");
+    expect(result.emitted).not.toBeNull();
+    expect(freeInStructure(join(result.emitted!.dir, "structure.js"))).toEqual([]);
+  });
+});
+
+const scratchDirs: string[] = [];
+afterAll(() => {
+  for (const dir of scratchDirs) rmSync(dir, { recursive: true, force: true });
+});
+
+function slotPattern(slots: Array<{ name: string }>): string {
+  if (slots.length === 0) return "_slots";
+  return `{ ${slots.map((slot) => slot.name).join(", ")} }`;
+}
+
+const LANGUAGE_GLOBALS = new Set(["undefined", "NaN", "Infinity"]);
+
+function fixtureSources(root: string): string[] {
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const name of entries) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) walk(full);
+      else if (name.endsWith(".tsx")) out.push(full);
+    }
+  };
+  walk(root);
+  return out.sort();
+}
+
+function structureFiles(root: string): string[] {
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const name of entries) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) walk(full);
+      else if (name === "structure.js") out.push(full);
+    }
+  };
+  walk(root);
+  return out.sort();
+}
+
+function freeInStructure(file: string): Array<{ owner: string; name: string }> {
+  const source = readFileSync(file, "utf8");
+  const analyzer = new Analyzer();
+  const mod = analyzer.addFile(file, source);
+  const free: Array<{ owner: string; name: string }> = [];
+  for (const fn of [...mod.findAll("FunctionExpression"), ...mod.findAll("FunctionDeclaration")]) {
+    const parent = mod.parentOf(fn) as { type?: string; key?: { name?: string; value?: string } } | null;
+    const key = parent?.type === "Property" ? (parent.key?.name ?? parent.key?.value) : undefined;
+    if (key !== "compute" && key !== "when" && key !== "each") continue;
+    for (const reference of mod.unresolvedReferences) {
+      if (reference.inTypePosition) continue;
+      if (!contains(fn, reference.node)) continue;
+      if (LANGUAGE_GLOBALS.has(reference.name)) continue;
+      free.push({ owner: String(key), name: reference.name });
+    }
+  }
+  return free;
+}
+
+describe("guarded-return callback — first-party host", () => {
+  const analysis = shape("GuardedReturnHost.tsx", "GuardedReturnHost");
+
+  it("classifies the host as provable with a folded title", () => {
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.html).toBe('<p class="guarded" title="on">seen</p>');
+    const title = analysis.bindings.find(
+      (binding): binding is AttributeBindingInfo =>
+        binding.kind === "attribute" && binding.attribute === "title",
+    );
+    expect(title?.origin).toBe("helper");
+    expect(title?.expression).not.toContain("flag");
+    expect(title?.expression).not.toContain("isPositive");
+  });
+
+  it("refuses the extra-statement counter by name", () => {
+    const counter = shape("GuardedReturnCounter.tsx", "GuardedReturnExtraStatement");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("callee-body-not-guarded-return");
+  });
+
+  it("refuses the non-literal guard-return counter by name", () => {
+    const counter = shape("GuardedReturnCounter.tsx", "GuardedReturnNonLiteral");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("callee-body-not-guarded-return");
+  });
+
+  it("refuses the write-in-body counter by name", () => {
+    const counter = shape("GuardedReturnCounter.tsx", "GuardedReturnWrite");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("callee-body-not-guarded-return");
+  });
+});
+
+describe("derived-cell admission — first-party host", () => {
+  const analysis = shape("DerivedCellHost.tsx", "DerivedCellHost");
+
+  it("classifies the host as provable with cells [c0, d0]", () => {
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.cells.map((cell) => ({ id: cell.id, initial: cell.initial }))).toEqual([
+      { id: "c0", initial: null },
+      { id: "d0", initial: "hr" },
+    ]);
+  });
+
+  it("refuses the unfoldable-initializer counter by name", () => {
+    const counter = shape("DerivedCellUnfoldable.tsx", "DerivedCellUnfoldable");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toEqual(["derived-cell-initial-not-foldable"]);
+  });
+
+  it("refuses the handler-wired input counter by name", () => {
+    const counter = shape("DerivedCellUnstable.tsx", "DerivedCellUnstable");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toEqual(["derived-cell-input-not-mount-stable"]);
+  });
+});
+
+describe("guarded-return object-argument decision tree — first-party host", () => {
+  const analysis = shape("GuardedObjectHost.tsx", "GuardedObjectHost");
+
+  it("classifies the host as provable", () => {
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.html).toBe('<button class="guarded-object"></button>');
+    expect(analysis.cells.some((cell) => cell.projection !== undefined)).toBe(true);
+  });
+});
+
+describe("element-projection admission — first-party host", () => {
+  const analysis = shape("ElementProjectionHost.tsx", "ElementProjectionHost");
+
+  it("classifies the host as provable with an own-host projection cell", () => {
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.cells[1]).toMatchObject({
+      id: "d0",
+      initial: "div",
+      projection: { host: "c0" },
+    });
+  });
+
+  it("refuses the other-element counter by name", () => {
+    const counter = shape("ElementProjectionCounter.tsx", "ElementProjectionOther");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("element-projection-not-own-host");
+  });
+
+  it("refuses the non-literal method-arg counter by name", () => {
+    const counter = shape("ElementProjectionCounter.tsx", "ElementProjectionNonLiteral");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("element-projection-not-pure");
+  });
+
+  it("refuses the handler-visible counter by name", () => {
+    const counter = shape("ElementProjectionCounter.tsx", "ElementProjectionHandler");
+    expect(counter.status).toBe("fallback");
+    expect(codes(counter)).toContain("handler-captures-unprovable-binding");
+  });
+});
+
+describe("compute closure — every emitted artifact", () => {
+  it("closes every compute, when, and each over slot names only", () => {
+    const files = [...structureFiles("artifacts"), ...structureFiles("demo/artifacts")];
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      expect(freeInStructure(file), file).toEqual([]);
+    }
+  });
+});
+
+describe("corpus reason-code invariant — every classified fixture", () => {
+  it("every reason.code emitted across the fixture corpus is a member of REASON_CODES", () => {
+    const members = new Set<string>(REASON_CODES);
+    const root = process.cwd();
+    const files = fixtureSources("test/fixtures");
+    expect(files.length).toBeGreaterThan(0);
+    const unknown: string[] = [];
+    for (const file of files) {
+      const project = loadProject(join(root, file), root);
+      for (const analysis of classifyAll(project.entry)) {
+        for (const reason of analysis.reasons) {
+          if (!members.has(reason.code)) {
+            unknown.push(`${file}#${analysis.component}:${reason.code}`);
+          }
+        }
+      }
+    }
+    expect(unknown).toEqual([]);
+  });
+});
+
+describe("corpus cell-id invariant — every emitted artifact", () => {
+  it("every cell-read capture id exists in that artifact's cells array", () => {
+    const files = [...structureFiles("artifacts"), ...structureFiles("demo/artifacts")];
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      const cellsBlock = source.match(/export const cells = \[([\s\S]*?)\];/);
+      expect(cellsBlock, file).not.toBeNull();
+      const cellIds = new Set(
+        [...(cellsBlock?.[1].matchAll(/id: "([^"]+)"/g) ?? [])].map((match) => match[1]),
+      );
+      for (const match of source.matchAll(/cell: "([^"]+)"/g)) {
+        expect(cellIds.has(match[1]), `${file} capture ${match[1]} missing from cells`).toBe(true);
+      }
+    }
+  });
+});
+
 describe("the corpus as a whole", () => {
   it("refuses every shape, and refuses each for a different reason", () => {
     // The account's own claim, asserted as one fact. Six shapes, six codes, no
@@ -318,5 +709,90 @@ describe("the corpus as a whole", () => {
     const analysis = shape("SpreadAfterAttribute.tsx", "SpreadAfterAttribute");
     expect(analysis.status).toBe("fallback");
     expect("emitted" in analysis).toBe(false);
+  });
+});
+
+function storeReasons(analysis: Analysis): string[] {
+  return analysis.reasons
+    .filter((reason) => reason.code === "store-binding-not-provable")
+    .map((reason) => String(reason.detail?.reason));
+}
+
+describe("whole-bind object-shaped context — first-party host", () => {
+  it("admits a never-reassigned Identifier bound to useContext against an object provider", () => {
+    const analysis = shape("ObjectStoreHost.tsx", "ObjectStoreHost");
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.stores).toHaveLength(1);
+    expect(analysis.stores[0]).toMatchObject({
+      id: "s0",
+      context: "ShelfContext",
+      keys: ["isOpen", "toggle", "setAnchor"],
+    });
+    expect(analysis.stores[0]).not.toHaveProperty("actionsSlot");
+    expect(analysis.reads).toEqual([expect.objectContaining({ store: "s0", path: [] })]);
+    expect(analysis.actions).toEqual([expect.objectContaining({ name: "toggle", path: ["toggle"] })]);
+  });
+
+  it("admits the same shape through a guard-throw helper", () => {
+    const analysis = shape("ObjectStoreHost.tsx", "ObjectStoreHelperHost");
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.stores[0]).toMatchObject({ keys: ["isOpen", "toggle", "setAnchor"] });
+  });
+
+  it("records a read-through call as a store-read with path []", () => {
+    const analysis = shape("ObjectStoreHost.tsx", "ObjectStoreReadHost");
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    expect(analysis.reads[0].path).toEqual([]);
+    expect(analysis.bindings[0].captures).toEqual([
+      expect.objectContaining({ kind: "store-read", store: "s0", path: [] }),
+    ]);
+  });
+
+  it("refuses a reassigned whole-bind", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreReassigned");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["whole-bind-reassigned"]);
+  });
+
+  it("refuses a computed member", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreComputed");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["whole-bind-computed-member"]);
+  });
+
+  it("refuses a bare escape", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreBareEscape");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["whole-bind-escapes"]);
+  });
+
+  it("refuses a spread provider", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreSpreadProvider");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["provider-value-not-readable"]);
+  });
+
+  it("refuses two providers", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreTwoProviders");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["provider-not-visible"]);
+  });
+
+  it("refuses a page-built provider value", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStorePageBuilt");
+    expect(analysis.status).toBe("fallback");
+    expect(storeReasons(analysis)).toEqual(["provider-value-not-readable"]);
+  });
+
+  it("emits a store capture in a ref binding once replay can resolve it", () => {
+    const analysis = shape("ObjectStoreCounter.tsx", "ObjectStoreRefCapture");
+    expect(analysis.status).toBe("provable");
+    if (analysis.status !== "provable") return;
+    const ref = analysis.bindings.find((binding) => binding.kind === "attribute" && binding.attribute === "ref");
+    expect(ref).toBeDefined();
+    expect(ref?.captures.some(isStoreReadSlot)).toBe(true);
   });
 });

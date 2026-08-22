@@ -1,14 +1,14 @@
 /**
  * The build config, parameterised by variant and page.
  *
- * Both variants build the same two pages from the same root with the same
+ * Both variants build the same pages from the same root with the same
  * plugin pipeline, the same minifier and the same target. Anything that could
  * move bytes lives here so it cannot differ between them by accident; the
  * per-variant halves add only what has to differ.
  *
  * ── Why each page is built on its own ──────────────────────────────────────
- * `pnpm build` runs four builds (2 variants x 2 pages), each into its own
- * `dist/<variant>/<page>/`. That is not how one would ship a two-page site;
+ * `pnpm build` runs one build per (variant, page), each into its own
+ * `dist/<variant>/<page>/`. That is not how one would ship a multi-page site;
  * it is how one has to *measure* one, because rollup assigns a module to a
  * chunk by which entry points reach it, so building two pages together lets
  * one page's dependencies decide the other page's chunk boundaries.
@@ -30,11 +30,32 @@ import solid from "@solidjs/vite-plugin";
 import resumability from "unplugin-solid-resumability/vite";
 
 import { DEMO_ROOT } from "./fixtures.mjs";
-import { apiMock, moduleSizes, variantLabel } from "./plugins.mjs";
+import { apiMock, installedMountIds, moduleSizes, variantLabel } from "./plugins.mjs";
 import { demoResumability } from "./resumability.mjs";
 
 export const VARIANTS = ["classic", "resumable"];
-export const PAGES = ["fixtures", "todos"];
+export const PAGES = ["fixtures", "todos", "rule", "click", "dialog", "tabs"];
+
+/**
+ * The plugin's page list lives in `resumability.mjs` (outside this slice).
+ * Tabs is registered here so the classic→resumable entry swap still runs
+ * without a kernel or plugin-declaration write.
+ */
+function withTabsPage(options) {
+  return {
+    ...options,
+    pages: [
+      ...options.pages,
+      {
+        id: "tabs",
+        html: "tabs.html",
+        entry: { from: "/src/pages/tabs-classic.ts", to: "/src/pages/tabs-resumable.ts" },
+        inlineTemplates: true,
+        prerender: false,
+      },
+    ],
+  };
+}
 
 const PORTS = { classic: 3010, resumable: 3011 };
 
@@ -60,6 +81,7 @@ export function demoConfig({ variant, page }) {
     preview: { port: PORTS[variant] },
     plugins: [
       variantLabel(variant),
+      installedMountIds(),
       apiMock(join(DEMO_ROOT, "src/api-mock.ts")),
       // The entire difference between the two variants, and the demo's only
       // claim on it is the declaration in `resumability.mjs`. The pass proves
@@ -68,7 +90,7 @@ export function demoConfig({ variant, page }) {
       // deferral group, swaps both entry scripts, fills the fixtures page's
       // mounts with their emitted markup, and — in the build that produced the
       // group chunk — captures the todos page's first paint and inlines it.
-      ...(resumable ? [resumability(demoResumability({ capture: inputs }))] : []),
+      ...(resumable ? [resumability(withTabsPage(demoResumability({ capture: inputs })))] : []),
       // The same pipeline `app/` builds with: native JSX compiler, native
       // lazy / refresh passes.
       solid(),

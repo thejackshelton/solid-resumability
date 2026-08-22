@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solid 2.0 — folded rule (__VARIANT__)</title>
+    <link rel="stylesheet" href="/src/styles/demo.css" />
+  </head>
+  <body>
+    <main class="page">
+      <h1>Folded rule</h1>
+      <p class="lede">
+        One mount the comptime pass proves resumable: an installed third-party
+        function folded to an intrinsic, served two ways from the same source.
+        This build is the <strong data-variant>__VARIANT__</strong> variant.
+      </p>
+
+      <section class="fixture">
+        <h2>Rule</h2>
+        <p class="blurb">One folded intrinsic, measured attributes, identity rest-spread.</p>
+        <!--
+          `data-resume` is filled by `demo-installed-mount-ids` from the id
+          `build/fixtures.mjs` derives off the installed @kobalte/core barrel.
+          The defining module is a content-hashed chunk, so the id is not
+          written down anywhere a package update would leave stale.
+        -->
+        <div class="mount" data-component="SeparatorRoot" data-resume="__ARTIFACT_SeparatorRoot__"></div>
+      </section>
+
+      <p class="nav"><a href="/fixtures.html">← fixtures</a></p>
+    </main>
+    <script type="module" src="/src/pages/rule-classic.ts"></script>
+  </body>
+</html>

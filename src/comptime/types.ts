@@ -76,6 +76,14 @@ export const REASON_CODES = [
   "jsx-dynamic-attribute",
   "jsx-unsupported-children",
   "jsx-dynamic-child-not-derivable",
+  /* derived cells */
+  "derived-cell-initial-not-foldable",
+  "derived-cell-input-not-mount-stable",
+  /* element-projection cells */
+  "element-projection-not-own-host",
+  "element-projection-not-pure",
+  /* callee bodies */
+  "callee-body-not-guarded-return",
 ] as const;
 
 export type ReasonCode = (typeof REASON_CODES)[number];
@@ -108,26 +116,44 @@ export type HandlerOrigin = "component" | "helper" | "action";
 /** A serialized literal: the only thing a source cell may start life as. */
 export type StaticValue = string | number | boolean | null;
 
-/** One `createSignal(<literal>)` whose getter and setter never leave the
- * component. `initial` is the literal, read straight off the AST. */
+/** One step of a mount-time own-element projection. Property and zero-arg
+ * method names are identifiers; `getAttribute` carries a string literal. */
+export type ElementProjectionStep =
+  | { kind: "property"; name: string }
+  | { kind: "call"; name: string }
+  | { kind: "getAttribute"; name: string };
+
+/** A pure projection of the mount's own host, restored after ref replay. */
+export interface ElementProjection {
+  host: string;
+  steps: ElementProjectionStep[];
+}
+
+/** One source cell (`createSignal(<literal>)`) or one admitted derived cell.
+ * `initial` is the literal, read straight off the AST or folded at the call
+ * site. `setter` is absent on a derived cell: the writer stays in the callee.
+ * `projection` is present when the deferred write is a pure own-host
+ * element projection; resume evaluates it on the already-held ref. */
 export interface CellInfo {
   id: string;
   getter: string;
-  setter: string;
+  setter?: string;
   initial: StaticValue;
   loc: SourceLoc;
+  projection?: ElementProjection;
 }
 
 /**
  * A context-provided store the component takes actions from (S3). Nothing here
  * describes the store's VALUE: it is identified by the `createContext` symbol
  * naming it and the provider proven to supply it, and its contents stay
- * runtime-opaque. `readSlot` is the tuple slot the component bound the store's
- * data from, when it bound one at a fixed numeric index — an identity, exactly
- * like `actionsSlot`, and never a value. `null` means the component destructured
- * a hole there and takes actions only.
+ * runtime-opaque.
+ *
+ * Two variants, discriminated by their own keys. The tuple variant keeps
+ * `actionsSlot` / `readSlot` / `value.factory`. The object variant carries the
+ * provider object's static `keys` and none of the tuple fields.
  */
-export interface StoreInfo {
+export interface TupleStoreInfo {
   id: string;
   /** Local name of the `createContext` binding the component consumed. */
   context: string;
@@ -142,6 +168,31 @@ export interface StoreInfo {
   /** The factory whose returned tuple the slot path indexes into. */
   value: { module: string; factory: string };
   loc: SourceLoc;
+  keys?: undefined;
+}
+
+/** Whole-bound object-shaped context: the binding IS the provider's value. */
+export interface ObjectStoreInfo {
+  id: string;
+  context: string;
+  contextModule: string;
+  provider: { module: string; loc: SourceLoc };
+  /** Static keys of the provider object. Identity only — no values. */
+  keys: string[];
+  loc: SourceLoc;
+  actionsSlot?: undefined;
+  readSlot?: undefined;
+  value?: undefined;
+}
+
+export type StoreInfo = TupleStoreInfo | ObjectStoreInfo;
+
+export function isTupleStore(store: StoreInfo): store is TupleStoreInfo {
+  return (store as TupleStoreInfo).actionsSlot !== undefined;
+}
+
+export function isObjectStore(store: StoreInfo): store is ObjectStoreInfo {
+  return (store as ObjectStoreInfo).keys !== undefined;
 }
 
 /** One action destructured out of a store, recorded BY IDENTITY: its store and
@@ -274,6 +325,15 @@ export function isCellSlot(slot: CaptureSlot): slot is CellCaptureSlot {
  */
 export type InitialFrom = "derivation" | "capture";
 
+/**
+ * One resolved AST node paired with the capture slot that node stands for.
+ * Compared by node identity at print time, never by identifier spelling.
+ */
+export interface SlotRewrite {
+  node: object;
+  name: string;
+}
+
 /** What every binding carries, whatever it owns on the element it addresses. */
 interface BindingCommon {
   id: string;
@@ -285,6 +345,8 @@ interface BindingCommon {
    * artifact still records which. */
   origin: CodeOrigin;
   loc: SourceLoc;
+  /** Resolved-node ↔ slot pairings recorded when the derivation was proven. */
+  slotRewrites?: readonly SlotRewrite[];
 }
 
 /** A binding that owns its element's `textContent`. */
@@ -346,7 +408,19 @@ export interface ClassBindingInfo extends BindingCommon {
   initialFrom: InitialFrom;
 }
 
-export type BindingInfo = TextBindingInfo | AttributeBindingInfo | ClassBindingInfo;
+/**
+ * A binding that owns the rest-attribute set of its element. Bakes no
+ * bytes: capture measures the set the spread actually wrote, and resume
+ * replays a spread assign of the identity-class rest object. `expression`
+ * is the rest identifier, printed from source.
+ */
+export interface SpreadBindingInfo extends BindingCommon {
+  kind: "spread";
+  expression: string;
+  initialFrom: InitialFrom;
+}
+
+export type BindingInfo = TextBindingInfo | AttributeBindingInfo | ClassBindingInfo | SpreadBindingInfo;
 
 /** True for the text arm. Bindings are told apart by `kind`; these two guards
  * exist so a consumer that only ever wanted text keeps reading the fields it
@@ -357,6 +431,10 @@ export function isTextBinding(binding: BindingInfo): binding is TextBindingInfo 
 
 export function isAttributeBinding(binding: BindingInfo): binding is AttributeBindingInfo {
   return binding.kind === "attribute";
+}
+
+export function isSpreadBinding(binding: BindingInfo): binding is SpreadBindingInfo {
+  return binding.kind === "spread";
 }
 
 /**
@@ -518,7 +596,12 @@ export interface RecordedProp {
 }
 
 /** Call-site role of one identity-shaped prop. Names no library or idiom. */
-export type IdentityRole = "attribute" | "spread-of-identifier";
+export type IdentityRole =
+  | "attribute"
+  | "spread-of-identifier"
+  | "slot-valued"
+  | "proven-handler"
+  | "ref-array";
 
 /** Binding classes that may be recorded as identity, never as a frozen value. */
 export type IdentityBindingClass = "own-props-parameter" | "derived-rest-props-result";
@@ -535,20 +618,144 @@ export interface SourceBindingIdentity {
 }
 
 /**
- * One call-site prop recorded by identity. No `value` field: folding
+ * Binding-identity call-site prop. No `value` field: folding
  * caller-dependent cargo is the second-instantiation failure.
  */
-export interface IdentityProp {
+export interface IdentityBindingProp {
   name: string;
-  role: IdentityRole;
+  role: "attribute" | "spread-of-identifier";
   bindingClass: IdentityBindingClass;
   source: SourceBindingIdentity;
+}
+
+/**
+ * Attribute whose expression derives only over admitted store slots and
+ * v1 constants. The author's expression is printed as written; captures
+ * name store identity, never a frozen value.
+ */
+export interface SlotValuedIdentityProp {
+  name: string;
+  role: "slot-valued";
+  expression: string;
+  captures: StoreReadCaptureSlot[];
+  store: StoreInfo;
+}
+
+/**
+ * Local closure the parent's handler pipeline proved. The record names
+ * the handler; captures are slot/identity only.
+ */
+export interface ProvenHandlerIdentityProp {
+  name: string;
+  role: "proven-handler";
+  handler: string;
+  source: string;
+  captures: CaptureSlot[];
+  stores: StoreInfo[];
+}
+
+/** One element of a ref-array record: a store member or an identity path. */
+export type RefArrayRecordElement =
+  | { kind: "store"; store: string; path: (string | number)[]; storeInfo: StoreInfo }
+  | { kind: "identity"; bindingClass: IdentityBindingClass; source: SourceBindingIdentity };
+
+/**
+ * `ref={[store.K, props.ref]}`: each element is a store member or an
+ * identity-class prop path. No frozen value.
+ */
+export interface RefArrayIdentityProp {
+  name: string;
+  role: "ref-array";
+  elements: RefArrayRecordElement[];
+}
+
+/**
+ * One call-site prop recorded by identity or slot. No `value` field:
+ * folding caller-dependent cargo is the second-instantiation failure.
+ */
+export type IdentityProp =
+  | IdentityBindingProp
+  | SlotValuedIdentityProp
+  | ProvenHandlerIdentityProp
+  | RefArrayIdentityProp;
+
+export function isBindingIdentity(prop: IdentityProp): prop is IdentityBindingProp {
+  return prop.role === "attribute" || prop.role === "spread-of-identifier";
+}
+
+export function isSlotValuedIdentity(prop: IdentityProp): prop is SlotValuedIdentityProp {
+  return prop.role === "slot-valued";
+}
+
+export function isProvenHandlerIdentity(prop: IdentityProp): prop is ProvenHandlerIdentityProp {
+  return prop.role === "proven-handler";
+}
+
+export function isRefArrayIdentity(prop: IdentityProp): prop is RefArrayIdentityProp {
+  return prop.role === "ref-array";
+}
+
+/**
+ * Record-qualified artifact id (T067 store-id precedent: identity from the
+ * distinguishing parts, never a source-file content hash).
+ *
+ * A claimed child with a nonempty record (`recordedProps` or `identityProps`)
+ * emits under `${artifactKey}~${fnv1a32(canonicalRecord)}`. Two distinct
+ * records never share a directory. An empty record keeps the unqualified key,
+ * so a record-free declaration (the click page's ButtonRoot) is untouched.
+ *
+ * The `~` suffix is the glob fence: `*.ButtonRoot` does not match
+ * `*.ButtonRoot~*`, and `app.*` does not match a hashed-stem qualifier.
+ */
+export function claimedArtifactKey(
+  modulePath: string,
+  component: string,
+  recorded?: ReadonlyArray<RecordedProp>,
+  identities?: ReadonlyArray<IdentityProp>,
+): string {
+  const base = artifactKey(modulePath, component);
+  if ((recorded?.length ?? 0) === 0 && (identities?.length ?? 0) === 0) return base;
+  return `${base}~${recordFingerprint(recorded, identities)}`;
+}
+
+/** Stable key for one identity record entry. Order-insensitive matching uses a set of these. */
+export function identityRecordKey(prop: IdentityProp): string {
+  if (isBindingIdentity(prop)) {
+    return JSON.stringify([prop.name, prop.role, prop.bindingClass, prop.source.name, prop.source.path]);
+  }
+  if (isSlotValuedIdentity(prop)) {
+    return JSON.stringify([prop.name, prop.role, prop.expression, prop.captures]);
+  }
+  if (isProvenHandlerIdentity(prop)) {
+    return JSON.stringify([prop.name, prop.role, prop.handler, prop.source, prop.captures]);
+  }
+  return JSON.stringify([prop.name, prop.role, prop.elements]);
+}
+
+function recordFingerprint(
+  recorded: ReadonlyArray<RecordedProp> | undefined,
+  identities: ReadonlyArray<IdentityProp> | undefined,
+): string {
+  const rec = [...(recorded ?? [])]
+    .map((prop) => [prop.name, prop.value] as const)
+    .sort((left, right) => (left[0] < right[0] ? -1 : left[0] > right[0] ? 1 : 0));
+  const identity = [...(identities ?? [])].map(identityRecordKey).sort();
+  return fnv1a32(JSON.stringify({ recorded: rec, identity }));
+}
+
+function fnv1a32(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 export interface ClaimedChild {
   /** The hole in the PARENT's template: the mount container's own address. */
   locator: string;
-  /** The child's artifact directory, `artifactKey(module, component)`. */
+  /** The child's artifact directory, `claimedArtifactKey(module, component, record)`. */
   artifact: string;
   /** The name the ordinary Solid path knows the child by. */
   component: string;

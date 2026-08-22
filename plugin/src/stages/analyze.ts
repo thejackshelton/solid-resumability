@@ -31,14 +31,17 @@ import { join, relative, resolve } from 'pathe';
 import {
   analyzeWithIdentityProps,
   analyzeWithRecordedProps,
+  emit,
   runComptime,
 } from '../../../src/comptime/index.ts';
-import type {
-  Analysis,
-  ClaimedChild,
-  IdentityProp,
-  ProvableAnalysis,
-  RecordedProp,
+import {
+  claimedArtifactKey,
+  identityRecordKey,
+  type Analysis,
+  type ClaimedChild,
+  type IdentityProp,
+  type ProvableAnalysis,
+  type RecordedProp,
 } from '../../../src/comptime/types.ts';
 import type { ResolvedMount, ResolvedOptions } from '../types.ts';
 
@@ -254,7 +257,7 @@ function recordsEqual(
 }
 
 function identityKey(prop: IdentityProp): string {
-  return JSON.stringify([prop.name, prop.role, prop.bindingClass, prop.source.name, prop.source.path]);
+  return identityRecordKey(prop);
 }
 
 function identitiesEqual(
@@ -340,6 +343,16 @@ function emitClaimedChild(
 
   const record = child.recordedProps ?? [];
   const identities = child.identityProps ?? [];
+  const derived = claimedArtifactKey(child.module, child.component, record, identities);
+  if (child.artifact !== derived) {
+    throw new ClaimedChildEmissionError(
+      'ClaimedChildMisaddressed',
+      `${where}: emitted to ${join(options.artifactDir, derived)}, and the parent's markup addresses ${expected}. ` +
+        `Artifacts at a name nothing looks for fill nothing.`,
+      parent,
+      child,
+    );
+  }
   const stamped = stampedClaimOf(options, parent, child.artifact);
   if (
     !recordsEqual(stamped?.recordedProps, child.recordedProps) ||
@@ -377,53 +390,27 @@ function emitClaimedChild(
     );
   }
 
-  let result;
+  if (isolated.status !== 'provable') {
+    const reasons = isolated.reasons.map(
+      (reason) => `${reason.code} @ ${reason.loc.line}:${reason.loc.column} — ${reason.message}`,
+    );
+    throw new ClaimedChildEmissionError(
+      'ClaimedChildNotEmitted',
+      `${where}: classified provable from its parent and NOT on its own.\n` +
+        reasons.map((reason) => `          ${reason}`).join('\n'),
+      parent,
+      child,
+    );
+  }
+
+  let emitted;
   try {
-    result = runComptime(sourcePath, {
-      root: options.corpusRoot,
-      outRoot: options.artifactDir,
-      component: child.component,
-      ...(record.length > 0 ? { recordedProps: record } : {}),
-      ...(identities.length > 0 ? { identityProps: identities } : {}),
-    });
+    emitted = emit(isolated, expected);
   } catch (error) {
     throw new ClaimedChildEmissionError(
       'ClaimedChildNotEmitted',
       `${where}: the pass threw classifying or emitting it — ` +
         `${error instanceof Error ? error.message : String(error)}`,
-      parent,
-      child,
-    );
-  }
-
-  const { analysis, emitted } = result;
-  if (
-    isolated.status !== analysis.status ||
-    (isolated.status === 'provable' &&
-      analysis.status === 'provable' &&
-      isolated.html !== analysis.html)
-  ) {
-    throw new ClaimedChildEmissionError(
-      'ClaimedChildRecordMismatch',
-      `${where}: isolated classify-with-record disagrees with the artifact that would ` +
-        `be published. Refuse rather than publish a child under a different valuation ` +
-        `or identity.`,
-      parent,
-      child,
-    );
-  }
-
-  if (analysis.status !== 'provable' || emitted === null) {
-    const reasons =
-      analysis.status === 'provable'
-        ? ['emitted nothing, with no verdict to explain it']
-        : analysis.reasons.map(
-            (reason) => `${reason.code} @ ${reason.loc.line}:${reason.loc.column} — ${reason.message}`,
-          );
-    throw new ClaimedChildEmissionError(
-      'ClaimedChildNotEmitted',
-      `${where}: classified provable from its parent and NOT on its own.\n` +
-        reasons.map((reason) => `          ${reason}`).join('\n'),
       parent,
       child,
     );
@@ -439,7 +426,7 @@ function emitClaimedChild(
     );
   }
 
-  return { parent, child, analysis, emittedDir: emitted.dir };
+  return { parent, child, analysis: isolated, emittedDir: emitted.dir };
 }
 
 /**
